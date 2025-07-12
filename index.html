@@ -543,6 +543,34 @@
   
 }
 
+@media print {
+  /* 全体の背景色と文字色を強制的にリセット */
+  * {
+    background: transparent !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact; /* Safari用 */
+    print-color-adjust: exact;
+  }
+
+  /* 特に背景色がついている要素をリセット */
+  .group-basic,
+  .group-shimei,
+  .group-set,
+  .group-option,
+  .result,
+  .subtotal,
+  .totalAmount,
+  .finalAmount {
+    background: none !important;
+  }
+
+  /* 文字色の強調を一部だけ残す場合（例：最終合計） */
+  .finalAmount.print-highlight {
+    color: rgb(43, 0, 255) !important; /* 青で強調 */
+    font-weight: bold !important;
+  }
+}
+
 
 
 
