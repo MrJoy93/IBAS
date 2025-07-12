@@ -480,9 +480,9 @@
     justify-content: center;
     align-items: center;
     height: 100vh;
-    /*transform: rotate(180deg);
+    transform: rotate(180deg);
     -webkit-transform: rotate(180deg); /* Safari対応 */
-    /*transform-origin: center;*/
+    transform-origin: center;
   }
 
   /* 印刷時に表示対象を制御 */
@@ -1967,6 +1967,9 @@ function printResult() {
 }
 
 function preparePrint() {
+
+    calculate();
+    
       // 現在のスクロール位置を保存
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
