@@ -465,7 +465,7 @@
 @media print {
   @page {
     size: 90mm 205mm;
-    margin: 5mm;
+    margin: 2mm;  /* ← 最小限の余白（プリンターの限界に応じて） */
   }
 
   body {
@@ -474,8 +474,8 @@
     padding: 0;
     width: 90mm;
     height: 205mm;
-    font-size: 8pt !important;          /* 印刷用に少し小さめ */
-    line-height: 1.1 !important;       /* 行間詰め */
+    font-size: 8pt !important;
+    line-height: 1.1 !important;
     background: #fff !important;
     color: #000 !important;
     display: flex;
@@ -486,7 +486,7 @@
     print-color-adjust: exact;
   }
 
-  /* 全要素の背景色と文字色を強制リセット */
+  /* 全要素の背景と文字色リセット */
   * {
     background: transparent !important;
     color: #000 !important;
@@ -494,7 +494,6 @@
     print-color-adjust: exact;
   }
 
-  /* 背景色のついてる要素を透明化 */
   .group-basic,
   .group-shimei,
   .group-set,
@@ -506,7 +505,7 @@
     background: transparent !important;
   }
 
-  /* 印刷時に表示対象を制御 */
+  /* 非表示制御 */
   body * {
     visibility: hidden;
   }
@@ -517,20 +516,19 @@
 
   #result {
     position: absolute;
-    top: 5mm;     
-    left: 5mm;    
-    width: calc(90mm - 10mm);
-    height: calc(205mm - 10mm);
+    top: 2mm;  /* ← 余白を2mmに合わせる */
+    left: 2mm;
+    width: calc(90mm - 4mm);
+    height: calc(205mm - 4mm);
     box-sizing: border-box;
     transform-origin: center center;
-    transform: rotate(180deg) scale(0.95);
+    transform: rotate(180deg) scale(0.97); /* ← 少し拡大 */
     background: transparent !important;
     color: #000 !important;
 
     white-space: normal !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
-
     font-size: 8pt !important;
     line-height: 1.1 !important;
   }
@@ -546,7 +544,6 @@
     display: none !important;
   }
 
-  /* details の表示制御 */
   details {
     display: block !important;
   }
@@ -560,28 +557,31 @@
     content: "";
   }
 
-  /* 印刷時のみ「領収書記入」表示 */
   .print-only {
     display: inline !important;
   }
 
-  /* 最終合計を強調（青＋太字） */
   .finalAmount.print-highlight {
     font-weight: bold !important;
-    color: rgb(43, 0, 255) !important;
+    color: rgb(90, 57, 251) !important;
+    font-size: 8pt !important;
   }
 
-  /* 合計金額をオレンジに変更 */
   .totalAmount {
     color: orange !important;
     font-weight: bold !important;
+    font-size: 8pt !important;
   }
 
-  /* 改ページを挿入したい場合のクラス */
+  .subtotal {
+    font-size: 8pt !important;
+  }
+
   .page-break {
     page-break-before: always;
   }
 }
+
 
 
 
