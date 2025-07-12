@@ -516,10 +516,10 @@
 
   #result {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 90mm;
-    height: 205mm;
+    top: 5mm;      /* 余白分だけ下げて端切れ防止 */
+    left: 5mm;     /* 余白分だけ右にずらして端切れ防止 */
+    width: calc(90mm - 10mm);  /* 左右余白分を差し引く */
+    height: calc(205mm - 10mm); /* 上下余白分を差し引く */
     box-sizing: border-box;
     /* 180度回転＋縮小 */
     transform-origin: center center;
@@ -564,9 +564,9 @@
     color: rgb(43, 0, 255) !important;
   }
 
-  /* 合計金額は黒の太字 */
+  /* 合計金額をオレンジに変更 */
   .totalAmount {
-    color: #000 !important;
+    color: orange !important;
     font-weight: bold !important;
   }
 }
