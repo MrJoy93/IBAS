@@ -474,7 +474,8 @@
     padding: 0;
     width: 90mm;
     height: 205mm;
-    font-size: 10pt;
+    font-size: 8pt !important;          /* 印刷用に少し小さめ */
+    line-height: 1.1 !important;       /* 行間詰め */
     background: #fff !important;
     color: #000 !important;
     display: flex;
@@ -516,16 +517,22 @@
 
   #result {
     position: absolute;
-    top: 5mm;      /* 余白分だけ下げて端切れ防止 */
-    left: 5mm;     /* 余白分だけ右にずらして端切れ防止 */
-    width: calc(90mm - 10mm);  /* 左右余白分を差し引く */
-    height: calc(205mm - 10mm); /* 上下余白分を差し引く */
+    top: 5mm;     
+    left: 5mm;    
+    width: calc(90mm - 10mm);
+    height: calc(205mm - 10mm);
     box-sizing: border-box;
-    /* 180度回転＋縮小 */
     transform-origin: center center;
     transform: rotate(180deg) scale(0.95);
     background: transparent !important;
     color: #000 !important;
+
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+
+    font-size: 8pt !important;
+    line-height: 1.1 !important;
   }
 
   /* 印刷時に非表示にする要素 */
@@ -569,7 +576,13 @@
     color: orange !important;
     font-weight: bold !important;
   }
+
+  /* 改ページを挿入したい場合のクラス */
+  .page-break {
+    page-break-before: always;
+  }
 }
+
 
 
 
