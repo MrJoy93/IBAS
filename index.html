@@ -465,7 +465,7 @@
 @media print {
   @page {
     size: 90mm 205mm;
-    margin: 2mm; /* 最小限の余白 */
+    margin: 0;  /* プリンター設定で余白最小を許可している場合のみ有効 */
   }
 
   body {
@@ -479,7 +479,6 @@
     background: #fff !important;
     color: #000 !important;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     -webkit-print-color-adjust: exact;
@@ -489,8 +488,6 @@
   * {
     background: transparent !important;
     color: #000 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
 
   .group-basic,
@@ -508,20 +505,21 @@
     visibility: hidden;
   }
 
-  #result,
-  #result * {
+  #result, #result * {
     visibility: visible;
   }
 
   #result {
     position: absolute;
-    top: 2mm;
-    left: 2mm;
-    width: calc(90mm - 4mm);
-    height: calc(205mm - 4mm);
+    top: 0;
+    left: 0;
+    width: 90mm;
+    height: 205mm;
     box-sizing: border-box;
-    transform-origin: center center;
-    transform: rotate(180deg) scale(0.97);
+    transform-origin: top left;
+    transform: rotate(180deg) scale(1); /* 最大拡大（切れない範囲で調整可） */
+    padding: 0;
+    margin: 0;
     background: transparent !important;
     color: #000 !important;
     white-space: normal !important;
@@ -549,44 +547,38 @@
     display: none !important;
   }
 
-  details[open] summary::after,
-  details:not([open]) summary::after {
-    content: "";
-  }
-
   .print-only {
     display: inline !important;
   }
 
-  /* ✅ 氏名エリアの文字サイズ拡大 */
+  /* 氏名欄を強調 */
   .group-shimei {
     font-size: 10pt !important;
   }
 
-  /* ✅ 最終合計を強調（青・大きめ） */
+  /* 最終合計を大きく・青で強調 */
   .finalAmount.print-highlight {
     font-weight: bold !important;
     color: rgb(90, 57, 251) !important;
     font-size: 11pt !important;
   }
 
-  /* ✅ 合計金額をオレンジ・通常サイズ */
+  /* 合計金額をオレンジに */
   .totalAmount {
     color: orange !important;
     font-weight: bold !important;
     font-size: 8pt !important;
   }
 
-  /* ✅ 小計もサイズ合わせ */
   .subtotal {
     font-size: 8pt !important;
   }
 
-  /* ✅ 改ページ用クラス */
   .page-break {
     page-break-before: always;
   }
 }
+
 
 
 
