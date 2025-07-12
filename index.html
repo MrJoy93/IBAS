@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IBASD β版</title>
+<style>
+
+  body {
+    background: #121212;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    font-size: 20px;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+}
+  
+  /* タブ部分 */
+  .tabs {
+    display: flex;
+    background: #222;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid #444;
+    width: 100vw; /* 画面幅いっぱい */
+    max-width: 1400px; /* 好きな最大幅 */
+    margin: 0 auto; /* 中央寄せ */
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 0;
+    text-align: center;
+    color: #bbb;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 3px solid transparent;
+    transition: background-color 0.3s, border-bottom-color 0.3s, color 0.3s;
+  }
+  .tab:hover {
+    background-color: #333;
+  }
+  .tab.active {
+    background-color: #111;
+    border-bottom-color: #00aaff;
+    color: #00aaff;
+    font-weight: bold;
+  }
+
+  /* コンテンツ部分 */
+.content {
+  background: #181818;
+  color: #ddd;
+  padding: 16px;
+  min-height: 300px;
+  width: 100vw; /* 画面幅いっぱい */
+  max-width: 1400px; /* 好きな最大幅 */
+  margin: 0 auto; /* 中央寄せ */
+  box-sizing: border-box;
+}
+  /* スマホ対応 */
+  @media (max-width: 600px) {
+    .tab {
+      padding: 10px 6px;
+      font-size: 14px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+
+  
+<div class="tabs">
+  <div class="tab active" data-target="app1">伝票入力</div>
+  <div class="tab" data-target="app2">報酬計算</div>
+  <div class="tab" data-target="app3">日計計算</div>
+</div>
+
+
+
+
+
+<div id="app1" class="content">
+
+    <style>
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      border: 1px solid #444;
+      padding: 6px;
+      text-align: center;
+    }
+
+    input, select {
+      box-sizing: border-box;
+      padding: 6px;
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #555;
+    }
+
+    .row {
+      background-color: #2c2c2c;
+    }
+
+    .totals {
+      font-weight: bold;
+      background-color: #444;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      tr {
+        margin-bottom: 10px;
+        border-bottom: 2px solid #444;
+      }
+      td {
+        text-align: right;
+        position: relative;
+        padding-left: 50%;
+      }
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        font-weight: bold;
+        text-align: left;
+      }
+    }
+
+    .category-UK { background-color: #00796b; }
+    .category-K  { background-color: #d81b60; }
+    .category-AB { background-color: #388e3c; }
+    .category-LA { background-color: #ff7043; }
+    .category-PA { background-color: #7e57c2; }
+    .category-BB { background-color: #8e24aa; }
+    .category-MS { background-color: #29b6f6; }
+    .category-GM { background-color: #ffca28; }
+    .category-B  { background-color: #ffab91; }
+    .category-JOE { background-color: #c5e1a5; }
+    .category-KOSE { background-color: #a1887f; }
+    .category-HE { background-color: #80deea; }
+    .category-PB { background-color: #f0f4c3; }
+    .category-X  { background-color: #bdbdbd; }
+    .category-Z  { background-color: #ff69b4; }
+
+    .tab {
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+
+    .tab button {
+      padding: 10px;
+      margin-right: 5px;
+      cursor: pointer;
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .tab button.active {
+      background-color: #444;
+    }
+
+    h3 {
+      font-size: 16px;
+    }
+
+    label {
+      display: none;
+    }
+  </style>
+ 
+<div class="tab">
+  <button class="tablinks" onclick="filterCategory('all')">すべて表示</button>
+  <button class="tablinks" onclick="filterCashOnlyRows()">現金のみ抽出</button>
+  <button class="tablinks" onclick="filterCardInputRows()">カード抽出</button>
+  <button class="tablinks" onclick="filterCategory('UK')">UK</button>
+  <button class="tablinks" onclick="filterCategory('K')">K</button>
+  <button class="tablinks" onclick="filterCategory('AB')">AB</button>
+  <button class="tablinks" onclick="filterCategory('LA')">LA</button>
+  <button class="tablinks" onclick="filterCategory('PA')">PA</button>
+  <button class="tablinks" onclick="filterCategory('BB')">BB</button>
+  <button class="tablinks" onclick="filterCategory('MS')">MS</button>
+  <button class="tablinks" onclick="filterCategory('GM')">GM</button>
+  <button class="tablinks" onclick="filterCategory('B')">B</button>
+  <button class="tablinks" onclick="filterCategory('JOE')">JOE</button>
+  <button class="tablinks" onclick="filterCategory('KOSE')">KOSE</button>
+  <button class="tablinks" onclick="filterCategory('HE')">HE</button>
+  <button class="tablinks" onclick="filterCategory('PB')">PB</button>
+  <button class="tablinks" onclick="filterCategory('X')">X</button>
+  <button class="tablinks" onclick="filterCategory('Z')">Z</button>
+</div>
+
+<table>
+  <tbody id="formRows">
+    <tr class="row">
+      <td class="rowNumber">1</td>
+      <td><input class="table-number" type="number" placeholder="卓番" onchange="updateTotals()" /></td>
+      <td><input class="honshi" type="number" placeholder="本指" onchange="updateTotals()" /></td>
+      <td>
+        <select class="c" onchange="updateRowColor(this); updateTotals()">
+          <option value="">-</option>
+          <option value="UK">UK</option>
+          <option value="K">K</option>
+          <option value="AB">AB</option>
+          <option value="LA">LA</option>
+          <option value="PA">PA</option>
+          <option value="BB">BB</option>
+          <option value="MS">MS</option>
+          <option value="GM">GM</option>
+          <option value="B">B</option>
+          <option value="JOE">JOE</option>
+          <option value="KOSE">KOSE</option>
+          <option value="HE">HE</option>
+          <option value="PB">PB</option>
+          <option value="X">X</option>
+          <option value="Z">Z</option>
+        </select>
+      </td>
+      <td><input class="amount" type="number" placeholder="金額" onchange="updateTotals()" /></td>
+      <td><input class="num" type="number" placeholder="人数" onchange="updateTotals()" /></td>
+      <td><input class="detail" type="text" placeholder="詳細" /></td>
+      <td><input class="card" type="number" placeholder="カード" onchange="updateTotals()" /></td>
+      <td><input class="total" type="number" placeholder="総合計" onchange="updateTotals()" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<button onclick="addRow()" style="font-size: 18px; padding: 15px 30px;">伝票を追加</button>
+
+<h3>集計</h3>
+<p>総客数: <span id="totalCustomers">0</span></p>
+<p>現金合計: <span id="cashTotal">0</span></p>
+<p>カード合計: <span id="cardTotal">0</span></p>
+<p>総合計金額: <span id="totalAmount">0</span></p>
+
+<h3>カテゴリ別キャッチバック</h3>
+<table>
+  <thead>
+    <tr>
+      <th>カテゴリ</th>
+      <th>人数</th>
+      <th>バック金額</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><input type="checkbox"> UK</td><td id="UKcount">0</td><td id="UKtotal">0</td></tr>
+    <tr><td><input type="checkbox"> K</td><td id="Kcount">0</td><td id="Ktotal">0</td></tr>
+    <tr><td><input type="checkbox"> AB</td><td id="ABcount">0</td><td id="ABtotal">0</td></tr>
+    <tr><td><input type="checkbox"> LA</td><td id="LAcount">0</td><td id="LAtotal">0</td></tr>
+    <tr><td><input type="checkbox"> PA</td><td id="PAcount">0</td><td id="PAtotal">0</td></tr>
+    <tr><td><input type="checkbox"> BB</td><td id="BBcount">0</td><td id="BBtotal">0</td></tr>
+    <tr><td><input type="checkbox"> MS</td><td id="MScount">0</td><td id="MStotal">0</td></tr>
+    <tr><td><input type="checkbox"> GM</td><td id="GMcount">0</td><td id="GMtotal">0</td></tr>
+    <tr><td><input type="checkbox"> B</td><td id="Bcount">0</td><td id="Btotal">0</td></tr>
+    <tr><td><input type="checkbox"> JOE</td><td id="JOEcount">0</td><td id="JOEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> KOSE</td><td id="KOSEcount">0</td><td id="KOSEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td id="HEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td id="PBtotal">0</td></tr>
+    <tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td id="Xtotal">0</td></tr>
+    <tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td id="Ztotal">0</td></tr>
+    <tr>
+      <td><strong>合計</strong></td>
+      <td id="totalCount">0</td>
+      <td id="totalBackAmount">0</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: center; margin-top: 30px;">
+  <button onclick="resetAll()" style="color: red; background: transparent; border: 2px solid red; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+    リセット
+  </button>
+</div>
+
+</div>
+
+
+<div id="app2" class="content" style="display:none;">
+
+<style>
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background: #121212;
+      color: #ffffff;
+    }
+  }
+
+  h2, h3 {
+    text-align: center;
+  }
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+    font-size: 16px;
+  }
+
+  input[type="number"], input[type="text"] {
+    width: 150px;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+  }
+
+  button {
+    flex: 1;
+    padding: 12px;
+    font-size: 18px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #45a049;
+  }
+
+  /* === 各グループの背景色 === */
+.group {
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.group-basic   { background: #1e3a5f; }
+.group-shimei  { background: #5f1e3a; }
+.group-set     { background: #1e5f3a; }
+.group-option  { background: #5f4e1e; }
+
+  /* === 結果表示 === */
+  .result {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    box-shadow: 0 0 10px rgba(255,255,255,0.05);
+    font-size: 22px;
+  }
+
+  .result span {
+    display: block;
+    margin-bottom: 5px;
+    padding: 5px;
+    border-radius: 4px;
+  }
+
+  .subtotal { background-color: #1e3a5f; }
+  .totalAmount      { background-color: #5f1e3a; }
+  .finalAmount  { background-color: #5f4e1e; }
+
+  /* === 履歴 === */
+  .history {
+    margin-top: 30px;
+  }
+
+  .history li {
+    margin-bottom: 8px;
+  }
+
+  /* === ボタン列 === */
+  .button-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .summary {
+    font-weight: bold;
+    margin-top: 20px;
+  }
+
+  /* === ボタンカラー個別指定 === */
+  .clear-button {
+    background: #e53935;
+  }
+
+  .clear-button:hover {
+    background: #c62828;
+  }
+
+  .clear-all-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    background: #e53935;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .clear-all-button:hover {
+    background: #c62828;
+  }
+
+  .print-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .print-button:hover {
+    background: #1976D2;
+  }
+
+/* === ボトルフォーム（通常） === */
+.bottle-entry,
+.bottle-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+  width: 100%;  /* ← 120%から修正 */
+}
+
+.bottle-label {
+  min-width: 100px;
+  text-align: left;
+}
+
+.bottle-entry input[type="text"],
+.bottle-entry input[type="number"],
+.bottle-form input[type="text"],
+.bottle-form input[type="number"] {
+  width: 200px;  /* ← 150pxから修正 */
+  padding: 6px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.bottle-form {
+  justify-content: flex-end;
+}
+
+.bottle-form label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+  /* === 印刷用スタイル === */
+  @media print {
+  @page {
+    size: 90mm 205mm;
+    margin: 10mm;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+    color: #000 !important;
+    background: #fff !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /*transform: rotate(180deg);
+    -webkit-transform: rotate(180deg); /* Safari対応 */
+    /*transform-origin: center;*/
+  }
+
+  /* 印刷時に表示対象を制御 */
+  body * {
+    visibility: hidden;
+  }
+
+  #result, #result * {
+    visibility: visible;
+  }
+
+  #result {
+    position: absolute;
+    top: 0;
+    left: -10mm;
+    width: 100%;
+    transform: scale(0.8);
+  }
+
+  .button-row,
+  .clear-button,
+  .clear-all-button,
+  .print-button,
+  form,
+  .history,
+  .summary {
+    display: none !important;
+  }
+
+  details {
+    display: block !important;
+  }
+
+  details summary {
+    display: none !important;
+  }
+
+  details[open] summary::after,
+  details:not([open]) summary::after {
+    content: "";
+  }
+
+  /* ✅ 印刷時のみ「領収書記入」表示 */
+  .print-only {
+    display: inline !important;
+  }
+
+  /* ✅ 印刷時のみ「最終合計」を強調（赤＋太字） */
+  .finalAmount.print-highlight {
+    font-weight: bold !important;
+    color: rgb(43, 0, 255) !important;
+  }
+
+   .totalAmount {
+    color: #000 !important;
+    font-weight: bold !important;
+  }
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</style> 
+
+  <div class="button-row" style="margin-top: 10px; justify-content: center;">
+  <button type="button" class="clear-button" onclick="clearInputs()">入力をクリア</button>
+</div>
+
+<form onsubmit="event.preventDefault(); calculate();">
+  <div class="group" style="background:#2e2e2e">
+    <label>キャスト名: <input type="text" id="castName" placeholder="名前を入力"></label>
+    <label>体験及び貸出:<input type="checkbox" id="experienceAndRental"></label>
+    <!--<label>保障: <input type="number" id="guaranteeAmount" placeholder="保障金額"></label>-->
+    <label>送迎: <input type="number" id="sendoffAmount" placeholder="送迎金額"></label>
+  </div>
+
+    <div class="group group-basic">
+      <h3>フリーバック</h3>
+      <label>F1（¥1500）: <input type="number" id="f" placeholder="F1"></label>
+      <label>F2（¥2000）: <input type="number" id="f2" placeholder="F2"></label>
+      <label>場内（¥1000）: <input type="number" id="jounai" placeholder="場内"></label>
+    </div>
+
+    <div class="group group-shimei">
+      <h3>指名・同伴・枝・HELP</h3>
+      <label>本指（¥0）: <input type="number" id="honshiri" placeholder="本指"></label>
+      <label>同伴（¥1500）: <input type="number" id="douhan" placeholder="同伴"></label>
+      <label>枝（¥500）: <input type="number" id="eda" placeholder="枝"></label>
+      <label>HELP（-¥1500）: <input type="number" id="help" placeholder="HELP"></label>
+    </div>
+
+    <div class="group group-set">
+      <h3>セット・VIP</h3>
+      <label>SET40（¥5500）: <input type="number" id="set40" placeholder="SET40"></label>
+      <label>SET20（¥3500）: <input type="number" id="set20" placeholder="SET20"></label>
+      <label>VIP（¥2000）: <input type="number" id="vip" placeholder="VIP"></label>
+    </div>
+
+    <div class="group group-option">
+      <h3>ドリンク・その他</h3>
+      <label>A（¥500）: <input type="number" id="a" placeholder="A"></label>
+      <label>B（¥1000）: <input type="number" id="b" placeholder="B"></label>
+      <label>C（¥1500）: <input type="number" id="c" placeholder="C"></label>
+      <label>D（¥2000）: <input type="number" id="d" placeholder="D"></label>
+      <label>E（¥2500）: <input type="number" id="e" placeholder="E"></label>
+
+      <div id="bottleFormsContainer"></div>
+      <button type="button" onclick="addBottleForm()">ボトル追加</button>
+    </div>
+
+    <!-- ここでformの閉じタグ -->
+    <div class="button-row" style="margin-top: 20px;">
+      <button type="submit">計算する</button>
+    </div>
+  </form>
+
+  <div class="result" id="result"></div>
+
+  <div class="button-row" style="margin-top: 20px;">
+    <button type="button" class="print-button" onclick="preparePrint()">出力</button>
+  </div>
+
+  <div class="button-row" style="margin-top: 20px;">
+    <button type="button" class="clear-button" onclick="clearInputs()">入力をクリア</button>
+  </div>
+
+  <div class="history">
+    <h3>履歴</h3>
+    <ul id="historyList"></ul>
+  </div>
+
+  <button id="deleteSelectedBtn" onclick="deleteSelectedHistory()">選択した履歴を削除</button>
+
+  <div class="summary" id="summary">
+  履歴の合計人数: <span id="summaryTotalPeople">0人</span> |
+  合計金額: <span id="summaryTotalAmount">¥0</span> |
+  合計源泉費: <span id="summaryTotalTax">¥0</span>
+  </div>
+
+  <div class="button-row" style="margin-top: 40px;">
+    <button type="button" class="clear-all-button" onclick="clearAll()">完全クリア</button>
+  </div>
+
+</div>
+
+
+
+
+<div id="app3" class="content" style="display:none;">
+
+  <style>
+    
+    .group {
+      margin-bottom: 24px;
+      padding: 16px;
+      border-radius: 10px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 12px;
+    }
+    label span {
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+    input[type="number"],
+    input[type="text"],
+    input[disabled] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      text-align: right;
+      box-sizing: border-box;
+    }
+    input[disabled] {
+      background-color: #444;
+      color: #ddd;
+    }
+    #salesGroup { background-color: #2b3a3b; }
+    #laborGroup { background-color: #3a4f5a; }
+    #taxGroup { background-color: #4b4a5b; }
+    #expensesGroup { background-color: #5c6b6c; }
+    #resultsGroup {
+      background-color: #3b4f3a;
+      font-weight: bold;
+      color: #b8f3b8;
+    }
+    .negative {
+      color: red !important;
+    }
+
+    .no-bg {
+      background-color: transparent !important;
+    }
+
+    .reset-button {
+      display: block;
+      width: 100%;
+      background-color: #c0392b;
+      color: white;
+      font-size: 18px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 30px;
+      cursor: pointer;
+    }
+
+    @media (min-width: 600px) {
+      label {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+      label span {
+        margin-bottom: 0;
+      }
+      input[type="number"],
+      input[type="text"],
+      input[disabled] {
+        max-width: 200px;
+      }
+    }
+
+    .reset-button:hover {
+  background-color: #ff0033;
+}
+  </style>
+
+  <div class="group no-bg">
+    <label><span>開始時金庫金:</span> <input type="number" id="startCash" oninput="updateCalculations()"></label>
+  </div>
+
+ <table class="outer-table" style="width: 100%; border: 2px solid #333; border-collapse: collapse; margin-bottom: 20px;">
+  <tr>
+    <td style="padding: 10px;">
+
+      <div class="group" id="salesGroup">
+        <label><span>現金売上:</span> <input type="text" id="cashSales" disabled></label>
+        <label><span>カード売上:</span> <input type="text" id="cardSales" disabled></label>
+        <label><span>売上合計:</span> <input type="text" id="totalSales" disabled></label>
+      </div>
+
+      <div class="group" id="laborGroup">
+        <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
+        <label><span>男子給与:</span> <input type="number" id="maleSalary" oninput="updateCalculations()"></label>
+        <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
+        <label><span>スカウトバック:</span> <input type="number" id="scoutBack" oninput="updateCalculations()"></label>
+        <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
+        <label><span>ドライバー代:</span> <input type="number" id="driverFee" oninput="updateCalculations()"></label>
+        <label><span>人件費合計:</span> <input type="text" id="totalLaborCosts" disabled></label>
+      </div>
+
+      <div class="group" id="taxGroup">
+        <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
+        <label><span>男子源泉費:</span> <input type="number" id="maleTax" oninput="updateCalculations()"></label>
+        <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
+      </div>
+
+      <div class="group" id="expensesGroup">
+        <label><span>酒代:</span> <input type="number" id="alcohol" oninput="updateCalculations()"></label>
+        <label><span>領収書①:</span> <input type="number" id="receipt1" oninput="updateCalculations()"></label>
+        <label><span>領収書②:</span> <input type="number" id="receipt2" oninput="updateCalculations()"></label>
+        <label><span>領収書③:</span> <input type="number" id="receipt3" oninput="updateCalculations()"></label>
+        <label><span>領収書④:</span> <input type="number" id="receipt4" oninput="updateCalculations()"></label>
+        <label><span>領収書⑤:</span> <input type="number" id="receipt5" oninput="updateCalculations()"></label>
+        <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
+        <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
+      </div>
+
+      <div class="group" id="resultsGroup">
+        <label><span>粗利益:</span> <input type="text" id="grossProfit" disabled></label>
+        <label><span>現金残:</span> <input type="text" id="remainingCash" disabled></label>
+      </div>
+
+    </td>
+  </tr>
+</table>
+
+<table class="outer-table" style="width: 100%; border: 2px solid #333; border-collapse: collapse; margin-bottom: 20px;">
+  <tr>
+    <td style="padding: 10px; background-color: #3e3e5a;">
+
+      <div class="group" id="extraGroup">
+        <label><span>粗利益:</span> <input type="text" id="grossProfit_extra" disabled></label>
+        <label><span>カード売上:</span> <input type="text" id="cardSales_extra" disabled></label>
+        <label><span>現金残:</span> <input type="text" id="remainingCash_extra" disabled></label>
+        <label><span>源泉費合計:</span> <input type="text" id="totalWithholdingTax" disabled></label>
+
+        <div style="height: 1em;"></div>
+
+        <label><span>合計（現金残 + 源泉費）:</span> <input type="text" id="totalGrossPlusTax" disabled></label>
+      </div>
+
+    </td>
+  </tr>
+</table>
+
+  <div class="group no-bg">
+    <label><span>集計提出前金庫金:</span> <input type="number" id="finalCash" oninput="updateCalculations()"></label>
+    <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
+  </div>
+
+  <button class="reset-button" onclick="resetForm()">リセット</button>
+  <button class="reset-button" onclick="resetAllData()">完全リセット</button>
+  <div style="text-align: center; margin-top: 20px;">
+  <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+//<base script---------------------------------------------------------------------------------------------------------------->
+    const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.content');
+
+  // タブをアクティブ化・コンテンツ表示切替する共通関数
+  function activateTab(target) {
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.style.display = 'none');
+
+    const tab = Array.from(tabs).find(t => t.getAttribute('data-target') === target);
+    if (tab) tab.classList.add('active');
+
+    const el = document.getElementById(target);
+    if (el) el.style.display = 'block';
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      if (!e.currentTarget.classList.contains('tab')) {
+        console.warn('クリックされた要素が.tabではありません。処理を中止');
+        return;
+      }
+
+      const target = tab.getAttribute('data-target');
+      console.log('clicked tab:', tab);
+      console.log('target:', target);
+
+      if (!target) {
+        console.warn('data-target属性がありません。処理を中断します。', tab);
+        return;
+      }
+
+      activateTab(target);
+
+      // 選択タブIDをlocalStorageに保存
+      localStorage.setItem('selectedTab', target);
+
+      updateCalculations();
+    });
+  });
+
+  // ページ読み込み時に保存されたタブを復元する処理
+  window.addEventListener('DOMContentLoaded', () => {
+    // 既存の処理
+    observeTotalCountForAdviserFee();
+    updateAdviserFeeFromTotalCount();
+
+    // 保存されたタブIDを取得して復元
+    const savedTab = localStorage.getItem('selectedTab');
+    if (savedTab && document.getElementById(savedTab)) {
+      activateTab(savedTab);
+    } else {
+      // 保存されていなければ最初のタブをアクティブに
+      const defaultTarget = tabs[0].getAttribute('data-target');
+      activateTab(defaultTarget);
+    }
+  });
+
+  function updateAdviserFeeFromTotalCount() {
+    const countEl = document.getElementById('totalCount');
+    const adviserFeeInput = document.getElementById('adviserFee');
+
+    if (!countEl || !adviserFeeInput) return;
+
+    const count = parseInt(countEl.textContent.replace(/,/g, ''), 10) || 0;
+    const fee = count * 1000;
+    adviserFeeInput.value = fee;
+
+    updateCalculations(); // 必要に応じて再計算
+  }
+
+  function observeTotalCountForAdviserFee() {
+    const target = document.getElementById('totalCount');
+    if (!target) return;
+
+    const observer = new MutationObserver(() => {
+      updateAdviserFeeFromTotalCount();
+    });
+
+    observer.observe(target, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+    let scrollPosition = 0;
+
+    function showTab(tabId) {
+      // スクロール位置を保存
+      scrollPosition = window.scrollY;
+
+      // すべてのタブを非表示
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => tab.style.display = 'none');
+
+      // 選択したタブだけを表示
+      const selectedTab = document.getElementById(tabId);
+      if (selectedTab) selectedTab.style.display = 'block';
+
+      // スクロール位置を復元
+      window.scrollTo(0, scrollPosition);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//<app1 script---------------------------------------------------------------------------------------------------------------->
+function saveCheckboxStates() {
+  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
+  const states = Array.from(checkboxes).map(cb => cb.checked);
+  localStorage.setItem("checkboxStates", JSON.stringify(states));
+}
+
+function restoreCheckboxStates() {
+  const states = JSON.parse(localStorage.getItem("checkboxStates"));
+  if (!states) return;
+  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
+  checkboxes.forEach((cb, index) => {
+    cb.checked = states[index];
+  });
+}
+
+let rowNumber = 2;
+
+window.addEventListener('load', function () {
+  restoreForm();                // フォームデータ復元
+  restoreCheckboxStates();      // チェックボックス状態復元
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", saveCheckboxStates);
+  });
+
+  filterCategory('all');        // ←すべての行を初期表示
+  currentCategory = 'all';      // ←currentCategoryもセット
+});
+
+
+function addRow() {
+  const table = document.getElementById("formRows");
+  const newRow = table.rows[0].cloneNode(true);
+  newRow.querySelectorAll("input").forEach(input => input.value = "");
+  newRow.querySelector(".rowNumber").textContent = rowNumber++;
+  newRow.className = "row";
+  const select = newRow.querySelector(".c");
+  select.value = "";
+  updateRowColor(select);
+  table.appendChild(newRow);
+
+  // オフセット量（タブの高さなどに合わせて調整）
+  const offset = 75; // 例: 60px下にスクロール位置をずらす
+
+  // 追加行の位置を取得してスクロール
+  const rect = newRow.getBoundingClientRect();
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const targetY = rect.top + scrollTop - offset;
+
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  saveForm();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const target = e.target;
+    // 入力欄かセレクトボックスのみ対象
+    if (target.matches('input, select')) {
+      e.preventDefault(); // デフォルトのEnter送信を防止
+
+      const formElements = Array.from(document.querySelectorAll('#formRows input, #formRows select'));
+      const index = formElements.indexOf(target);
+      if (index > -1 && index < formElements.length - 1) {
+        formElements[index + 1].focus();
+      }
+    }
+  }
+});
+
+function updateRowColor(select) {
+  const row = select.closest("tr");
+  row.className = "row";
+  if (select.value) {
+    row.classList.add("category-" + select.value);
+  }
+  saveForm();
+}
+
+function updateTotals() {
+  let totalCustomers = 0, cardTotal = 0, totalAmount = 0;
+  const catchbackTotals = {};
+  const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
+  categories.forEach(cat => catchbackTotals[cat] = { amount: 0, count: 0 });
+
+  document.querySelectorAll(".row").forEach(row => {
+    const num = parseInt(row.querySelector(".num")?.value) || 0;
+    const honshi = parseInt(row.querySelector(".honshi")?.value) || 0;
+    const amount = parseInt(row.querySelector(".amount")?.value) || 0;
+    const card = parseInt(row.querySelector(".card")?.value) || 0;
+    const total = parseInt(row.querySelector(".total")?.value) || 0;
+    const category = row.querySelector(".c")?.value;
+
+    totalCustomers += num + honshi;
+    cardTotal += card;
+    totalAmount += total;
+
+    if (category && catchbackTotals[category]) {
+      const backAmount = (amount <= 5999) ? amount * num * 0.2 : amount * num * 0.3;
+      if (category === "X") {
+        catchbackTotals[category].amount += backAmount;
+        catchbackTotals[category].count += num;
+      } else if (category !== "Z") {
+        catchbackTotals[category].amount += backAmount;
+        catchbackTotals[category].count += num;
+      }
+    }
+  });
+
+  let totalCount = 0, totalBackAmount = 0;
+  categories.forEach(cat => {
+    if (cat !== "X") {
+      totalCount += catchbackTotals[cat].count;
+      totalBackAmount += catchbackTotals[cat].amount;
+    } else {
+      totalBackAmount += catchbackTotals[cat].amount;
+    }
+
+    document.getElementById(`${cat}count`).textContent = catchbackTotals[cat].count.toLocaleString();
+    document.getElementById(`${cat}total`).textContent = Math.floor(catchbackTotals[cat].amount).toLocaleString();
+  });
+
+  document.getElementById("totalCustomers").textContent = totalCustomers.toLocaleString();
+  document.getElementById("cardTotal").textContent = cardTotal.toLocaleString();
+  document.getElementById("cashTotal").textContent = (totalAmount - cardTotal).toLocaleString();
+  document.getElementById("totalAmount").textContent = totalAmount.toLocaleString();
+  document.getElementById("totalCount").textContent = totalCount.toLocaleString();
+  document.getElementById("totalBackAmount").textContent = Math.floor(totalBackAmount).toLocaleString();
+
+  const cardSalesInput = document.getElementById("cardSales");
+if (cardSalesInput) {
+  cardSalesInput.value = cardTotal;
+}
+
+  // 日計計算のinputに値をセット
+  const totalSalesInput = document.getElementById("totalSales");
+  if (totalSalesInput) {
+    totalSalesInput.value = totalAmount;
+  }
+
+  saveForm();
+}
+
+function saveForm() {
+  const formData = [];
+  document.querySelectorAll(".row").forEach((row, index) => {
+    const rowNumber = parseInt(row.querySelector(".rowNumber")?.textContent) || index + 1;
+
+    const rowData = {
+      rowNumber: rowNumber,
+      honshi: row.querySelector(".honshi")?.value || "",
+      category: row.querySelector(".c")?.value || "",
+      amount: row.querySelector(".amount")?.value || "",
+      num: row.querySelector(".num")?.value || "",
+      detail: row.querySelector(".detail")?.value || "",
+      card: row.querySelector(".card")?.value || "",
+      total: row.querySelector(".total")?.value || "",
+      checkboxes: {}
+    };
+
+    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      rowData.checkboxes[checkbox.parentElement.textContent.trim()] = checkbox.checked;
+    });
+
+    formData.push(rowData);
+  });
+
+  localStorage.setItem("formData", JSON.stringify(formData));
+}
+
+
+function restoreForm() {
+  const savedData = localStorage.getItem("formData");
+  if (savedData) {
+    const formData = JSON.parse(savedData);
+    const table = document.getElementById("formRows");
+
+    // 最初の行をテンプレートとして取得
+    const templateRow = table.rows[0];
+
+    // 最初の行以外を削除
+    while (table.rows.length > 1) {
+      table.deleteRow(1);
+    }
+
+    formData.forEach((data, index) => {
+      let row;
+      if (index === 0) {
+        row = table.rows[0];
+      } else {
+        row = templateRow.cloneNode(true);
+        table.appendChild(row);
+      }
+
+      // 各セルの値を復元
+      row.querySelector(".rowNumber").textContent = data.rowNumber || index + 1;
+      row.querySelector(".honshi").value = data.honshi || "";
+      row.querySelector(".c").value = data.category || "";
+      row.querySelector(".amount").value = data.amount || "";
+      row.querySelector(".num").value = data.num || "";
+      row.querySelector(".detail").value = data.detail || "";
+      row.querySelector(".card").value = data.card || "";
+      row.querySelector(".total").value = data.total || "";
+
+      // チェックボックスの復元
+      const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        const labelText = checkbox.parentElement.textContent.trim();
+        checkbox.checked = data.checkboxes && data.checkboxes[labelText] ? true : false;
+      });
+
+      // 行の色を更新
+      updateRowColor(row.querySelector(".c"));
+    });
+
+    updateTotals();
+  }
+}
+
+function resetAll() {
+
+  if (!confirm("本当にリセットしますか？")) {
+    return; // キャンセルされたら処理中断
+  }
+  
+  // formRows の中のすべての行を取得
+  const formRows = document.getElementById("formRows");
+  const rows = formRows.querySelectorAll(".row");
+
+  // 最初の1行を残して削除
+  for (let i = rows.length - 1; i >= 1; i--) {
+    formRows.removeChild(rows[i]);
+  }
+
+  // 最初の行の input をすべてリセット
+  const inputs = formRows.querySelectorAll("tr:first-child input, tr:first-child select");
+  inputs.forEach(input => {
+    if (input.type === "checkbox" || input.type === "radio") {
+      input.checked = false;
+    } else {
+      input.value = "";
+    }
+  });
+
+  // カテゴリ別集計などをリセット
+  const countIds = [
+    "UK", "K", "AB", "LA", "PA", "BB", "MS", "GM",
+    "B", "JOE", "TR", "HE", "PB", "X", "Z"
+  ];
+  countIds.forEach(id => {
+    document.getElementById(id + "count").textContent = "0";
+    document.getElementById(id + "total").textContent = "0";
+  });
+
+  // 合計表示のリセット
+  document.getElementById("totalCustomers").textContent = "0";
+  document.getElementById("cashTotal").textContent = "0";
+  document.getElementById("cardTotal").textContent = "0";
+  document.getElementById("totalAmount").textContent = "0";
+  document.getElementById("totalCount").textContent = "0";
+  document.getElementById("totalBackAmount").textContent = "0";
+
+  // チェックボックスの状態もリセット
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.checked = false;
+  });
+  localStorage.removeItem("checkboxStates");
+
+  // 行番号をリセット
+  rowNumber = 2;
+
+  window.scrollTo({ top: 0, behavior: "smooth" })
+}
+
+  let currentCategory = 'all';
+
+  function updateRowColor(select) {
+    const row = select.closest('tr');
+    const value = select.value;
+    
+    // クラス再設定（背景色用）
+    row.className = 'row';
+    if (value) {
+      row.classList.add('category-' + value);
+    }
+
+    // フィルターと一致していれば表示
+    row.style.display = (currentCategory === 'all' || value === currentCategory) ? '' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const selects = document.querySelectorAll('#formRows select.c');
+
+    selects.forEach(select => {
+      updateRowColor(select);
+      select.addEventListener('change', () => {
+        updateRowColor(select);
+      });
+    });
+
+    filterCategory(currentCategory); // 初期表示
+  });
+
+    currentCategory = "filter";
+
+  function updateRowColor(select) {
+    const row = select.closest('tr');
+    const value = select.value;
+    
+    // クラス再設定（背景色用）
+    row.className = 'row';
+    if (value) {
+      row.classList.add('category-' + value);
+    }
+
+    // フィルターと一致していれば表示
+    row.style.display = (currentCategory === 'all' || value === currentCategory) ? '' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const selects = document.querySelectorAll('#formRows select.c');
+
+    selects.forEach(select => {
+      updateRowColor(select);
+      select.addEventListener('change', () => {
+        updateRowColor(select);
+      });
+    });
+
+    filterCategory(currentCategory); // 初期表示
+  });
+
+  // ▼ タブの初期復元
+  const savedTab = localStorage.getItem('selectedTab');
+  const defaultTab = savedTab && document.getElementById(savedTab) ? savedTab : 'app1';
+  activateTab(defaultTab);
+
+function filterSlipsByCategory(category) {
+  const rows = document.querySelectorAll('.slipRow');
+  rows.forEach(row => {
+    const rowCategory = row.getAttribute('data-category');
+    row.style.display = (category === 'all' || category === rowCategory) ? '' : 'none';
+  });
+}
+
+function filterCategory(category) {
+  currentCategory = category;
+  localStorage.setItem("selectedCategory", category); // ← 保存
+
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const select = row.querySelector('select.c');
+    const value = select ? select.value : '';
+    row.style.display = (category === 'all' || value === category) ? '' : 'none';
+  });
+
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = Array.from(document.querySelectorAll('.tab button')).find(btn => {
+    return btn.textContent === category || (category === 'all' && btn.textContent.includes('すべて表示'));
+  });
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+
+  restoreForm();
+  restoreCheckboxStates();
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", saveCheckboxStates);
+  });
+
+  // カテゴリフィルタを復元
+  const savedCategory = localStorage.getItem("selectedCategory") || "all";
+  filterCategory(savedCategory);
+
+
+function filterCardInputRows() {
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const cardInput = row.querySelector('.card');
+    const hasCardValue = cardInput && cardInput.value.trim() !== '';
+    row.style.display = hasCardValue ? '' : 'none';
+  });
+
+  currentCategory = 'cardInputOnly'; // 現在のカテゴリにセット（任意）
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+}
+
+function filterCashOnlyRows() {
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const cardInput = row.querySelector('.card');
+    const cardValue = parseInt(cardInput?.value || "0");
+    // cardが空または0の行だけ表示
+    row.style.display = (!cardValue || cardValue === 0) ? '' : 'none';
+  });
+
+  currentCategory = 'cashOnly'; // 任意の識別用
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//<app2 script---------------------------------------------------------------------------------------------------------------->
+
+function addBottleForm() {
+  const container = document.getElementById('bottleFormsContainer');
+  const newForm = createBottleForm(); // ←空のフォームを追加
+  container.appendChild(newForm);
+  saveBottleForms(); // 保存
+}
+
+function saveBottleForms() {
+  const bottleForms = [];
+  const forms = document.querySelectorAll('.bottle-form');
+
+  forms.forEach(form => {
+    const bottleDetails = form.querySelector('.bottleDetails').value || '';
+    const bottleAmount = parseInt(form.querySelector('.bottleAmount').value) || 0;
+
+    bottleForms.push({ bottleDetails, bottleAmount });
+  });
+
+  // ローカルストレージにボトルフォームのデータを保存
+  localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
+}
+
+function loadBottleForms() {
+  const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms')) || [];
+  const container = document.getElementById('bottleFormsContainer');
+  container.innerHTML = ''; // 初期化
+
+  bottleFormsData.forEach(data => {
+    const form = createBottleForm(data.bottleDetails, data.bottleAmount);
+    container.appendChild(form);
+  });
+}
+
+function renumberHistory() {
+  const items = Array.from(document.querySelectorAll('#historyList li')).reverse(); // 下から順に1,2,3
+  items.forEach((item, index) => {
+    const castElem = item.querySelector('.castName');
+    if (castElem) {
+      let text = castElem.textContent.replace(/^\s*\d+\.\s*/, ' '); // 旧番号を削除
+      const nameOnly = text.replace(/^\s*/, '').trim();
+      castElem.innerHTML = `<strong></strong> ${index + 1}. ${nameOnly}`;
+    }
+  });
+}
+
+function calculate() {
+  // 「体験及び貸出」のチェックボックスの状態を取得
+  const isExperienceAndRentalChecked = document.getElementById('experienceAndRental').checked;
+  let experienceText = isExperienceAndRentalChecked ? '体験及び貸出: 有り' : '体験及び貸出: 無し';
+
+  const values = {
+    f: 1500, f2: 2000, jounai: 1000, honshiri: 0, douhan: 1500,
+    eda: 500, help: -1500, set40: 5500, set20: 3500, vip: 2000,
+    a: 500, b: 1000, c: 1500, d: 2000, e: 2500
+  };
+
+  let total = 0;
+  for (let key in values) {
+    const count = parseInt(document.getElementById(key).value) || 0;
+    total += count * values[key];
+  }
+
+   // 動的に追加されたボトルフォームから金額と詳細を取得
+  const bottleForms = document.querySelectorAll('.bottle-form');
+  bottleForms.forEach(form => {
+    const bottleAmount = parseInt(form.querySelector('.bottleAmount').value) || 0;
+    const bottleDetails = form.querySelector('.bottleDetails').value || '詳細なし';
+    total += bottleAmount;
+  });
+
+  const kousei = 1000;
+  const gensen = Math.ceil((total * 0.1) / 100) * 100;
+
+  let afterGensen = total - gensen;
+
+  let actualKousei = 0;
+
+  // 厚生費の引き方を変更
+  if (!isExperienceAndRentalChecked) {
+    if (afterGensen - kousei >= 5000) {
+      actualKousei = kousei;
+    } else {
+      actualKousei = Math.max(0, afterGensen - 5000);
+    }
+  }
+
+const kouseiStoreCovered = (actualKousei === 0) ? 1000 : 0;
+const kouseiCastCovered = 0;
+
+let welfareText = `厚生費：¥${actualKousei.toLocaleString()} (店舗負担：¥${kouseiStoreCovered.toLocaleString()})`;
+
+  // 送迎金額の取得
+  let sendoffAmount = parseInt(document.getElementById('sendoffAmount').value) || 0;
+
+// 合計 = 小計 - 源泉費 - 厚生費
+let totalAmount = afterGensen - actualKousei;
+
+let adjustedSendoff = 0;
+
+if (!isExperienceAndRentalChecked) {
+  adjustedSendoff = sendoffAmount;
+  const tempFinalAmount = totalAmount - adjustedSendoff;
+
+  if (tempFinalAmount < 5000) {
+    const maxDeductible = totalAmount - 5000;
+    adjustedSendoff = Math.max(0, maxDeductible);
+  }
+}
+
+// 最終合計
+let finalAmount = totalAmount - adjustedSendoff;
+
+// 店舗負担・本人負担の計算
+const castCoveredAmount = adjustedSendoff;
+const storeCoveredAmount = sendoffAmount - adjustedSendoff;
+
+let sendoffText = `送迎：¥${sendoffAmount.toLocaleString()} (本人負担：¥${castCoveredAmount.toLocaleString()}`;
+if (storeCoveredAmount > 0) {
+  sendoffText += ` 店舗負担：¥${storeCoveredAmount.toLocaleString()})`;
+} else {
+  sendoffText += `)`; // ←これを追加すると安心
+}
+
+  const labels = {
+    f: 'F',
+    f2: 'F2',
+    jounai: '場内',
+    honshiri: '本指',
+    douhan: '同伴',
+    eda: '枝',
+    help: 'HELP',
+    set40: 'SET40',
+    set20: 'SET20',
+    vip: 'VIP',
+    a: 'A',
+    b: 'B',
+    c: 'C',
+    d: 'D',
+    e: 'E'
+  };
+
+  let detailsHTML = '<div class="details" style="font-size: 14px; margin-top: 10px;">';
+ 
+  for (let key in values) {
+    const count = parseInt(document.getElementById(key).value) || 0;
+    if (count > 0) {
+      const label = labels[key] || key.toUpperCase();
+      const unitPrice = values[key];
+      const subtotal = count * unitPrice;
+      detailsHTML += `<div>${label} ×${count}（¥${unitPrice.toLocaleString()}）= ¥${subtotal.toLocaleString()}</div>`;
+    }
+  }
+
+// 追加された全ボトル明細
+bottleForms.forEach(form => {
+  const bottleAmount = parseInt(form.querySelector('.bottleAmount').value) || 0;
+  const bottleDetail = form.querySelector('.bottleDetails').value || '詳細なし';
+  if (bottleAmount > 0) {
+    detailsHTML += `<div>ボトル: ¥${bottleAmount.toLocaleString()}（${bottleDetail}）</div>`;
+  }
+});
+
+detailsHTML += '</div>';
+
+  const castName = document.getElementById('castName').value || '（名前なし）';
+
+const resultText = `
+  <span class="castName"><strong></strong> ${castName}</span>
+  <span class="experienceAndRental">${experienceText}</span>
+  <span class="subtotal"><strong>小計:</strong> ¥${total.toLocaleString()}</span>
+  <span class="tax" style="font-size: 16px; font-weight: bold;">
+  <strong>源泉費:</strong> ¥${gensen.toLocaleString()}
+  </span>
+  <span class="welfare" style="font-size: 16px; font-weight: bold;">
+  <span class="welfare" style="font-size: 16px; font-weight: bold;"><strong>${welfareText}</strong></span>
+  </span>
+  <span class="totalAmount" style="font-size: 25px; font-weight: bold;">
+  <strong>合計:</strong> ¥${totalAmount.toLocaleString()}<span class="print-only" style="float: right; font-size: 14px; margin-left: 10px;">←領収書記入</span>
+  </span>
+  </span>
+  <span class="sendoff"><strong>${sendoffText}</strong></span>
+  <span class="finalAmount print-highlight"><strong>最終合計:</strong> ¥${finalAmount.toLocaleString()}</span>
+  ${detailsHTML}
+`;
+
+  // 履歴に新しい項目を追加
+const existingItem = Array.from(historyList.children).find(item => {
+  const nameElem = item.querySelector('.castName');
+  if (!nameElem) return false;
+
+  // 🔽 正規表現で先頭の番号（例: "1. "）を削除
+  const nameText = nameElem.textContent.replace(/^\s*\d+\.\s*/, '').trim();
+  
+  return nameText === castName;
+});
+
+
+// detailsHTMLを囲んで非表示にする
+const detailsHiddenHTML = `<div class="details-html-container" style="display:none; font-size:14px; margin-top:5px;">${detailsHTML}</div>`;
+
+const fullHTML = `
+  <div>
+    <label><input type="checkbox" class="history-checkbox"> 削除対象</label>
+    ${resultText.replace(detailsHTML, '')}
+    ${detailsHiddenHTML}
+    <div style="margin-top: 5px;">
+      <button onclick="restoreFromHistory(this)" style="margin-right: 5px; font-size: 12px;">復元</button>
+      <button onclick="moveHistoryItem(this, 'up')" style="font-size: 12px;">↑</button>
+      <button onclick="moveHistoryItem(this, 'down')" style="font-size: 12px;">↓</button>
+    </div>
+  </div>
+`;
+
+if (existingItem) {
+  existingItem.innerHTML = fullHTML;
+} else {
+  const listItem = document.createElement('li');
+  listItem.innerHTML = fullHTML;
+  historyList.prepend(listItem);
+}
+
+  renumberHistory();
+
+  // サマリーを更新
+  updateSummary();
+
+
+  // 保存処理
+  const inputElements = document.querySelectorAll('input[type="number"], input[type="text"]');
+  const inputValues = {};
+  inputElements.forEach(input => {
+    inputValues[input.id] = input.value;
+  });
+  localStorage.setItem('inputs', JSON.stringify(inputValues));
+  localStorage.setItem('historyList', historyList.innerHTML);
+  localStorage.setItem('result', resultText);
+
+  // チェックボックスの状態も保存
+  const checkboxStates = {
+  experienceAndRental: document.getElementById('experienceAndRental').checked
+   };
+  localStorage.setItem('checkboxes', JSON.stringify(checkboxStates));
+
+    // 🔽 ここを追加：ボトルフォームの内容も保存する
+  saveBottleForms();
+
+  console.log('f:', inputValues['f']);
+  console.log(inputValues); // 入力値をコンソールに出力
+  console.log('送迎金額:', sendoffAmount); // 送迎金額が取得されているか確認
+
+
+  document.getElementById("result").innerHTML = resultText;
+  document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+
+
+}
+
+function moveHistoryItem(button, direction) {
+  const listItem = button.closest('li');
+  if (!listItem) return;
+
+  const parentList = listItem.parentNode;
+  let targetItem = null;
+
+  if (direction === 'up' && listItem.previousElementSibling) {
+    targetItem = listItem.previousElementSibling;
+    parentList.insertBefore(listItem, targetItem);
+  } else if (direction === 'down' && listItem.nextElementSibling) {
+    targetItem = listItem.nextElementSibling;
+    parentList.insertBefore(targetItem, listItem);
+  }
+
+  // ↓ 移動後の要素に強制スクロール（DOM反映後に実行）
+  requestAnimationFrame(() => {
+    listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  renumberHistory(); // ← 連番再振り
+  localStorage.setItem('historyList', parentList.innerHTML);
+  updateSummary();
+}
+
+
+function restoreFromHistory(button) {
+  const historyItem = button.closest('li') || button.closest('div');
+  if (!historyItem) return;
+
+  // キャスト名の復元
+  const castNameElem = historyItem.querySelector('.castName');
+  const castName = castNameElem ? castNameElem.textContent.replace(/^\s*\d+\.\s*/, '').trim() : '';
+  document.getElementById('castName').value = castName;
+
+  // ラベル対応表を定義（calculate関数と同じ内容）
+  const labels = {
+    f: 'F',
+    f2: 'F2',
+    jounai: '場内',
+    honshiri: '本指',
+    douhan: '同伴',
+    eda: '枝',
+    help: 'HELP',
+    set40: 'SET40',
+    set20: 'SET20',
+    vip: 'VIP',
+    a: 'A',
+    b: 'B',
+    c: 'C',
+    d: 'D',
+    e: 'E'
+  };
+
+  // 数値入力欄を復元
+  const inputIds = Object.keys(labels);
+  inputIds.forEach(id => {
+    const label = labels[id];
+    const regex = new RegExp(`${label} ×(\\d+)`);
+    const match = historyItem.textContent.match(regex);
+    if (match) {
+      document.getElementById(id).value = match[1];
+    } else {
+      document.getElementById(id).value = '';
+    }
+  });
+
+  // 送迎金額を復元
+  const sendoffMatch = historyItem.textContent.match(/送迎：¥([\d,]+)/);
+  if (sendoffMatch) {
+    document.getElementById('sendoffAmount').value = parseInt(sendoffMatch[1].replace(/,/g, ''), 10);
+  } else {
+    document.getElementById('sendoffAmount').value = 0;
+  }
+
+// 体験及び貸出チェックボックスを復元（textContentかinnerHTMLにキーワードがあるか確認）
+const experienceElem = historyItem.querySelector('.experienceAndRental');
+const experienceText = experienceElem ? experienceElem.textContent : '';
+const experienceChecked = experienceText.includes('体験及び貸出: 有り');
+document.getElementById('experienceAndRental').checked = experienceChecked;
+
+  // ボトル明細を復元
+  const bottleRegex = /ボトル: ¥([\d,]+)（([^）]+)）/g;
+  const bottles = [];
+  let match;
+  while ((match = bottleRegex.exec(historyItem.innerHTML)) !== null) {
+    bottles.push({
+      bottleAmount: parseInt(match[1].replace(/,/g, '')),
+      bottleDetails: match[2]
+    });
+  }
+
+  const container = document.getElementById('bottleFormsContainer');
+  container.innerHTML = ''; // 一度クリア
+bottles.forEach(data => {
+  const bottleForm = document.createElement('div');
+  bottleForm.classList.add('bottle-form');
+  bottleForm.innerHTML = `
+    <label>
+      <input type="text" class="bottleDetails" placeholder="ボトル詳細" value="${data.bottleDetails}">
+    </label>
+    <label>
+      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" value="${data.bottleAmount === 0 ? '' : data.bottleAmount}">
+    </label>
+  `;
+  container.appendChild(bottleForm);
+});
+
+  // 保存処理（現在の復元状態を保存しておく）
+  saveBottleForms();
+
+    // ページ上部にスクロール
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+}
+
+function deleteSelectedHistory() {
+  const historyList = document.getElementById('historyList');
+  const items = historyList.querySelectorAll('li');
+
+  const checkedItems = Array.from(items).filter(item => {
+    const checkbox = item.querySelector('.history-checkbox');
+    return checkbox && checkbox.checked;
+  });
+
+  if (checkedItems.length === 0) {
+    alert('削除する履歴を選択してください');
+    return;
+  }
+
+  const deletedNames = [];
+
+  checkedItems.forEach(item => {
+    const nameElem = item.querySelector('.castName');
+    const name = nameElem ? nameElem.textContent.replace('', '').trim() : '不明';
+
+    const confirmed = confirm(`「${name}」の履歴を削除しますか？`);
+    if (confirmed) {
+      deletedNames.push(name);
+      item.remove();
+    }
+  });
+
+  // 削除後の保存
+  localStorage.setItem('historyList', historyList.innerHTML);
+  updateSummary();
+
+  // 削除結果の表示
+  if (deletedNames.length > 0) {
+    const msg = deletedNames.map(name => `${name} の履歴は削除されました。`).join('\n');
+    alert(msg);
+  }
+}
+
+function updateSummary() {
+  const historyItems = document.querySelectorAll('#historyList li');
+  let totalPeople = 0;
+  let totalAmount = 0;
+  let totalGensen = 0;
+
+  historyItems.forEach(item => {
+    const text = item.innerText;
+
+    const amountMatch = text.match(/合計:\s*¥([\d,]+)/);
+    const gensenMatch = text.match(/源泉費:\s*¥([\d,]+)/);
+
+    if (amountMatch) {
+      const amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+      totalAmount += amount;
+    }
+
+    if (gensenMatch) {
+      const gensen = parseInt(gensenMatch[1].replace(/,/g, ''), 10);
+      totalGensen += gensen;
+    }
+
+    totalPeople += 1;
+  });
+
+  // 各 span に値を反映
+  document.getElementById('summaryTotalPeople').innerText = `${totalPeople}人`;
+  document.getElementById('summaryTotalAmount').innerText = `¥${totalAmount.toLocaleString()}`;
+  document.getElementById('summaryTotalTax').innerText = `¥${totalGensen.toLocaleString()}`;
+
+  document.getElementById('femaleSalary').value =
+  totalAmount; // 数値でセット
+
+  document.getElementById('femaleTax').value = totalGensen;
+
+}
+
+function toggleDetails(button) {
+  const container = button.nextElementSibling.nextElementSibling; 
+  // ボタンのすぐ次のボタンの次のdiv（details-html-container）を取得
+  if (container.style.display === 'none' || container.style.display === '') {
+    container.style.display = 'block';
+    button.textContent = '詳細を隠す';
+  } else {
+    container.style.display = 'none';
+    button.textContent = '詳細を表示';
+  }
+}
+
+function calculateBack() {
+  const values = {
+    f: 1500,
+    f2: 2000,
+    jounai: 1000,
+    honshiri: 0,
+    douhan: 1500,
+    eda: 500,
+    help: -1500,
+    set40: 5500,
+    set20: 3500,
+    vip: 2000,
+    a: 500,
+    b: 1000,
+    c: 1500,
+    d: 2000,
+    e: 2500
+  };
+
+  const inputs = {
+    f: document.getElementById("f"),
+    f2: document.getElementById("f2"),
+    jounai: document.getElementById("jounai"),
+    honshiri: document.getElementById("honshiri"),
+    douhan: document.getElementById("douhan"),
+    eda: document.getElementById("eda"),
+    help: document.getElementById("help"),
+    set40: document.getElementById("set40"),
+    set20: document.getElementById("set20"),
+    vip: document.getElementById("vip"),
+    a: document.getElementById("a"),
+    b: document.getElementById("b"),
+    c: document.getElementById("c"),
+    d: document.getElementById("d"),
+    e: document.getElementById("e")
+  };
+
+  let total = 0;
+  let detailLines = [];
+
+  Object.keys(values).forEach(key => {
+    const count = parseInt(inputs[key]?.value || 0);
+    if (count > 0) {
+      const unitPrice = values[key];
+      const itemTotal = count * unitPrice;
+      total += itemTotal;
+
+      const sign = unitPrice < 0 ? "-" : "";
+      detailLines.push(`${key.toUpperCase()} ×${count}（¥${Math.abs(unitPrice).toLocaleString()}）= ${sign}¥${Math.abs(itemTotal).toLocaleString()}`);
+    }
+  });
+
+  document.getElementById("total").textContent = "¥" + total.toLocaleString();
+  document.getElementById("detail").value = detailLines.join("\n");
+}
+
+function printResult() {
+  const printContents = document.getElementById('result').innerHTML; // 計算結果を取得
+  const originalContents = document.body.innerHTML; // 元のページの内容を保存
+
+  document.body.innerHTML = printContents; // 印刷用に結果だけ表示
+
+  window.print(); // 印刷ダイアログを開く
+
+  document.body.innerHTML = originalContents; // 元のページ内容に戻す
+}
+
+function preparePrint() {
+      // 現在のスクロール位置を保存
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+    const rows = document.querySelectorAll('.denpyou'); // 各伝票の親divなどに合わせて適切に変更
+
+    rows.forEach(row => {
+      const inputs = row.querySelectorAll('input, select, textarea');
+      let hasValue = false;
+
+      inputs.forEach(input => {
+        // チェックボックスまたはその他の入力
+        if ((input.type === 'checkbox' && input.checked) || 
+            (input.type !== 'checkbox' && input.value.trim() !== '')) {
+          hasValue = true;
+        }
+         // 印刷後、元のスクロール位置に戻す
+         setTimeout(() => {
+         window.scrollTo(scrollX, scrollY);
+         }, 100);
+      });
+    
+
+      // 例えば、hasValueがtrueの場合に何か処理するならここに記述
+      if (hasValue) {
+        // ここに行いたい処理を書く
+        console.log('値がある伝票:', row);
+      }
+    });
+
+    window.print();
+}
+
+
+    // 印刷用スタイル（.hide-for-printを非表示に）
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        .hide-for-print {
+          display: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    setTimeout(() => {
+      document.querySelectorAll('.hide-for-print').forEach(row => {
+        row.classList.remove('hide-for-print');
+      });
+      document.head.removeChild(style);
+    }, 1000);
+
+function clearInputs() {
+  const activeTab = document.querySelector('.tab.active');
+  if (!activeTab) return;
+
+  const targetId = activeTab.getAttribute('data-target');
+  const targetContent = document.getElementById(targetId);
+  if (!targetContent) return;
+
+  // テキスト・数値入力のクリア（アクティブなタブ内だけ）
+  targetContent.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+    input.value = '';
+  });
+
+  // チェックボックス（idが固定なら注意）→ 対象タブ内に限定
+  const checkbox = targetContent.querySelector('#experienceAndRental');
+  if (checkbox) {
+    checkbox.checked = false;
+  }
+
+  // ボトルフォーム削除（containerのIDが固定なら注意）
+  const bottleFormsContainer = targetContent.querySelector('#bottleFormsContainer');
+  if (bottleFormsContainer) {
+    bottleFormsContainer.innerHTML = '';
+  }
+
+  // 対象のローカルストレージデータ削除（タブ別キー前提）
+  if (targetId === 'app1') {
+    localStorage.removeItem('inputs');
+    localStorage.removeItem('result');
+  } else if (targetId === 'app2') {
+    localStorage.removeItem('inputs2');
+    localStorage.removeItem('result2');
+    localStorage.removeItem('bottleForms');
+  } else if (targetId === 'app3') {
+    localStorage.removeItem('app3_inputs');
+    localStorage.removeItem('app3_result');
+  }
+
+  // 結果欄クリア（アクティブタブ内のみ）
+  const result = targetContent.querySelector('#result');
+  if (result) {
+    result.innerHTML = '';
+  }
+
+  // スクロールは全体でOK
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearAll() {
+  const confirmClear = confirm("本当にすべてを完全にクリアしてもよろしいですか？この操作は元に戻せません。");
+  if (!confirmClear) return; // キャンセルされた場合、処理を中断
+
+  clearInputs(); // 入力欄やボトルフォームをクリア
+
+  // 履歴と結果をクリア
+  const historyList = document.getElementById('historyList');
+  if (historyList) historyList.innerHTML = '';
+
+  const result = document.getElementById('result');
+  if (result) result.innerHTML = '';
+
+  // ローカルストレージは必要なキーだけ削除（全部消すなら localStorage.clear()）
+  localStorage.removeItem('inputs');
+  localStorage.removeItem('historyList');
+  localStorage.removeItem('result');
+  localStorage.removeItem('bottleForms');
+
+  // サマリー更新
+  updateSummary();
+
+  // スクロール位置をトップに戻す
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', function () {});
+
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadBottleForms();
+});
+
+function restoreCheckboxes() {
+  const checkboxStates = JSON.parse(localStorage.getItem('checkboxes')) || {};
+  document.getElementById('experienceAndRental').checked = checkboxStates.experienceAndRental || false;
+}
+
+window.onload = function () {
+  loadBottleForms();
+  restoreCheckboxes(); // ← 追加
+  // 他にも loadInputs() などがあるならそこにも
+};
+
+window.addEventListener('load', () => {
+  // 入力値の復元
+  const inputs = JSON.parse(localStorage.getItem('inputs')) || {};
+  Object.entries(inputs).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+
+  // チェックボックスの復元
+  const checkboxes = JSON.parse(localStorage.getItem('checkboxes')) || {};
+  Object.entries(checkboxes).forEach(([id, checked]) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = checked;
+  });
+
+  // 履歴リストの復元
+  const historyListHTML = localStorage.getItem('historyList');
+  if (historyListHTML) {
+    document.getElementById('historyList').innerHTML = historyListHTML;
+  }
+
+  // ボトルフォームの復元
+  loadBottleForms();
+
+  // 計算結果の復元
+  const resultText = localStorage.getItem('result');
+  if (resultText) {
+    document.getElementById('result').innerHTML = resultText;
+  }
+
+  // サマリーも更新しておく
+  updateSummary();
+});
+
+
+document.getElementById('experienceAndRental').addEventListener('change', function(event) {
+  if (this.checked) {
+    const confirmed = confirm('「体験及び貸出」にチェックが入りました。');
+    if (!confirmed) {
+      this.checked = false; // チェックをキャンセル
+    }
+  }
+});
+
+window.addEventListener('DOMContentLoaded', loadBottleForms);
+
+function createBottleForm(bottleDetails = '', bottleAmount = 0) {
+  const bottleForm = document.createElement('div');
+  bottleForm.classList.add('bottle-form');
+  bottleForm.innerHTML = `
+    <label>
+      <input type="text" class="bottleDetails" placeholder="ボトル詳細" value="${bottleDetails}">
+    </label>
+    <label>
+      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" value="${bottleAmount}">
+    </label>
+  `;
+  return bottleForm;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//<app3 script----------------------------------------------------------------------------------------------------------------->
+    function formatNumber(num) {
+    return num.toLocaleString('ja-JP');
+    }
+
+    function get(id) {
+      return parseInt(document.getElementById(id).value.replace(/,/g, '')) || 0;
+    }
+
+  function updateCalculations() {
+    const cardTotalText = document.getElementById('cardTotal')?.textContent || '0';
+    const cardTotal = parseInt(cardTotalText.replace(/,/g, '')) || 0;
+
+    const cardSalesInput = document.getElementById("cardSales");
+    if (cardSalesInput) {
+    cardSalesInput.value = cardTotal;
+     }
+    const summaryTaxText = document.getElementById('summaryTotalTax')?.innerText || '¥0';
+    const summaryTaxValue = parseInt(summaryTaxText.replace(/[¥,]/g, ''), 10) || 0;
+    document.getElementById('femaleTax').value = summaryTaxValue;
+  // totalBackAmount を catchBack に反映
+  const totalBackAmountText = document.getElementById("totalBackAmount").textContent.replace(/,/g, "");
+  const totalBackAmount = parseInt(totalBackAmountText) || 0;
+  document.getElementById("catchBack").value = totalBackAmount;
+
+  const total = get('totalSales');
+  const card = get('cardSales');
+  const cash = total - card;
+  document.getElementById('cashSales').value = formatNumber(cash);
+
+  const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
+  document.getElementById('totalLaborCosts').value = formatNumber(labor);
+
+  const tax = get('femaleTax') + get('maleTax');
+  document.getElementById('totalTax').value = formatNumber(tax);
+  const receiptTotal = get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
+  document.getElementById('receipt6').value = formatNumber(receiptTotal);
+
+  const expenses = get('alcohol') + receiptTotal;
+  document.getElementById('totalExpenses').value = formatNumber(expenses);
+
+  const gross = total - labor - tax - expenses;
+  document.getElementById('grossProfit').value = formatNumber(gross);
+
+  const remaining = gross - card;
+  document.getElementById('remainingCash').value = formatNumber(remaining);
+
+  const startCash = get('startCash');
+  const finalCash = get('finalCash');
+  const difference = (finalCash - remaining - tax) - startCash;
+  document.getElementById('cashDifference').value = formatNumber(difference);
+
+  updateNegativeColor('grossProfit');
+  updateNegativeColor('remainingCash');
+  updateNegativeColor('cashDifference');
+
+  updateExtraGroupFields();
+
+  saveToLocal();
+}
+
+function updateExtraGroupFields() {
+  // それぞれの値を取得（必要に応じて変数は他から渡してください）
+  let grossProfit = get('grossProfit');         // 粗利益
+  let cardSales = get('cardSales');             // カード売上
+  let remainingCash = get('remainingCash');     // 現金残
+  let totalTax = get('totalTax');               // 源泉費合計
+
+  // 合計計算：現金残 + 源泉費
+  let totalGrossPlusTax = remainingCash + totalTax;
+
+  // 各フィールドに値を表示（存在確認しながら安全に代入）
+  let el;
+
+  el = document.getElementById('grossProfit_extra');
+  if (el) el.value = formatNumber(grossProfit);
+
+  el = document.getElementById('cardSales_extra');
+  if (el) el.value = formatNumber(cardSales);
+
+  el = document.getElementById('remainingCash_extra');
+  if (el) el.value = formatNumber(remainingCash);
+
+  el = document.getElementById('totalWithholdingTax');
+  if (el) el.value = formatNumber(totalTax);
+
+  el = document.getElementById('totalGrossPlusTax');
+  if (el) el.value = formatNumber(totalGrossPlusTax);
+}
+
+
+    function updateNegativeColor(id) {
+      const element = document.getElementById(id);
+      const value = parseInt(element.value.replace(/,/g, '')) || 0;
+      if (value < 0) {
+        element.classList.add('negative');
+      } else {
+        element.classList.remove('negative');
+      }
+    }
+
+function saveToLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    // disabled 状態でも保存
+    localStorage.setItem(input.id, input.value);
+  });
+}
+
+function loadFromLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    const saved = localStorage.getItem(input.id);
+    if (saved !== null) input.value = saved;
+  });
+}
+
+    function resetForm() {
+      if (!confirm("すべての入力をリセットしてもよろしいですか？")) return;
+      localStorage.clear();
+      document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+      updateCalculations();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFromLocal();
+      const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
+      inputs.forEach((input, index) => {
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const next = inputs[index + 1];
+            if (next) next.focus();
+          }
+        });
+      });
+    });
+
+    function resetAllData() {
+      if (!confirm("すべての入力を完全リセットしてもよろしいですか？")) return;
+      localStorage.clear();
+
+  // 2. すべてのフォーム要素を初期化（input, select, textarea）
+  const inputs = document.querySelectorAll('input, select, textarea');
+  inputs.forEach(input => {
+    if (input.type === 'checkbox' || input.type === 'radio') {
+      input.checked = false;
+    } else if (input.type === 'number' || input.type === 'text' || input.tagName === 'TEXTAREA') {
+      input.value = '';
+    }
+  });
+
+  // 3. 計算結果や表示エリアも初期化（必要に応じて）
+  const results = document.querySelectorAll('.result, .output, .total'); // よくあるクラス名
+  results.forEach(el => el.textContent = '');
+
+  // 4. 画面再読み込みで再初期化
+     location.reload();
+     updateCalculations();
+
+  alert('すべてのデータがリセットされました');
+
+  updateCalculations(); // 読み込み後に再計算
+
+}
+
+//業務内容を保存
+window.addEventListener("DOMContentLoaded", () => {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+  if (!localStorage.getItem("workStartDate")) {
+    localStorage.setItem("workStartDate", todayStr);
+  }
+});
+
+function saveApp3Data() {
+  const fields = [
+    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
+    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
+  ];
+  const data = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  localStorage.setItem('app3_inputs', JSON.stringify(data));
+}
+
+function restoreApp3Data() {
+  const saved = localStorage.getItem('app3_inputs');
+  if (!saved) return;
+  const data = JSON.parse(saved);
+  Object.entries(data).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+  updateCalculations(); // 計算更新
+}
+
+function attachApp3Listeners() {
+  const fields = [
+    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
+    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
+  ];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', saveApp3Data);
+    }
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  restoreApp3Data();
+  attachApp3Listeners();
+});
+
+function exportAsSelfContainedHTML() {
+  // 🔽 各アプリの保存関数を事前に呼び出して、ローカルストレージを最新化
+  if (typeof saveForm === 'function') saveForm();          // app1
+  if (typeof saveBottleForms === 'function') saveBottleForms();  // app2
+  if (typeof saveApp3Data === 'function') saveApp3Data();  // app3（手動実装）
+
+  // 🔽 最新のローカルストレージを取得してHTMLに埋め込む
+  const doc = document.documentElement.cloneNode(true);
+  const localStorageData = JSON.stringify(localStorage);
+  const savedDate = localStorage.getItem("workStartDate") || new Date().toISOString().slice(0, 10);
+  const fileName = `IBASD_${savedDate}.html`;
+
+  // 🔽 ローカルストレージ再現用スクリプトの埋め込み
+  const storageScript = document.createElement("script");
+  storageScript.textContent = `
+    (function() {
+      const savedData = ${localStorageData};
+      for (let key in savedData) {
+        localStorage.setItem(key, savedData[key]);
+      }
+    })();
+  `;
+
+  const head = doc.querySelector("head");
+  if (head) head.appendChild(storageScript);
+
+  const html = "<!DOCTYPE html>\n" + doc.outerHTML;
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+
+  // 🔽 ダウンロード開始
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // 🔽 保存後の処理（データ削除オプション）
+  if (confirm("保存が完了しました。\nローカルデータを削除しますか？")) {
+    localStorage.clear();
+    alert("ローカルストレージのデータを削除しました。");
+  } else {
+    alert("ローカルストレージのデータはそのまま残っています。");
+  }
+}
+
+</script>
+
+</body>
+</html>
