@@ -544,15 +544,13 @@
 }
 
 @media print {
-  /* 全体の背景色と文字色を強制的にリセット */
+  /* ─── 既存の全体リセット ─── */
   * {
     background: transparent !important;
     color: #000 !important;
-    -webkit-print-color-adjust: exact; /* Safari用 */
+    -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-
-  /* 特に背景色がついている要素をリセット */
   .group-basic,
   .group-shimei,
   .group-set,
@@ -564,10 +562,25 @@
     background: none !important;
   }
 
-  /* 文字色の強調を一部だけ残す場合（例：最終合計） */
-  .finalAmount.print-highlight {
-    color: rgb(43, 0, 255) !important; /* 青で強調 */
+  /* ─── 行間を詰める ─── */
+  /* result 内のテキスト全体を対象に */
+  #result,
+  #result * {
+    line-height: 1.2 !important; /* 1.1 ～ 1.3 の間でお好み調整してください */
+  }
+
+  /* ─── 合計金額だけオレンジに ─── */
+  /* subtotal は中間小計、totalAmount が合計、finalAmount が最終合計と仮定 */
+  .totalAmount {
+    color: orange !important;
+    /* もし太字にしたければ下も有効化 */
     font-weight: bold !important;
+  }
+
+  /* ─── 最終合計を別強調したい場合 ─── */
+  .finalAmount.print-highlight {
+    /* blue 強調 → こちらは不要ならそのまま */
+    color: rgb(43, 0, 255) !important;
   }
 }
 
