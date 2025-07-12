@@ -465,7 +465,7 @@
 @media print {
   @page {
     size: 90mm 205mm;
-    margin: 2mm; /* 最小限の余白 */
+    margin: 0; /* プリンターが許せば余白ゼロ */
   }
 
   body {
@@ -479,7 +479,6 @@
     background: #fff !important;
     color: #000 !important;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     -webkit-print-color-adjust: exact;
@@ -489,8 +488,6 @@
   * {
     background: transparent !important;
     color: #000 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
 
   .group-basic,
@@ -515,13 +512,13 @@
 
   #result {
     position: absolute;
-    top: 2mm;
-    left: 2mm;
-    width: calc(90mm - 4mm);
-    height: calc(205mm - 4mm);
+    top: 0;
+    left: 0;
+    width: 90mm;
+    height: 205mm;
     box-sizing: border-box;
     transform-origin: center center;
-    transform: rotate(180deg) scale(0.97);
+    transform: rotate(180deg) scale(1); /* 拡大！最大サイズ */
     background: transparent !important;
     color: #000 !important;
     white-space: normal !important;
@@ -558,35 +555,31 @@
     display: inline !important;
   }
 
-  /* ✅ 氏名エリアの文字サイズ拡大 */
   .group-shimei {
     font-size: 10pt !important;
   }
 
-  /* ✅ 最終合計を強調（青・大きめ） */
   .finalAmount.print-highlight {
     font-weight: bold !important;
     color: rgb(90, 57, 251) !important;
     font-size: 11pt !important;
   }
 
-  /* ✅ 合計金額をオレンジ・通常サイズ */
   .totalAmount {
     color: orange !important;
     font-weight: bold !important;
     font-size: 8pt !important;
   }
 
-  /* ✅ 小計もサイズ合わせ */
   .subtotal {
     font-size: 8pt !important;
   }
 
-  /* ✅ 改ページ用クラス */
   .page-break {
     page-break-before: always;
   }
 }
+
 
 
 
