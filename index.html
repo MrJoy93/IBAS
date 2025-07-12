@@ -544,43 +544,33 @@
 }
 
 @media print {
-  /* ─── 既存の全体リセット ─── */
-  * {
-    background: transparent !important;
-    color: #000 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .group-basic,
-  .group-shimei,
-  .group-set,
-  .group-option,
-  .result,
-  .subtotal,
-  .totalAmount,
-  .finalAmount {
-    background: none !important;
+  @page {
+    size: 90mm 205mm;  /* 長形4号の封筒サイズ */
+    margin: 5mm;       /* 印刷余白、必要に応じて調整 */
   }
 
-  /* ─── 行間を詰める ─── */
-  /* result 内のテキスト全体を対象に */
-  #result,
-  #result * {
-    line-height: 1.2 !important; /* 1.1 ～ 1.3 の間でお好み調整してください */
+  /* 印刷時にコンテンツを長4封筒サイズに収める */
+  #result {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 90mm;
+    height: 205mm;
+    box-sizing: border-box;
+    /* 全体を縮小して封筒内に収める */
+    transform-origin: top left;
+    transform: scale(0.95); /* 実際のサイズに合わせて微調整 */
   }
 
-  /* ─── 合計金額だけオレンジに ─── */
-  /* subtotal は中間小計、totalAmount が合計、finalAmount が最終合計と仮定 */
-  .totalAmount {
-    color: orange !important;
-    /* もし太字にしたければ下も有効化 */
-    font-weight: bold !important;
-  }
+  /* 余白がある場合は width/height をそれに合わせて調整してください */
 
-  /* ─── 最終合計を別強調したい場合 ─── */
-  .finalAmount.print-highlight {
-    /* blue 強調 → こちらは不要ならそのまま */
-    color: rgb(43, 0, 255) !important;
+  /* もしくはflex配置のbodyを一旦解除 */
+  body {
+    all: unset; /* 必要ならリセット */
+    margin: 0;
+    padding: 0;
+    width: 90mm;
+    height: 205mm;
   }
 }
 
