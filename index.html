@@ -545,11 +545,22 @@
 
 @media print {
   @page {
-    size: 90mm 205mm;  /* 長形4号の封筒サイズ */
-    margin: 5mm;       /* 印刷余白、必要に応じて調整 */
+    size: 90mm 205mm;
+    margin: 5mm;
   }
 
-  /* 印刷時にコンテンツを長4封筒サイズに収める */
+  body {
+    all: unset;
+    margin: 0;
+    padding: 0;
+    width: 90mm;
+    height: 205mm;
+    background: #fff !important;  /* 背景は白 */
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   #result {
     position: absolute;
     top: 0;
@@ -557,20 +568,30 @@
     width: 90mm;
     height: 205mm;
     box-sizing: border-box;
-    /* 全体を縮小して封筒内に収める */
     transform-origin: top left;
-    transform: scale(0.95); /* 実際のサイズに合わせて微調整 */
+    transform: scale(0.95);
+    background: transparent !important; /* 背景透明に */
+    color: #000 !important;
   }
 
-  /* 余白がある場合は width/height をそれに合わせて調整してください */
+  /* 全要素の背景色と文字色を強制リセット */
+  * {
+    background: transparent !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
-  /* もしくはflex配置のbodyを一旦解除 */
-  body {
-    all: unset; /* 必要ならリセット */
-    margin: 0;
-    padding: 0;
-    width: 90mm;
-    height: 205mm;
+  /* 背景色がついている要素を明示的にリセット */
+  .group-basic,
+  .group-shimei,
+  .group-set,
+  .group-option,
+  .result,
+  .subtotal,
+  .totalAmount,
+  .finalAmount {
+    background: transparent !important;
   }
 }
 
