@@ -555,23 +555,10 @@
     padding: 0;
     width: 90mm;
     height: 205mm;
-    background: #fff !important;  /* 背景は白 */
+    background: #fff !important;
     color: #000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-
-  #result {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 90mm;
-    height: 205mm;
-    box-sizing: border-box;
-    transform-origin: top left;
-    transform: scale(0.95);
-    background: transparent !important; /* 背景透明に */
-    color: #000 !important;
   }
 
   /* 全要素の背景色と文字色を強制リセット */
@@ -582,7 +569,7 @@
     print-color-adjust: exact;
   }
 
-  /* 背景色がついている要素を明示的にリセット */
+  /* 背景色のついてる要素を透明化 */
   .group-basic,
   .group-shimei,
   .group-set,
@@ -592,6 +579,21 @@
   .totalAmount,
   .finalAmount {
     background: transparent !important;
+  }
+
+  /* 印刷時にコンテンツを長4封筒サイズに収め、180度回転 */
+  #result {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 90mm;
+    height: 205mm;
+    box-sizing: border-box;
+    /* 180度回転 */
+    transform-origin: center center;
+    transform: rotate(180deg) scale(0.95); /* 回転＋縮小 */
+    background: transparent !important;
+    color: #000 !important;
   }
 }
 
