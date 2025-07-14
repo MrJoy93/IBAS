@@ -67,6 +67,11 @@
     }
   }
 
+  html, body {
+  touch-action: manipulation; /* タップ系のみ許可（ピンチ無効） */
+  overscroll-behavior: none;  /* スクロール時の挙動防止 */
+}
+
 </style>
 </head>
 <body>
@@ -992,7 +997,9 @@
       window.scrollTo(0, scrollPosition);
     }
 
-
+document.addEventListener('gesturestart', function (e) {
+  e.preventDefault();
+});
 
 
 
