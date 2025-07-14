@@ -846,7 +846,7 @@
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 2.0.2β
+  Ver. 2.0.3
 </div>
 
 </div>
@@ -2197,7 +2197,7 @@ document.getElementById('experienceAndRental').addEventListener('change', functi
 
 window.addEventListener('DOMContentLoaded', loadBottleForms);
 
-function createBottleForm(bottleDetails = '', bottleAmount = 0) {
+function createBottleForm(bottleDetails = '', bottleAmount = null) {
   const bottleForm = document.createElement('div');
   bottleForm.classList.add('bottle-form');
   bottleForm.innerHTML = `
@@ -2205,12 +2205,11 @@ function createBottleForm(bottleDetails = '', bottleAmount = 0) {
       <input type="text" class="bottleDetails" placeholder="ボトル詳細" value="${bottleDetails}">
     </label>
     <label>
-      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" value="${bottleAmount}">
+      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" ${bottleAmount !== null && bottleAmount !== 0 ? `value="${bottleAmount}"` : ''}>
     </label>
   `;
   return bottleForm;
 }
-
 
 
 
