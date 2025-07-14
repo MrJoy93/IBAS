@@ -211,8 +211,8 @@
   <tbody id="formRows">
     <tr class="row">
       <td class="rowNumber">1</td>
-      <td><input class="table-number" type="number" placeholder="卓番" onchange="updateTotals()" /></td>
-      <td><input class="honshi" type="number" placeholder="本指" onchange="updateTotals()" /></td>
+      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="卓番" onchange="updateTotals()" /></td>
+      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="本指" onchange="updateTotals()" /></td>
       <td>
         <select class="c" onchange="updateRowColor(this); updateTotals()">
           <option value="">-</option>
@@ -233,11 +233,11 @@
           <option value="Z">Z</option>
         </select>
       </td>
-      <td><input class="amount" type="number" placeholder="金額" onchange="updateTotals()" /></td>
-      <td><input class="num" type="number" placeholder="人数" onchange="updateTotals()" /></td>
+      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="金額" onchange="updateTotals()" /></td>
+      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="人数" onchange="updateTotals()" /></td>
       <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="number" placeholder="カード" onchange="updateTotals()" /></td>
-      <td><input class="total" type="number" placeholder="総合計" onchange="updateTotals()" /></td>
+      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="カード" onchange="updateTotals()" /></td>
+      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="総合計" onchange="updateTotals()" /></td>
     </tr>
   </tbody>
 </table>
@@ -611,39 +611,39 @@
   <div class="group" style="background:#2e2e2e">
     <label>キャスト名: <input type="text" id="castName" placeholder="名前を入力"></label>
     <label>体験及び貸出:<input type="checkbox" id="experienceAndRental"></label>
-    <!--<label>保障: <input type="number" id="guaranteeAmount" placeholder="保障金額"></label>-->
-    <label>送迎: <input type="number" id="sendoffAmount" placeholder="送迎金額"></label>
+    <!--<label>保障: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="guaranteeAmount" placeholder="保障金額"></label>-->
+    <label>送迎: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="sendoffAmount" placeholder="送迎金額"></label>
   </div>
 
     <div class="group group-basic">
       <h3>フリーバック</h3>
-      <label>F1（¥1500）: <input type="number" id="f" placeholder="F1"></label>
-      <label>F2（¥2000）: <input type="number" id="f2" placeholder="F2"></label>
-      <label>場内（¥1000）: <input type="number" id="jounai" placeholder="場内"></label>
+      <label>F1（¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="f" placeholder="F1"></label>
+      <label>F2（¥2000）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="f2" placeholder="F2"></label>
+      <label>場内（¥1000）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="jounai" placeholder="場内"></label>
     </div>
 
     <div class="group group-shimei">
       <h3>指名・同伴・枝・HELP</h3>
-      <label>本指（¥0）: <input type="number" id="honshiri" placeholder="本指"></label>
-      <label>同伴（¥1500）: <input type="number" id="douhan" placeholder="同伴"></label>
-      <label>枝（¥500）: <input type="number" id="eda" placeholder="枝"></label>
-      <label>HELP（-¥1500）: <input type="number" id="help" placeholder="HELP"></label>
+      <label>本指（¥0）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="honshiri" placeholder="本指"></label>
+      <label>同伴（¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="douhan" placeholder="同伴"></label>
+      <label>枝（¥500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="eda" placeholder="枝"></label>
+      <label>HELP（-¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="help" placeholder="HELP"></label>
     </div>
 
     <div class="group group-set">
       <h3>セット・VIP</h3>
-      <label>SET40（¥5500）: <input type="number" id="set40" placeholder="SET40"></label>
-      <label>SET20（¥3500）: <input type="number" id="set20" placeholder="SET20"></label>
-      <label>VIP（¥2000）: <input type="number" id="vip" placeholder="VIP"></label>
+      <label>SET40（¥5500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="set40" placeholder="SET40"></label>
+      <label>SET20（¥3500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="set20" placeholder="SET20"></label>
+      <label>VIP（¥2000）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="vip" placeholder="VIP"></label>
     </div>
 
     <div class="group group-option">
       <h3>ドリンク・その他</h3>
-      <label>A（¥500）: <input type="number" id="a" placeholder="A"></label>
-      <label>B（¥1000）: <input type="number" id="b" placeholder="B"></label>
-      <label>C（¥1500）: <input type="number" id="c" placeholder="C"></label>
-      <label>D（¥2000）: <input type="number" id="d" placeholder="D"></label>
-      <label>E（¥2500）: <input type="number" id="e" placeholder="E"></label>
+      <label>A（¥500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="a" placeholder="A"></label>
+      <label>B（¥1000）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="b" placeholder="B"></label>
+      <label>C（¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="c" placeholder="C"></label>
+      <label>D（¥2000）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="d" placeholder="D"></label>
+      <label>E（¥2500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" id="e" placeholder="E"></label>
 
       <div id="bottleFormsContainer"></div>
       <button type="button" onclick="addBottleForm()">ボトル追加</button>
@@ -772,7 +772,7 @@
   </style>
 
   <div class="group no-bg">
-    <label><span>開始時金庫金:</span> <input type="number" id="startCash" oninput="updateCalculations()"></label>
+    <label><span>開始時金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="startCash" oninput="updateCalculations()"></label>
   </div>
 
  <table class="outer-table" style="width: 100%; border: 2px solid #333; border-collapse: collapse; margin-bottom: 20px;">
@@ -787,27 +787,27 @@
 
       <div class="group" id="laborGroup">
         <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
-        <label><span>男子給与:</span> <input type="number" id="maleSalary" oninput="updateCalculations()"></label>
+        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="maleSalary" oninput="updateCalculations()"></label>
         <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
-        <label><span>スカウトバック:</span> <input type="number" id="scoutBack" oninput="updateCalculations()"></label>
+        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="scoutBack" oninput="updateCalculations()"></label>
         <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
-        <label><span>ドライバー代:</span> <input type="number" id="driverFee" oninput="updateCalculations()"></label>
+        <label><span>ドライバー代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="driverFee" oninput="updateCalculations()"></label>
         <label><span>人件費合計:</span> <input type="text" id="totalLaborCosts" disabled></label>
       </div>
 
       <div class="group" id="taxGroup">
         <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
-        <label><span>男子源泉費:</span> <input type="number" id="maleTax" oninput="updateCalculations()"></label>
+        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="maleTax" oninput="updateCalculations()"></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
       </div>
 
       <div class="group" id="expensesGroup">
-        <label><span>酒代:</span> <input type="number" id="alcohol" oninput="updateCalculations()"></label>
-        <label><span>領収書①:</span> <input type="number" id="receipt1" oninput="updateCalculations()"></label>
-        <label><span>領収書②:</span> <input type="number" id="receipt2" oninput="updateCalculations()"></label>
-        <label><span>領収書③:</span> <input type="number" id="receipt3" oninput="updateCalculations()"></label>
-        <label><span>領収書④:</span> <input type="number" id="receipt4" oninput="updateCalculations()"></label>
-        <label><span>領収書⑤:</span> <input type="number" id="receipt5" oninput="updateCalculations()"></label>
+        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="alcohol" oninput="updateCalculations()"></label>
+        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="receipt1" oninput="updateCalculations()"></label>
+        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="receipt2" oninput="updateCalculations()"></label>
+        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="receipt3" oninput="updateCalculations()"></label>
+        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="receipt4" oninput="updateCalculations()"></label>
+        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="receipt5" oninput="updateCalculations()"></label>
         <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
         <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
       </div>
@@ -841,7 +841,7 @@
 </table>
 
   <div class="group no-bg">
-    <label><span>集計提出前金庫金:</span> <input type="number" id="finalCash" oninput="updateCalculations()"></label>
+    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="f" id="finalCash" oninput="updateCalculations()"></label>
     <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
@@ -850,7 +850,7 @@
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 2.0
+  Ver. 2.1
 </div>
 </div>
 
@@ -1841,7 +1841,7 @@ bottles.forEach(data => {
       <input type="text" class="bottleDetails" placeholder="ボトル詳細" value="${data.bottleDetails}">
     </label>
     <label>
-      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" value="${data.bottleAmount === 0 ? '' : data.bottleAmount}">
+      <input type="text" inputmode="numeric" pattern="\d*" id="f" class="bottleAmount" placeholder="ボトル金額" min="0" value="${data.bottleAmount === 0 ? '' : data.bottleAmount}">
     </label>
   `;
   container.appendChild(bottleForm);
