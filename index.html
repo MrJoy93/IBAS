@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -234,11 +235,12 @@
           <option value="Z">Z</option>
         </select>
       </td>
-      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" /></td>
-      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" /></td>
-      <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" /></td>
-      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" /></td>
+<td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" value="" /></td>
+<td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" value="" /></td>
+<td><input class="detail" type="text" placeholder="詳細" value="" /></td>
+<td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" value="" /></td>
+<td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" value="" /></td>
+
     </tr>
   </tbody>
 </table>
@@ -847,7 +849,7 @@
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 2.0.4
+  Ver. 2.0.5
 </div>
 
 </div>
@@ -1093,6 +1095,8 @@ function addRow() {
   const targetY = rect.top + scrollTop - offset;
 
   window.scrollTo({ top: targetY, behavior: 'smooth' });
+  
+  row.querySelector(".num").value = "";  // 明示的にクリア
 
   saveForm();
 }
@@ -2220,7 +2224,11 @@ function createBottleForm(bottleDetails = '', bottleAmount = null) {
 
 
 //<app3 script----------------------------------------------------------------------------------------------------------------->
-    function formatNumber(num) {
+ window.addEventListener('load', () => {
+  document.querySelectorAll('#formRows input').forEach(input => input.value = "");
+});
+ 
+  function formatNumber(num) {
     return num.toLocaleString('ja-JP');
     }
 
