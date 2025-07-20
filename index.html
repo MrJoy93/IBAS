@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -235,12 +234,11 @@
           <option value="Z">Z</option>
         </select>
       </td>
-<td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" value="" /></td>
-<td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" value="" /></td>
-<td><input class="detail" type="text" placeholder="詳細" value="" /></td>
-<td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" value="" /></td>
-<td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" value="" /></td>
-
+      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" /></td>
+      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" /></td>
+      <td><input class="detail" type="text" placeholder="詳細" /></td>
+      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" /></td>
+      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" /></td>
     </tr>
   </tbody>
 </table>
@@ -263,26 +261,26 @@
     </tr>
   </thead>
   <tbody>
-<tr><td><input type="checkbox" data-category="UK"> UK</td><td id="UKcount">0</td><td id="UKtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="K"> K</td><td id="Kcount">0</td><td id="Ktotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="AB"> AB</td><td id="ABcount">0</td><td id="ABtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="LA"> LA</td><td id="LAcount">0</td><td id="LAtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="PA"> PA</td><td id="PAcount">0</td><td id="PAtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="BB"> BB</td><td id="BBcount">0</td><td id="BBtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="MS"> MS</td><td id="MScount">0</td><td id="MStotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="GM"> GM</td><td id="GMcount">0</td><td id="GMtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="B"> B</td><td id="Bcount">0</td><td id="Btotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="JOE"> JOE</td><td id="JOEcount">0</td><td id="JOEtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="KOSE"> KOSE</td><td id="KOSEcount">0</td><td id="KOSEtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="HE"> HE</td><td id="HEcount">0</td><td id="HEtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="PB"> PB</td><td id="PBcount">0</td><td id="PBtotal">0</td></tr>
-<tr><td><input type="checkbox" data-category="X"> X</td><td id="Xcount">0</td><td id="Xtotal">0</td></tr>
-<tr style="display: none;"><td><input type="checkbox" data-category="Z"> Z</td><td id="Zcount">0</td><td id="Ztotal">0</td></tr>
-<tr>
-  <td><strong>合計</strong></td>
-  <td id="totalCount">0</td>
-  <td id="totalBackAmount">0</td>
-</tr>
+    <tr><td><input type="checkbox"> UK</td><td id="UKcount">0</td><td id="UKtotal">0</td></tr>
+    <tr><td><input type="checkbox"> K</td><td id="Kcount">0</td><td id="Ktotal">0</td></tr>
+    <tr><td><input type="checkbox"> AB</td><td id="ABcount">0</td><td id="ABtotal">0</td></tr>
+    <tr><td><input type="checkbox"> LA</td><td id="LAcount">0</td><td id="LAtotal">0</td></tr>
+    <tr><td><input type="checkbox"> PA</td><td id="PAcount">0</td><td id="PAtotal">0</td></tr>
+    <tr><td><input type="checkbox"> BB</td><td id="BBcount">0</td><td id="BBtotal">0</td></tr>
+    <tr><td><input type="checkbox"> MS</td><td id="MScount">0</td><td id="MStotal">0</td></tr>
+    <tr><td><input type="checkbox"> GM</td><td id="GMcount">0</td><td id="GMtotal">0</td></tr>
+    <tr><td><input type="checkbox"> B</td><td id="Bcount">0</td><td id="Btotal">0</td></tr>
+    <tr><td><input type="checkbox"> JOE</td><td id="JOEcount">0</td><td id="JOEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> KOSE</td><td id="KOSEcount">0</td><td id="KOSEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td id="HEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td id="PBtotal">0</td></tr>
+    <tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td id="Xtotal">0</td></tr>
+    <tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td id="Ztotal">0</td></tr>
+    <tr>
+      <td><strong>合計</strong></td>
+      <td id="totalCount">0</td>
+      <td id="totalBackAmount">0</td>
+    </tr>
   </tbody>
 </table>
 
@@ -849,7 +847,7 @@
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 2.0.5
+  Ver. 2.0.3
 </div>
 
 </div>
@@ -1059,6 +1057,10 @@ let rowNumber = 2;
 window.addEventListener('load', function () {
   restoreForm();                // フォームデータ復元
   restoreCheckboxStates();      // チェックボックス状態復元
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", saveCheckboxStates);
+  });
+
   filterCategory('all');        // ←すべての行を初期表示
   currentCategory = 'all';      // ←currentCategoryもセット
 });
@@ -1067,23 +1069,12 @@ window.addEventListener('load', function () {
 function addRow() {
   const table = document.getElementById("formRows");
   const newRow = table.rows[0].cloneNode(true);
-  
-  newRow.querySelectorAll("input").forEach(input => {
-    if (input.type === "checkbox") {
-      input.checked = false;  // チェックボックスはチェックを外す
-    } else {
-      input.value = "";       // それ以外のinputは値を空文字にする
-    }
-    console.log(input.className, input.type, input.value);
-  });
-  
+  newRow.querySelectorAll("input").forEach(input => input.value = "");
   newRow.querySelector(".rowNumber").textContent = rowNumber++;
   newRow.className = "row";
-  
   const select = newRow.querySelector(".c");
   select.value = "";
   updateRowColor(select);
-  
   table.appendChild(newRow);
 
   // オフセット量（タブの高さなどに合わせて調整）
@@ -1095,8 +1086,6 @@ function addRow() {
   const targetY = rect.top + scrollTop - offset;
 
   window.scrollTo({ top: targetY, behavior: 'smooth' });
-  
-  row.querySelector(".num").value = "";  // 明示的にクリア
 
   saveForm();
 }
@@ -1117,6 +1106,14 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+function updateRowColor(select) {
+  const row = select.closest("tr");
+  row.className = "row";
+  if (select.value) {
+    row.classList.add("category-" + select.value);
+  }
+  saveForm();
+}
 
 function updateTotals() {
   let totalCustomers = 0, cardTotal = 0, totalAmount = 0;
@@ -1189,7 +1186,6 @@ function saveForm() {
 
     const rowData = {
       rowNumber: rowNumber,
-      tableNumber: row.querySelector(".table-number")?.value || "",
       honshi: row.querySelector(".honshi")?.value || "",
       category: row.querySelector(".c")?.value || "",
       amount: row.querySelector(".amount")?.value || "",
@@ -1201,12 +1197,9 @@ function saveForm() {
     };
 
     const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-checkboxes.forEach(checkbox => {
-  const key = checkbox.dataset.category;
-  if (key) {
-    rowData.checkboxes[key] = checkbox.checked;
-  }
-});
+    checkboxes.forEach(checkbox => {
+      rowData.checkboxes[checkbox.parentElement.textContent.trim()] = checkbox.checked;
+    });
 
     formData.push(rowData);
   });
@@ -1217,8 +1210,7 @@ checkboxes.forEach(checkbox => {
 
 function restoreForm() {
   const savedData = localStorage.getItem("formData");
-if (!savedData || savedData === "undefined" || savedData === "null") return;
-
+  if (savedData) {
     const formData = JSON.parse(savedData);
     const table = document.getElementById("formRows");
 
@@ -1239,9 +1231,6 @@ if (!savedData || savedData === "undefined" || savedData === "null") return;
         table.appendChild(row);
       }
 
-          // 卓番を文字列として必ずセット
-    row.querySelector(".table-number").value = data.tableNumber ? String(data.tableNumber) : "";
-
       // 各セルの値を復元
       row.querySelector(".rowNumber").textContent = data.rowNumber || index + 1;
       row.querySelector(".honshi").value = data.honshi || "";
@@ -1254,12 +1243,10 @@ if (!savedData || savedData === "undefined" || savedData === "null") return;
 
       // チェックボックスの復元
       const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-checkboxes.forEach(checkbox => {
-  const key = checkbox.dataset.category;
-  if (key && data.checkboxes && key in data.checkboxes) {
-    checkbox.checked = data.checkboxes[key];
-  }
-});
+      checkboxes.forEach(checkbox => {
+        const labelText = checkbox.parentElement.textContent.trim();
+        checkbox.checked = data.checkboxes && data.checkboxes[labelText] ? true : false;
+      });
 
       // 行の色を更新
       updateRowColor(row.querySelector(".c"));
@@ -1267,7 +1254,7 @@ checkboxes.forEach(checkbox => {
 
     updateTotals();
   }
-
+}
 
 function resetAll() {
 
@@ -1323,6 +1310,37 @@ function resetAll() {
 
   window.scrollTo({ top: 0, behavior: "smooth" })
 }
+
+  let currentCategory = 'all';
+
+  function updateRowColor(select) {
+    const row = select.closest('tr');
+    const value = select.value;
+    
+    // クラス再設定（背景色用）
+    row.className = 'row';
+    if (value) {
+      row.classList.add('category-' + value);
+    }
+
+    // フィルターと一致していれば表示
+    row.style.display = (currentCategory === 'all' || value === currentCategory) ? '' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const selects = document.querySelectorAll('#formRows select.c');
+
+    selects.forEach(select => {
+      updateRowColor(select);
+      select.addEventListener('change', () => {
+        updateRowColor(select);
+      });
+    });
+
+    filterCategory(currentCategory); // 初期表示
+  });
+
+    currentCategory = "filter";
 
   function updateRowColor(select) {
     const row = select.closest('tr');
@@ -1381,6 +1399,13 @@ function filterCategory(category) {
   });
   if (activeBtn) activeBtn.classList.add('active');
 }
+
+
+  restoreForm();
+  restoreCheckboxStates();
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", saveCheckboxStates);
+  });
 
   // カテゴリフィルタを復元
   const savedCategory = localStorage.getItem("selectedCategory") || "all";
@@ -2224,11 +2249,7 @@ function createBottleForm(bottleDetails = '', bottleAmount = null) {
 
 
 //<app3 script----------------------------------------------------------------------------------------------------------------->
- window.addEventListener('load', () => {
-  document.querySelectorAll('#formRows input').forEach(input => input.value = "");
-});
- 
-  function formatNumber(num) {
+    function formatNumber(num) {
     return num.toLocaleString('ja-JP');
     }
 
