@@ -515,8 +515,8 @@
     overflow: hidden;
 
         /* ★ 回転指定 */
-    transform: rotate(180deg);
-    transform-origin: center center;
+    /*transform: rotate(180deg);
+    transform-origin: center center;*/
   }
 
   /* 非表示項目 */
@@ -1115,17 +1115,27 @@ function addRow() {
   saveForm();
 }
 
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter') {
     const target = e.target;
-    // 入力欄かセレクトボックスのみ対象
     if (target.matches('input, select')) {
-      e.preventDefault(); // デフォルトのEnter送信を防止
+      e.preventDefault();
 
-      const formElements = Array.from(document.querySelectorAll('#formRows input, #formRows select'));
+      // アクティブタブの中身だけを対象に
+      const activeTab = document.querySelector('.tab.active');
+      const targetId = activeTab?.dataset.target;
+      const scope = targetId ? document.getElementById(targetId) : document.body;
+
+      // 非表示の要素を除外
+      const formElements = Array.from(
+        scope.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled])')
+      ).filter(el => el.offsetParent !== null);
+
       const index = formElements.indexOf(target);
       if (index > -1 && index < formElements.length - 1) {
-        formElements[index + 1].focus();
+        const next = formElements[index + 1];
+        next.focus();
+        if (typeof next.select === 'function') next.select();
       }
     }
   }
