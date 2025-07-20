@@ -1063,6 +1063,16 @@ window.addEventListener('load', function () {
 
   filterCategory('all');        // ←すべての行を初期表示
   currentCategory = 'all';      // ←currentCategoryもセット
+  if (formData && formData.length > 0) {
+    // 最大の行番号を計算して rowNumber にセット
+    const maxRowNum = formData.reduce((max, data) => {
+      const num = parseInt(data.rowNumber, 10);
+      return (!isNaN(num) && num > max) ? num : max;
+    }, 0);
+    rowNumber = maxRowNum + 1;
+  } else {
+    rowNumber = 2;  // データなしなら初期値に戻す
+  }
 });
 
 
@@ -1112,7 +1122,6 @@ function updateRowColor(select) {
   if (select.value) {
     row.classList.add("category-" + select.value);
   }
-  saveForm();
 }
 
 function updateTotals() {
@@ -1214,9 +1223,6 @@ function restoreForm() {
     const formData = JSON.parse(savedData);
     const table = document.getElementById("formRows");
 
-    // 最初の行をテンプレートとして取得
-    const templateRow = table.rows[0];
-
     // 最初の行以外を削除
     while (table.rows.length > 1) {
       table.deleteRow(1);
@@ -1227,11 +1233,11 @@ function restoreForm() {
       if (index === 0) {
         row = table.rows[0];
       } else {
-        row = templateRow.cloneNode(true);
+        row = table.rows[0].cloneNode(true);
         table.appendChild(row);
       }
 
-      // 各セルの値を復元
+      // セルの復元
       row.querySelector(".rowNumber").textContent = data.rowNumber || index + 1;
       row.querySelector(".honshi").value = data.honshi || "";
       row.querySelector(".c").value = data.category || "";
@@ -1241,18 +1247,22 @@ function restoreForm() {
       row.querySelector(".card").value = data.card || "";
       row.querySelector(".total").value = data.total || "";
 
-      // チェックボックスの復元
-      const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        const labelText = checkbox.parentElement.textContent.trim();
-        checkbox.checked = data.checkboxes && data.checkboxes[labelText] ? true : false;
-      });
+      // チェックボックスの復元などもここで
 
-      // 行の色を更新
       updateRowColor(row.querySelector(".c"));
     });
 
+    // **ここで最大行番号を取得して rowNumber を更新**
+    const maxRowNum = formData.reduce((max, data) => {
+      const num = parseInt(data.rowNumber, 10);
+      return (!isNaN(num) && num > max) ? num : max;
+    }, 0);
+    rowNumber = maxRowNum + 1;
+
     updateTotals();
+
+  } else {
+    rowNumber = 2; // データなしなら初期値に戻す
   }
 }
 
@@ -1274,11 +1284,13 @@ function resetAll() {
   // 最初の行の input をすべてリセット
   const inputs = formRows.querySelectorAll("tr:first-child input, tr:first-child select");
   inputs.forEach(input => {
-    if (input.type === "checkbox" || input.type === "radio") {
-      input.checked = false;
-    } else {
-      input.value = "";
-    }
+  console.log("type:", input.type, "value(before):", input.value, "checked(before):", input.checked);
+  if (input.type === "checkbox" || input.type === "radio") {
+    input.checked = false;
+  } else {
+    input.value = "";
+  }
+  console.log("value(after):", input.value, "checked(after):", input.checked);
   });
 
   // カテゴリ別集計などをリセット
@@ -1303,17 +1315,19 @@ function resetAll() {
   document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
     cb.checked = false;
   });
+  localStorage.removeItem("formData");
   localStorage.removeItem("checkboxStates");
 
   // 行番号をリセット
   rowNumber = 2;
 
   window.scrollTo({ top: 0, behavior: "smooth" })
-}
+  }
 
   let currentCategory = 'all';
 
-  function updateRowColor(select) {
+
+function updateRowColor(select) {
     const row = select.closest('tr');
     const value = select.value;
     
@@ -1374,7 +1388,7 @@ function resetAll() {
   const defaultTab = savedTab && document.getElementById(savedTab) ? savedTab : 'app1';
   activateTab(defaultTab);
 
-function filterSlipsByCategory(category) {
+  function filterSlipsByCategory(category) {
   const rows = document.querySelectorAll('.slipRow');
   rows.forEach(row => {
     const rowCategory = row.getAttribute('data-category');
@@ -1398,7 +1412,7 @@ function filterCategory(category) {
     return btn.textContent === category || (category === 'all' && btn.textContent.includes('すべて表示'));
   });
   if (activeBtn) activeBtn.classList.add('active');
-}
+  }
 
 
   restoreForm();
@@ -1412,7 +1426,7 @@ function filterCategory(category) {
   filterCategory(savedCategory);
 
 
-function filterCardInputRows() {
+  function filterCardInputRows() {
   const rows = document.querySelectorAll('#formRows tr');
   rows.forEach(row => {
     const cardInput = row.querySelector('.card');
