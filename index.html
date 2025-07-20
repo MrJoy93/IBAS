@@ -847,7 +847,7 @@
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 2.0.3
+  Ver. 2.0.3.1
 </div>
 
 </div>
@@ -999,6 +999,21 @@
 document.addEventListener('gesturestart', function (e) {
   e.preventDefault();
 });
+
+let startY = 0;
+
+document.addEventListener('touchstart', function (e) {
+  startY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchmove', function (e) {
+  const currentY = e.touches[0].clientY;
+
+  // 上方向へスクロールしようとしていて、ページが一番上にいるとき
+  if (currentY > startY && window.scrollY === 0) {
+    e.preventDefault(); // iOS Safari でPull-to-Refreshを防止
+  }
+}, { passive: false });
 
 
 
