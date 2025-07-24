@@ -260,6 +260,7 @@ section {
 <table>
   <tbody id="formRows">
     <tr class="row">
+      <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber">1</td>
       <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" onchange="updateTotals()" /></td>
       <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" onchange="updateTotals()" /></td>
@@ -288,7 +289,6 @@ section {
       <td><input class="detail" type="text" placeholder="詳細" /></td>
       <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" /></td>
       <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" /></td>
-      <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     </tr>
   </tbody>
 </table>
