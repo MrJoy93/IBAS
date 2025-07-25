@@ -513,9 +513,9 @@ section {
 }
 
 .bottle-form label {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  display: inline-block;
+  margin-right: 10px;
+  font-size: 14px;
 }
 
 @media print {
@@ -900,7 +900,7 @@ section {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 2.1
+  Ver. 2.2
 </div>
 
 </div>
@@ -1613,6 +1613,19 @@ function renumberRows() {
 
 
 //<app2 script---------------------------------------------------------------------------------------------------------------->
+function createBottleForm(detail = '', split = '', quantity = '', amount = 0) {
+  const form = document.createElement('div');
+  form.className = 'bottle-form';
+
+  form.innerHTML = `
+    <input type="text" class="bottleDetails" value="${detail}" placeholder="詳細" style="width: 122px; margin-right: 5px;">
+    <input type="text" class="splitCount" value="${split}" placeholder="割" style="width: 30px; margin-right: 5px;">
+    <input type="text" class="bottleQuantity" value="${quantity}" placeholder="数量" style="width: 30px; margin-right: 5px;">
+    <input type="number" class="bottleAmount" value="${amount}" placeholder="金額" style="width: 202px;">
+  `;
+
+  return form;
+}
 
 function addBottleForm() {
   const container = document.getElementById('bottleFormsContainer');
@@ -1626,23 +1639,34 @@ function saveBottleForms() {
   const forms = document.querySelectorAll('.bottle-form');
 
   forms.forEach(form => {
-    const bottleDetails = form.querySelector('.bottleDetails').value || '';
-    const bottleAmount = parseInt(form.querySelector('.bottleAmount').value) || 0;
+    const bottleDetails = form.querySelector('.bottleDetails')?.value || '';
+    const splitCount = form.querySelector('.splitCount')?.value || '';
+    const bottleQuantity = form.querySelector('.bottleQuantity')?.value || '';
+    const bottleAmount = parseInt(form.querySelector('.bottleAmount')?.value) || 0;
 
-    bottleForms.push({ bottleDetails, bottleAmount });
+    bottleForms.push({
+      bottleDetails,
+      splitCount,
+      bottleQuantity,
+      bottleAmount
+    });
   });
 
-  // ローカルストレージにボトルフォームのデータを保存
   localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
 }
 
 function loadBottleForms() {
   const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms')) || [];
   const container = document.getElementById('bottleFormsContainer');
-  container.innerHTML = ''; // 初期化
+  container.innerHTML = '';
 
   bottleFormsData.forEach(data => {
-    const form = createBottleForm(data.bottleDetails, data.bottleAmount);
+    const form = createBottleForm(
+      data.bottleDetails || '',
+      data.splitCount || '',
+      data.bottleQuantity || '',
+      data.bottleAmount || 0
+    );
     container.appendChild(form);
   });
 }
@@ -1769,10 +1793,16 @@ if (storeCoveredAmount > 0) {
 
 // 追加された全ボトル明細
 bottleForms.forEach(form => {
-  const bottleAmount = parseInt(form.querySelector('.bottleAmount').value) || 0;
-  const bottleDetail = form.querySelector('.bottleDetails').value || '詳細なし';
-  if (bottleAmount > 0) {
-    detailsHTML += `<div>ボトル: ¥${bottleAmount.toLocaleString()}（${bottleDetail}）</div>`;
+  const bottleAmount = parseInt(form.querySelector('.bottleAmount')?.value) || 0;
+  const bottleDetail = form.querySelector('.bottleDetails')?.value || '詳細なし';
+  const split = form.querySelector('.splitCount')?.value || '';
+  const quantity = form.querySelector('.bottleQuantity')?.value || '';
+
+  if (bottleAmount > 0 || bottleDetail || split || quantity) {
+    detailsHTML += `<div>ボトル: ¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
+    if (split) detailsHTML += ` / 割: ${split}`;
+    if (quantity) detailsHTML += ` / 数量: ${quantity}`;
+    detailsHTML += `）</div>`;
   }
 });
 
@@ -2333,20 +2363,6 @@ document.getElementById('experienceAndRental').addEventListener('change', functi
 });
 
 window.addEventListener('DOMContentLoaded', loadBottleForms);
-
-function createBottleForm(bottleDetails = '', bottleAmount = null) {
-  const bottleForm = document.createElement('div');
-  bottleForm.classList.add('bottle-form');
-  bottleForm.innerHTML = `
-    <label>
-      <input type="text" class="bottleDetails" placeholder="ボトル詳細" value="${bottleDetails}">
-    </label>
-    <label>
-      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" ${bottleAmount !== null && bottleAmount !== 0 ? `value="${bottleAmount}"` : ''}>
-    </label>
-  `;
-  return bottleForm;
-}
 
 
 
