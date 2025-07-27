@@ -7,6 +7,41 @@
 <title>IBASD β版</title>
 <style>
 
+  #resetOverlay {
+  position: fixed;
+  z-index: 99999;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  background: #191924;
+  opacity: 0;
+  transition: opacity 0.8s;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#resetOverlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#matrixCanvas {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100vw; height: 100vh;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#resetFlash {
+  position: absolute;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  background: white;
+  opacity: 0;
+  z-index: 3;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
 
 body {
@@ -299,6 +334,20 @@ body {
   box-shadow: 0 1px 8px #00eaff33;
   padding: 9px 15px;
   color: #97e4f5;
+}
+
+/* 赤系リセット・クリアボタン共通クラス */
+.red-btn, .clear-btn, .reset-btn {
+  background: linear-gradient(90deg, #f73378 30%, #d80032 100%);
+  color: #fff !important;
+  border: 1.5px solid #d80032;
+  box-shadow: 0 0 12px #ff006288;
+}
+.red-btn:hover, .clear-btn:hover, .reset-btn:hover {
+  background: linear-gradient(90deg, #f44 10%, #b00020 90%);
+  color: #fff;
+  box-shadow: 0 0 20px #ff2e62aa;
+  transform: scale(1.05);
 }
 
 /* --- モバイル対応 --- */
@@ -762,7 +811,75 @@ input:focus, select:focus {
   }
 }
 
+/* コンテンツ切替時の近未来的なアニメーション */
+.content {
+  opacity: 0;
+  transform: scale(0.96) translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
 
+.content.active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* スライドインアニメーション */
+@keyframes slideInRow {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* アニメーション用クラス */
+.row.slide-in {
+  animation: slideInRow 0.5s ease-out;
+}
+
+@keyframes slideOutLeft {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+}
+.row.slide-out-left {
+  animation: slideOutLeft 0.32s cubic-bezier(.77,.17,.3,1.11) forwards;
+}
+
+@keyframes slideOutLeft {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+}
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.row.slide-out-left {
+  animation: slideOutLeft 0.28s cubic-bezier(.77,.17,.3,1.11) forwards;
+}
+.row.slide-in-right {
+  animation: slideInRight 0.28s cubic-bezier(.77,.17,.3,1.11) forwards;
+}
 
 
 
@@ -773,7 +890,10 @@ input:focus, select:focus {
 </head>
 <body>
 
-
+<div id="resetOverlay" style="display:none;">
+  <canvas id="matrixCanvas"></canvas>
+  <div id="resetFlash"></div>
+</div>
   
 <div class="tabs">
   <div class="tab active" data-target="app1">伝票入力</div>
@@ -894,9 +1014,7 @@ input:focus, select:focus {
 </section>
 
 <div style="text-align: center; margin-top: 30px;">
-  <button onclick="resetAll()" style="color: red; background: transparent; border: 2px solid red; padding: 10px 20px; font-size: 16px; cursor: pointer;">
-    リセット
-  </button>
+ <button onclick="resetApp('app1')" class="red-btn">リセット</button>
 </div>
 
 </div>
@@ -905,7 +1023,7 @@ input:focus, select:focus {
 <div id="app2" class="content" style="display:none;">
 
   <div class="button-row" style="margin-top: 10px; justify-content: center;">
-  <button type="button" class="clear-button" onclick="clearInputs()">入力をクリア</button>
+  <<button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
 </div>
 
 <form onsubmit="event.preventDefault(); calculate();">
@@ -962,7 +1080,7 @@ input:focus, select:focus {
   </div>
 
   <div class="button-row" style="margin-top: 20px;">
-    <button type="button" class="clear-button" onclick="clearInputs()">入力をクリア</button>
+    <button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
   </div>
 
   <div class="history">
@@ -979,7 +1097,7 @@ input:focus, select:focus {
   </div>
 
   <div class="button-row" style="margin-top: 40px;">
-    <button type="button" class="clear-all-button" onclick="clearAll()">完全クリア</button>
+    <button type="button" class="red-btn" onclick="resetApp('app2', true)">完全クリア</button>
   </div>
 
 </div>
@@ -1063,13 +1181,12 @@ input:focus, select:focus {
     <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
-  <button class="reset-button" onclick="resetForm()">リセット</button>
-  <button class="reset-button" onclick="resetAllData()">完全リセット</button>
+  <button type="button" onclick="resetApp('app3')" class="red-btn">リセット</button>
+  <button type="button" onclick="resetAllApps()" class="red-btn">完全リセット</button>
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 3.1
-
+  Ver. 3.4
 </div>
 
 </div>
@@ -1122,7 +1239,7 @@ input:focus, select:focus {
 const scrollPositions = {};  // ← タブごとのスクロール位置を保持
 
 function activateTab(target) {
-  // --- 現在のタブのスクロール位置を保存 ---
+  // スクロール位置を保存
   const currentTab = document.querySelector('.tab.active');
   if (currentTab) {
     const currentTarget = currentTab.getAttribute('data-target');
@@ -1131,42 +1248,36 @@ function activateTab(target) {
     }
   }
 
-  // --- 通常のタブ切り替え処理 ---
+  // すべてのタブとコンテンツからactiveクラスを外す
   tabs.forEach(t => t.classList.remove('active'));
-  contents.forEach(c => c.style.display = 'none');
+  contents.forEach(c => c.classList.remove('active'));
 
+  // 選択されたタブにactiveを付与
   const tab = Array.from(tabs).find(t => t.getAttribute('data-target') === target);
   if (tab) tab.classList.add('active');
 
+  // 選択されたコンテンツをフェードイン
   const el = document.getElementById(target);
-  if (el) el.style.display = 'block';
+  if (el) {
+    el.style.display = 'block';
+    setTimeout(() => el.classList.add('active'), 20); // 遅延してアニメ発火
+  }
 
-  // --- スクロール位置を復元（保存がなければ0） ---
-  const savedScroll = scrollPositions[target] || 0;
-  window.scrollTo({ top: savedScroll, behavior: 'instant' });
-
-  // --- タブ選択状態を保存 ---
-  localStorage.setItem('selectedTab', target);
-
-  updateCalculations();
-}
-
-  // ページ読み込み時に保存されたタブを復元する処理
-  window.addEventListener('DOMContentLoaded', () => {
-    // 既存の処理
-    observeTotalCountForAdviserFee();
-    updateAdviserFeeFromTotalCount();
-
-    // 保存されたタブIDを取得して復元
-    const savedTab = localStorage.getItem('selectedTab');
-    if (savedTab && document.getElementById(savedTab)) {
-      activateTab(savedTab);
-    } else {
-      // 保存されていなければ最初のタブをアクティブに
-      const defaultTarget = tabs[0].getAttribute('data-target');
-      activateTab(defaultTarget);
+  // 非表示にする他のコンテンツ
+  contents.forEach(c => {
+    if (c !== el) {
+      c.classList.remove('active');
+      setTimeout(() => { c.style.display = 'none'; }, 400);
     }
   });
+
+  // スクロール復元
+  const savedScroll = scrollPositions[target] || 0;
+  window.scrollTo({ top: savedScroll, behavior: 'auto' });
+
+  localStorage.setItem('selectedTab', target);
+  updateCalculations();
+}
 
   function updateAdviserFeeFromTotalCount() {
     const countEl = document.getElementById('totalCount');
@@ -1304,48 +1415,21 @@ function restoreCheckboxStates() {
 
 let rowNumber = 2;
 
-window.addEventListener('load', function () {
-  restoreForm();                // フォームデータ復元
-  restoreCheckboxStates();      // チェックボックス状態復元
-  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
-    cb.addEventListener("change", saveCheckboxStates);
-  });
-
-  filterCategory('all');        // ←すべての行を初期表示
-  currentCategory = 'all';      // ←currentCategoryもセット
-
-  // formData をここで取得して存在チェック
-  const savedData = localStorage.getItem("formData");
-  let formData = null;
-  if (savedData) {
-    formData = JSON.parse(savedData);
-  }
-
-  if (formData && formData.length > 0) {
-    const maxRowNum = formData.reduce((max, data) => {
-      const num = parseInt(data.rowNumber, 10);
-      return (!isNaN(num) && num > max) ? num : max;
-    }, 0);
-    rowNumber = maxRowNum + 1;
-  } else {
-    rowNumber = 2;  // データなしなら初期値に戻す
-  }
-});
-
 
 function addRow() {
   const table = document.getElementById("formRows");
   const newRow = table.rows[0].cloneNode(true);
 
+  // 初期化
   newRow.querySelectorAll("input").forEach(input => input.value = "");
   newRow.querySelector(".rowNumber").textContent = rowNumber++;
-  newRow.className = "row";
-  
+  newRow.className = "row";  // まず通常クラスにする
+
   const select = newRow.querySelector(".c");
   select.value = "";
   updateRowColor(select);
 
-  // 削除ボタンがなければ追加（安全のためチェック）
+  // 削除ボタン確認
   if (!newRow.querySelector(".delete-btn")) {
     const deleteCell = document.createElement("td");
     const deleteButton = document.createElement("button");
@@ -1360,6 +1444,17 @@ function addRow() {
 
   table.appendChild(newRow);
 
+  renumberRows();
+
+  // **ここでアニメーションを確実に発火させる**
+  requestAnimationFrame(() => {
+    newRow.classList.add('slide-in');
+  });
+
+  newRow.addEventListener('animationend', () => {
+    newRow.classList.remove('slide-in');
+  });
+
   // スクロール
   const offset = 155;
   const rect = newRow.getBoundingClientRect();
@@ -1367,8 +1462,11 @@ function addRow() {
   const targetY = rect.top + scrollTop - offset;
   window.scrollTo({ top: targetY, behavior: 'smooth' });
 
+  attachCommaFormatApp1and3();
+
   saveForm();
 }
+
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter') {
@@ -1411,11 +1509,11 @@ function updateTotals() {
   categories.forEach(cat => catchbackTotals[cat] = { amount: 0, count: 0 });
 
   document.querySelectorAll(".row").forEach(row => {
-    const num = parseInt(row.querySelector(".num")?.value) || 0;
-    const honshi = parseInt(row.querySelector(".honshi")?.value) || 0;
-    const amount = parseInt(row.querySelector(".amount")?.value) || 0;
-    const card = parseInt(row.querySelector(".card")?.value) || 0;
-    const total = parseInt(row.querySelector(".total")?.value) || 0;
+    const num = parseInt(row.querySelector(".num")?.value.replace(/,/g, '')) || 0;
+    const honshi = parseInt(row.querySelector(".honshi")?.value.replace(/,/g, '')) || 0;
+    const amount = parseInt(row.querySelector(".amount")?.value.replace(/,/g, '')) || 0;
+    const card = parseInt(row.querySelector(".card")?.value.replace(/,/g, '')) || 0;
+    const total = parseInt(row.querySelector(".total")?.value.replace(/,/g, '')) || 0;
     const category = row.querySelector(".c")?.value;
 
     totalCustomers += num + honshi;
@@ -1454,15 +1552,14 @@ function updateTotals() {
   document.getElementById("totalCount").textContent = totalCount.toLocaleString();
   document.getElementById("totalBackAmount").textContent = Math.floor(totalBackAmount).toLocaleString();
 
+  // ↓ここまとめて定義
   const cardSalesInput = document.getElementById("cardSales");
-if (cardSalesInput) {
-  cardSalesInput.value = cardTotal;
-}
-
-  // 日計計算のinputに値をセット
+  if (cardSalesInput) {
+    cardSalesInput.value = formatNumber(cardTotal);
+  }
   const totalSalesInput = document.getElementById("totalSales");
   if (totalSalesInput) {
-    totalSalesInput.value = totalAmount;
+    totalSalesInput.value = formatNumber(totalAmount);
   }
 
   saveForm();
@@ -1556,110 +1653,6 @@ function restoreForm() {
   }
 }
 
-function resetAll() {
-
-  if (!confirm("本当にリセットしますか？")) {
-    return; // キャンセルされたら処理中断
-  }
-  
-  // formRows の中のすべての行を取得
-  const formRows = document.getElementById("formRows");
-  const rows = formRows.querySelectorAll(".row");
-
-  // 最初の1行を残して削除
-  for (let i = rows.length - 1; i >= 1; i--) {
-    formRows.removeChild(rows[i]);
-  }
-
-  // 最初の行の input をすべてリセット
-  const inputs = formRows.querySelectorAll("tr:first-child input, tr:first-child select");
-  inputs.forEach(input => {
-  console.log("type:", input.type, "value(before):", input.value, "checked(before):", input.checked);
-  if (input.type === "checkbox" || input.type === "radio") {
-    input.checked = false;
-  } else {
-    input.value = "";
-  }
-  console.log("value(after):", input.value, "checked(after):", input.checked);
-  });
-
-  // カテゴリ別集計などをリセット
-  const countIds = [
-    "UK", "K", "AB", "LA", "PA", "BB", "MS", "GM",
-    "B", "JOE", "TR", "HE", "PB", "X", "Z"
-  ];
-  countIds.forEach(id => {
-    document.getElementById(id + "count").textContent = "0";
-    document.getElementById(id + "total").textContent = "0";
-  });
-
-  // 合計表示のリセット
-  document.getElementById("totalCustomers").textContent = "0";
-  document.getElementById("cashTotal").textContent = "0";
-  document.getElementById("cardTotal").textContent = "0";
-  document.getElementById("totalAmount").textContent = "0";
-  document.getElementById("totalCount").textContent = "0";
-  document.getElementById("totalBackAmount").textContent = "0";
-
-  // チェックボックスの状態もリセット
-  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
-    cb.checked = false;
-  });
-  localStorage.removeItem("formData");
-  localStorage.removeItem("checkboxStates");
-
-  // 行番号をリセット
-  rowNumber = 2;
-
-  window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  let currentCategory = 'all';
-
-
-function updateRowColor(select) {
-    const row = select.closest('tr');
-    const value = select.value;
-    
-    // クラス再設定（背景色用）
-    row.className = 'row';
-    if (value) {
-      row.classList.add('category-' + value);
-    }
-
-    // フィルターと一致していれば表示
-    row.style.display = (currentCategory === 'all' || value === currentCategory) ? '' : 'none';
-  }
-
-    currentCategory = "filter";
-
-  function updateRowColor(select) {
-    const row = select.closest('tr');
-    const value = select.value;
-    
-    // クラス再設定（背景色用）
-    row.className = 'row';
-    if (value) {
-      row.classList.add('category-' + value);
-    }
-
-    // フィルターと一致していれば表示
-    row.style.display = (currentCategory === 'all' || value === currentCategory) ? '' : 'none';
-  }
-
-  // ▼ タブの初期復元
-  const savedTab = localStorage.getItem('selectedTab');
-  const defaultTab = savedTab && document.getElementById(savedTab) ? savedTab : 'app1';
-  activateTab(defaultTab);
-
-  function filterSlipsByCategory(category) {
-  const rows = document.querySelectorAll('.slipRow');
-  rows.forEach(row => {
-    const rowCategory = row.getAttribute('data-category');
-    row.style.display = (category === 'all' || category === rowCategory) ? '' : 'none';
-  });
-}
-
 function filterCategory(category) {
   currentCategory = category;
   localStorage.setItem("selectedCategory", category); // ← 保存
@@ -1668,7 +1661,29 @@ function filterCategory(category) {
   rows.forEach(row => {
     const select = row.querySelector('select.c');
     const value = select ? select.value : '';
-    row.style.display = (category === 'all' || value === category) ? '' : 'none';
+
+    const shouldShow = (category === 'all' || value === category);
+
+    if (shouldShow && row.style.display === 'none') {
+      // 表示する必要あり→右からスライドイン
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      // スライドインアニメを付ける
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      // 非表示にする必要あり→左スライドで消す
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
   });
 
   document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
@@ -1676,30 +1691,6 @@ function filterCategory(category) {
     return btn.textContent === category || (category === 'all' && btn.textContent.includes('すべて表示'));
   });
   if (activeBtn) activeBtn.classList.add('active');
-  }
-
-
-  restoreForm();
-  restoreCheckboxStates();
-  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
-    cb.addEventListener("change", saveCheckboxStates);
-  });
-
-  // カテゴリフィルタを復元
-  const savedCategory = localStorage.getItem("selectedCategory") || "all";
-  filterCategory(savedCategory);
-
-
-  function filterCardInputRows() {
-  const rows = document.querySelectorAll('#formRows tr');
-  rows.forEach(row => {
-    const cardInput = row.querySelector('.card');
-    const hasCardValue = cardInput && cardInput.value.trim() !== '';
-    row.style.display = hasCardValue ? '' : 'none';
-  });
-
-  currentCategory = 'cardInputOnly'; // 現在のカテゴリにセット（任意）
-  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
 }
 
 function filterCashOnlyRows() {
@@ -1707,11 +1698,59 @@ function filterCashOnlyRows() {
   rows.forEach(row => {
     const cardInput = row.querySelector('.card');
     const cardValue = parseInt(cardInput?.value || "0");
-    // cardが空または0の行だけ表示
-    row.style.display = (!cardValue || cardValue === 0) ? '' : 'none';
+    const shouldShow = (!cardValue || cardValue === 0);
+
+    if (shouldShow && row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
   });
 
-  currentCategory = 'cashOnly'; // 任意の識別用
+  currentCategory = 'cashOnly';
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+}
+
+
+function filterCardInputRows() {
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const cardInput = row.querySelector('.card');
+    const hasCardValue = cardInput && cardInput.value.trim() !== '';
+    const shouldShow = hasCardValue;
+
+    if (shouldShow && row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+
+  currentCategory = 'cardInputOnly';
   document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
 }
 
@@ -1725,10 +1764,17 @@ function deleteRow(button) {
   }
 
   if (confirm("この伝票を削除しますか？")) {
-    formRows.removeChild(row);
-    renumberRows();     // ← 行番号を振り直す関数を呼び出し
-    updateTotals();
-    saveForm();
+    // まずアニメーション用クラスを付ける
+    row.classList.add('slide-out-left');
+
+    // アニメーション終了後にDOMから削除
+    row.addEventListener('animationend', function onAnimEnd() {
+      row.removeEventListener('animationend', onAnimEnd); // 多重登録防止
+      formRows.removeChild(row);
+      renumberRows();
+      updateTotals();
+      saveForm();
+    });
   }
 }
 
@@ -2059,11 +2105,6 @@ if (existingItem) {
     // 🔽 ここを追加：ボトルフォームの内容も保存する
   saveBottleForms();
 
-  console.log('f:', inputValues['f']);
-  console.log(inputValues); // 入力値をコンソールに出力
-  console.log('送迎金額:', sendoffAmount); // 送迎金額が取得されているか確認
-
-
   document.getElementById("result").innerHTML = resultText;
   document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -2145,38 +2186,39 @@ function restoreFromHistory(button) {
     document.getElementById('sendoffAmount').value = 0;
   }
 
-// 体験及び貸出チェックボックスを復元（textContentかinnerHTMLにキーワードがあるか確認）
-const experienceElem = historyItem.querySelector('.experienceAndRental');
-const experienceText = experienceElem ? experienceElem.textContent : '';
-const experienceChecked = experienceText.includes('体験及び貸出: 有り');
-document.getElementById('experienceAndRental').checked = experienceChecked;
+  // 体験及び貸出チェックボックスを復元（textContentかinnerHTMLにキーワードがあるか確認）
+  const experienceElem = historyItem.querySelector('.experienceAndRental');
+  const experienceText = experienceElem ? experienceElem.textContent : '';
+  const experienceChecked = experienceText.includes('体験及び貸出: 有り');
+  document.getElementById('experienceAndRental').checked = experienceChecked;
 
   // ボトル明細を復元
-  const bottleRegex = /ボトル: ¥([\d,]+)（([^）]+)）/g;
+  const bottleRegex = /ボトル: ¥([\d,]+)（([^/（）]*)(?: ?\/ 割: ?([^\s/（）]+))?(?: ?\/ 数量: ?([^\s/（）]+))?）/g;
+
+  // 復元用のループ
   const bottles = [];
   let match;
   while ((match = bottleRegex.exec(historyItem.innerHTML)) !== null) {
-    bottles.push({
-      bottleAmount: parseInt(match[1].replace(/,/g, '')),
-      bottleDetails: match[2]
-    });
+  bottles.push({
+    bottleAmount: parseInt(match[1].replace(/,/g, '')),
+    bottleDetails: match[2] || '',
+    splitCount: match[3] || '',
+    bottleQuantity: match[4] || ''
+  });
   }
 
+  // 復元して配置
   const container = document.getElementById('bottleFormsContainer');
-  container.innerHTML = ''; // 一度クリア
-bottles.forEach(data => {
-  const bottleForm = document.createElement('div');
-  bottleForm.classList.add('bottle-form');
-  bottleForm.innerHTML = `
-    <label>
-      <input type="text" class="bottleDetails" placeholder="ボトル詳細" value="${data.bottleDetails}">
-    </label>
-    <label>
-      <input type="number" class="bottleAmount" placeholder="ボトル金額" min="0" value="${data.bottleAmount === 0 ? '' : data.bottleAmount}">
-    </label>
-  `;
+  container.innerHTML = '';
+  bottles.forEach(data => {
+  const bottleForm = createBottleForm(
+    data.bottleDetails,
+    data.splitCount,
+    data.bottleQuantity,
+    data.bottleAmount
+  );
   container.appendChild(bottleForm);
-});
+  });
 
   // 保存処理（現在の復元状態を保存しておく）
   saveBottleForms();
@@ -2232,7 +2274,6 @@ function updateSummary() {
 
   historyItems.forEach(item => {
     const text = item.innerText;
-
     const amountMatch = text.match(/合計:\s*¥([\d,]+)/);
     const gensenMatch = text.match(/源泉費:\s*¥([\d,]+)/);
 
@@ -2249,17 +2290,15 @@ function updateSummary() {
     totalPeople += 1;
   });
 
-  // 各 span に値を反映
   document.getElementById('summaryTotalPeople').innerText = `${totalPeople}人`;
   document.getElementById('summaryTotalAmount').innerText = `¥${totalAmount.toLocaleString()}`;
   document.getElementById('summaryTotalTax').innerText = `¥${totalGensen.toLocaleString()}`;
 
-  document.getElementById('femaleSalary').value =
-  totalAmount; // 数値でセット
-
-  document.getElementById('femaleTax').value = totalGensen;
-
+  // カンマ付きでセット
+  document.getElementById('femaleSalary').value = totalAmount.toLocaleString();
+  document.getElementById('femaleTax').value = totalGensen.toLocaleString();
 }
+
 
 function toggleDetails(button) {
   const container = button.nextElementSibling.nextElementSibling; 
@@ -2368,8 +2407,6 @@ function preparePrint() {
 
       // 例えば、hasValueがtrueの場合に何か処理するならここに記述
       if (hasValue) {
-        // ここに行いたい処理を書く
-        console.log('値がある伝票:', row);
       }
     });
 
@@ -2395,131 +2432,12 @@ function preparePrint() {
       document.head.removeChild(style);
     }, 1000);
 
-function clearInputs() {
-  const activeTab = document.querySelector('.tab.active');
-  if (!activeTab) return;
-
-  const targetId = activeTab.getAttribute('data-target');
-  const targetContent = document.getElementById(targetId);
-  if (!targetContent) return;
-
-  // テキスト・数値入力のクリア（アクティブなタブ内だけ）
-  targetContent.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
-    input.value = '';
-  });
-
-  // チェックボックス（idが固定なら注意）→ 対象タブ内に限定
-  const checkbox = targetContent.querySelector('#experienceAndRental');
-  if (checkbox) {
-    checkbox.checked = false;
-  }
-
-  // ボトルフォーム削除（containerのIDが固定なら注意）
-  const bottleFormsContainer = targetContent.querySelector('#bottleFormsContainer');
-  if (bottleFormsContainer) {
-    bottleFormsContainer.innerHTML = '';
-  }
-
-  // 対象のローカルストレージデータ削除（タブ別キー前提）
-  if (targetId === 'app1') {
-    localStorage.removeItem('inputs');
-    localStorage.removeItem('result');
-  } else if (targetId === 'app2') {
-    localStorage.removeItem('inputs2');
-    localStorage.removeItem('result2');
-    localStorage.removeItem('bottleForms');
-  } else if (targetId === 'app3') {
-    localStorage.removeItem('app3_inputs');
-    localStorage.removeItem('app3_result');
-  }
-
-  // 結果欄クリア（アクティブタブ内のみ）
-  const result = targetContent.querySelector('#result');
-  if (result) {
-    result.innerHTML = '';
-  }
-
-  // スクロールは全体でOK
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function clearAll() {
-  const confirmClear = confirm("本当にすべてを完全にクリアしてもよろしいですか？この操作は元に戻せません。");
-  if (!confirmClear) return; // キャンセルされた場合、処理を中断
-
-  clearInputs(); // 入力欄やボトルフォームをクリア
-
-  // 履歴と結果をクリア
-  const historyList = document.getElementById('historyList');
-  if (historyList) historyList.innerHTML = '';
-
-  const result = document.getElementById('result');
-  if (result) result.innerHTML = '';
-
-  // ローカルストレージは必要なキーだけ削除（全部消すなら localStorage.clear()）
-  localStorage.removeItem('inputs');
-  localStorage.removeItem('historyList');
-  localStorage.removeItem('result');
-  localStorage.removeItem('bottleForms');
-
-  // サマリー更新
-  updateSummary();
-
-  // スクロール位置をトップに戻す
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
 document.addEventListener('DOMContentLoaded', function () {});
-
-
-window.addEventListener('DOMContentLoaded', () => {
-  loadBottleForms();
-});
 
 function restoreCheckboxes() {
   const checkboxStates = JSON.parse(localStorage.getItem('checkboxes')) || {};
   document.getElementById('experienceAndRental').checked = checkboxStates.experienceAndRental || false;
 }
-
-window.onload = function () {
-  loadBottleForms();
-  restoreCheckboxes(); // ← 追加
-  // 他にも loadInputs() などがあるならそこにも
-};
-
-window.addEventListener('load', () => {
-  // 入力値の復元
-  const inputs = JSON.parse(localStorage.getItem('inputs')) || {};
-  Object.entries(inputs).forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value;
-  });
-
-  // チェックボックスの復元
-  const checkboxes = JSON.parse(localStorage.getItem('checkboxes')) || {};
-  Object.entries(checkboxes).forEach(([id, checked]) => {
-    const el = document.getElementById(id);
-    if (el) el.checked = checked;
-  });
-
-  // 履歴リストの復元
-  const historyListHTML = localStorage.getItem('historyList');
-  if (historyListHTML) {
-    document.getElementById('historyList').innerHTML = historyListHTML;
-  }
-
-  // ボトルフォームの復元
-  loadBottleForms();
-
-  // 計算結果の復元
-  const resultText = localStorage.getItem('result');
-  if (resultText) {
-    document.getElementById('result').innerHTML = resultText;
-  }
-
-  // サマリーも更新しておく
-  updateSummary();
-});
 
 
 document.getElementById('experienceAndRental').addEventListener('change', function(event) {
@@ -2531,7 +2449,72 @@ document.getElementById('experienceAndRental').addEventListener('change', functi
   }
 });
 
-window.addEventListener('DOMContentLoaded', loadBottleForms);
+// 統一された初期化処理
+document.addEventListener('DOMContentLoaded', () => {
+  // APP2
+  loadBottleForms();
+  restoreCheckboxes();
+  restoreInputs(); 
+
+  // APP1
+  restoreForm();
+  restoreCheckboxStates();
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", saveCheckboxStates);
+  });
+
+  // APP3
+  restoreApp3Data();
+  attachApp3Listeners();
+
+  // 顧問料自動反映
+  observeTotalCountForAdviserFee(); // ←これを追加
+
+  attachCommaFormatApp1and3();
+
+  // タブ切替
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-target');
+      if (target) activateTab(target);
+    });
+  });
+
+  // 前回選択タブの復元
+  const savedTab = localStorage.getItem('selectedTab') || 'app1';
+  activateTab(savedTab);
+
+  // Enterキーで次の入力欄へ
+  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
+  inputs.forEach((input, index) => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const next = inputs[index + 1];
+        if (next) next.focus();
+      }
+    });
+  });
+
+    const historyList = document.getElementById('historyList');
+  if (historyList) {
+    historyList.innerHTML = localStorage.getItem('historyList') || '';
+  }
+
+  updateSummary();
+  updateCalculations(); // 初期計算
+  attachCommaFormatApp3();
+});
+
+function restoreInputs() {
+  const inputValues = JSON.parse(localStorage.getItem('inputs') || '{}');
+  Object.entries(inputValues).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
+
 
 
 
@@ -2584,48 +2567,62 @@ window.addEventListener('DOMContentLoaded', loadBottleForms);
 
     const cardSalesInput = document.getElementById("cardSales");
     if (cardSalesInput) {
-    cardSalesInput.value = cardTotal;
+    cardSalesInput.value = formatNumber(cardTotal);
      }
     const summaryTaxText = document.getElementById('summaryTotalTax')?.innerText || '¥0';
     const summaryTaxValue = parseInt(summaryTaxText.replace(/[¥,]/g, ''), 10) || 0;
     document.getElementById('femaleTax').value = summaryTaxValue;
-  // totalBackAmount を catchBack に反映
-  const totalBackAmountText = document.getElementById("totalBackAmount").textContent.replace(/,/g, "");
-  const totalBackAmount = parseInt(totalBackAmountText) || 0;
-  document.getElementById("catchBack").value = totalBackAmount;
+    // totalBackAmount を catchBack に反映
+    const totalBackAmountText = document.getElementById("totalBackAmount").textContent.replace(/,/g, "");
+    const totalBackAmount = parseInt(totalBackAmountText) || 0;
+    document.getElementById("catchBack").value = totalBackAmount;
 
-  const total = get('totalSales');
-  const card = get('cardSales');
-  const cash = total - card;
-  document.getElementById('cashSales').value = formatNumber(cash);
+    const total = get('totalSales');
+    const card = get('cardSales');
+    const cash = total - card;
+    document.getElementById('cashSales').value = formatNumber(cash);
 
-  const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
-  document.getElementById('totalLaborCosts').value = formatNumber(labor);
+    const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
+    document.getElementById('totalLaborCosts').value = formatNumber(labor);
 
-  const tax = get('femaleTax') + get('maleTax');
-  document.getElementById('totalTax').value = formatNumber(tax);
-  const receiptTotal = get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
-  document.getElementById('receipt6').value = formatNumber(receiptTotal);
+    const tax = get('femaleTax') + get('maleTax');
+    document.getElementById('totalTax').value = formatNumber(tax);
+    const receiptTotal = get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
+    document.getElementById('receipt6').value = formatNumber(receiptTotal);
 
-  const expenses = get('alcohol') + receiptTotal;
-  document.getElementById('totalExpenses').value = formatNumber(expenses);
+    const expenses = get('alcohol') + receiptTotal;
+    document.getElementById('totalExpenses').value = formatNumber(expenses);
 
-  const gross = total - labor - tax - expenses;
-  document.getElementById('grossProfit').value = formatNumber(gross);
+    const gross = total - labor - tax - expenses;
+    document.getElementById('grossProfit').value = formatNumber(gross);
 
-  const remaining = gross - card;
-  document.getElementById('remainingCash').value = formatNumber(remaining);
+    const remaining = gross - card;
+    document.getElementById('remainingCash').value = formatNumber(remaining);
 
-  const startCash = get('startCash');
-  const finalCash = get('finalCash');
-  const difference = (finalCash - remaining - tax) - startCash;
-  document.getElementById('cashDifference').value = formatNumber(difference);
+    const startCash = get('startCash');
+    const finalCash = get('finalCash');
+    const difference = (finalCash - remaining - tax) - startCash;
+    document.getElementById('cashDifference').value = formatNumber(difference);
 
-  updateNegativeColor('grossProfit');
-  updateNegativeColor('remainingCash');
-  updateNegativeColor('cashDifference');
+    // adviserFee を自動計算して反映
+    const adviserCountEl = document.getElementById('totalCount');
+    const adviserFeeInput = document.getElementById('adviserFee');
+    if (adviserCountEl && adviserFeeInput) {
+    const count = parseInt(adviserCountEl.textContent.replace(/,/g, ''), 10) || 0;
+    adviserFeeInput.value = (count * 1000).toLocaleString();
+    }
 
-  updateExtraGroupFields();
+    document.getElementById('femaleSalary').value = formatNumber(get('femaleSalary'));
+    document.getElementById('femaleTax').value = formatNumber(get('femaleTax'));
+
+
+
+    updateNegativeColor('grossProfit');
+    updateNegativeColor('remainingCash');
+    updateNegativeColor('cashDifference');
+
+    updateExtraGroupFields();
+    attachCommaFormatApp3();
 
   saveToLocal();
 }
@@ -2686,92 +2683,6 @@ function loadFromLocal() {
   });
 }
 
-    function resetForm() {
-      if (!confirm("すべての入力をリセットしてもよろしいですか？")) return;
-      localStorage.clear();
-      document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
-      updateCalculations();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-document.addEventListener('DOMContentLoaded', () => {
-  // ←追加①: select.cの色更新（APP1）
-  const selects = document.querySelectorAll('#formRows select.c');
-  selects.forEach(select => {
-    updateRowColor(select);
-    select.addEventListener('change', () => {
-      updateRowColor(select);
-    });
-  });
-
-  // ←追加②: タブ切り替え用イベント登録
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const target = tab.getAttribute('data-target');
-      if (target) {
-        activateTab(target);
-      }
-    });
-  });
-
-  // ←追加③: 最後のタブを復元（localStorage）
-  const savedTab = localStorage.getItem('selectedTab');
-  if (savedTab) {
-    activateTab(savedTab);
-  } else {
-    activateTab('app1');
-  }
-
-  // ←既存④: フォームデータ読み込みとEnterキーで移動
-  loadFromLocal();
-  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
-  inputs.forEach((input, index) => {
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const next = inputs[index + 1];
-        if (next) next.focus();
-      }
-    });
-  });
-
-  // ←追加⑤: チェックボックスの状態復元
-  restoreForm();
-  restoreCheckboxStates();
-  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
-    cb.addEventListener("change", saveCheckboxStates);
-  });
-
-  filterCategory(currentCategory); // 初期カテゴリフィルタ
-});
-    function resetAllData() {
-      if (!confirm("すべての入力を完全リセットしてもよろしいですか？")) return;
-      localStorage.clear();
-
-  // 2. すべてのフォーム要素を初期化（input, select, textarea）
-  const inputs = document.querySelectorAll('input, select, textarea');
-  inputs.forEach(input => {
-    if (input.type === 'checkbox' || input.type === 'radio') {
-      input.checked = false;
-    } else if (input.type === 'number' || input.type === 'text' || input.tagName === 'TEXTAREA') {
-      input.value = '';
-    }
-  });
-
-  // 3. 計算結果や表示エリアも初期化（必要に応じて）
-  const results = document.querySelectorAll('.result, .output, .total'); // よくあるクラス名
-  results.forEach(el => el.textContent = '');
-
-  // 4. 画面再読み込みで再初期化
-     location.reload();
-     updateCalculations();
-
-  alert('すべてのデータがリセットされました');
-
-  updateCalculations(); // 読み込み後に再計算
-
-}
 
 //業務内容を保存
 window.addEventListener("DOMContentLoaded", () => {
@@ -2805,6 +2716,7 @@ function restoreApp3Data() {
     if (el) el.value = value;
   });
   updateCalculations(); // 計算更新
+  attachCommaFormatApp1and3();
 }
 
 function attachApp3Listeners() {
@@ -2820,24 +2732,14 @@ function attachApp3Listeners() {
   });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  restoreApp3Data();
-  attachApp3Listeners();
-});
-
 function exportAsSelfContainedHTML() {
-  // 🔽 各アプリの保存関数を事前に呼び出して、ローカルストレージを最新化
-  if (typeof saveForm === 'function') saveForm();          // app1
-  if (typeof saveBottleForms === 'function') saveBottleForms();  // app2
-  if (typeof saveApp3Data === 'function') saveApp3Data();  // app3（手動実装）
-
-  // 🔽 最新のローカルストレージを取得してHTMLに埋め込む
+  // ... 既存処理そのまま ...
   const doc = document.documentElement.cloneNode(true);
   const localStorageData = JSON.stringify(localStorage);
   const savedDate = localStorage.getItem("workStartDate") || new Date().toISOString().slice(0, 10);
   const fileName = `IBASD_${savedDate}.html`;
 
-  // 🔽 ローカルストレージ再現用スクリプトの埋め込み
+  // ローカルストレージ再現用スクリプトの埋め込み
   const storageScript = document.createElement("script");
   storageScript.textContent = `
     (function() {
@@ -2855,21 +2757,304 @@ function exportAsSelfContainedHTML() {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
 
-  // 🔽 ダウンロード開始
+  // ダウンロード開始
   const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
 
-  // 🔽 保存後の処理（データ削除オプション）
-  if (confirm("保存が完了しました。\nローカルデータを削除しますか？")) {
-    localStorage.clear();
-    alert("ローカルストレージのデータを削除しました。");
-  } else {
-    alert("ローカルストレージのデータはそのまま残っています。");
+  // ↓保存後に自動リセット
+  setTimeout(() => {
+    resetAllApps();
+  }, 600); // ダイアログと演出に余裕をもたせる
+}
+
+
+
+// =========================
+// 共通リセット関数
+// =========================
+
+// 特定アプリ(app1, app2, app3)をリセット
+function resetApp(appId, full = false) {
+  if (!confirm(full 
+    ? "本当に完全クリアしますか？（履歴・保存データも削除）" 
+    : "入力をクリアしますか？"
+  )) return;
+
+  if (appId === 'app1') {
+    resetApp1(full);
+  } else if (appId === 'app3') {
+    resetApp3(full);
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+}
+
+function resetAllApps() {
+  if (!confirm("app1〜app3のデータを全て削除しますか？")) return;
+
+  const overlay = document.getElementById('resetOverlay');
+  const canvas = document.getElementById('matrixCanvas');
+  const flash = document.getElementById('resetFlash');
+  overlay.style.display = 'flex';
+  setTimeout(() => overlay.classList.add('active'), 20);
+
+  startMatrixEffect(canvas);
+
+  setTimeout(() => {
+    flash.style.opacity = 1;
+    setTimeout(() => {
+      resetApp1(true);
+      resetApp2(true);
+      resetApp3(true);
+      activateTab('app1');
+      window.scrollTo({top: 0, behavior: 'auto'});
+
+      // ★ ここで全部一気に消す
+      setTimeout(() => {
+        flash.style.opacity = 0;
+        stopMatrixEffect();
+        overlay.classList.remove('active');
+        overlay.style.display = 'none';
+      }, 520); // flashフェードアウト分
+    }, 400);  // 発光持続
+  }, 1600);   // マトリックス演出
+}
+
+
+
+
+
+// =========================
+// app1用リセット
+// =========================
+function resetApp1(full) {
+  const formRows = document.getElementById("formRows");
+  if (!formRows) return;
+
+  // 1行だけ残して削除
+  while (formRows.rows.length > 1) formRows.deleteRow(1);
+
+  // 最初の行の初期化
+  formRows.querySelectorAll("input, select").forEach(el => el.value = '');
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => cb.checked = false);
+
+  // 合計リセット
+  document.getElementById("totalCustomers").textContent = "0";
+  document.getElementById("cashTotal").textContent = "0";
+  document.getElementById("cardTotal").textContent = "0";
+  document.getElementById("totalAmount").textContent = "0";
+  document.getElementById("totalCount").textContent = "0";
+  document.getElementById("totalBackAmount").textContent = "0";
+
+  // カテゴリ別もリセット
+  const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
+  categories.forEach(cat => {
+    document.getElementById(`${cat}count`).textContent = "0";
+    document.getElementById(`${cat}total`).textContent = "0";
+  });
+
+  rowNumber = 2;
+  updateTotals();
+
+  if (full) {
+    localStorage.removeItem("formData");
+    localStorage.removeItem("checkboxStates");
   }
 }
+
+
+// =========================
+// app2用リセット
+// =========================
+function resetApp2(full) {
+  // 入力欄クリア
+  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
+  const exp = document.getElementById('experienceAndRental');
+  if (exp) exp.checked = false;
+  const result = document.getElementById('result');
+  if (result) result.innerHTML = '';
+  const bottleForms = document.getElementById('bottleFormsContainer');
+  if (bottleForms) bottleForms.innerHTML = '';
+
+  if (full) {
+    const historyList = document.getElementById('historyList');
+    if (historyList) historyList.innerHTML = '';
+    localStorage.removeItem('inputs');
+    localStorage.removeItem('historyList');
+    localStorage.removeItem('result');
+    localStorage.removeItem('bottleForms');
+    updateSummary();
+  }
+}
+
+
+// =========================
+// app3用リセット
+// =========================
+function resetApp3(full) {
+  document.querySelectorAll('#app3 input').forEach(el => {
+    if (el.type !== 'button') el.value = '';
+  });
+  updateCalculations();
+
+  if (full) {
+    localStorage.removeItem('app3_inputs');
+    localStorage.removeItem('app3_result');
+  }
+
+
+  attachCommaFormatApp1and3();
+}
+
+function clearApp2Inputs() {
+  resetApp2(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function addComma(numStr) {
+  if (!numStr) return '';
+  // 数字とマイナス以外は除去
+  let val = numStr.replace(/[^\d\-]/g, '');
+  val = val.replace(/(?!^)-/g, '');
+  if (val === '' || val === '-') return val;
+  return parseInt(val, 10).toLocaleString('ja-JP');
+}
+
+// app1/app3内だけカンマ付与
+function attachCommaFormatApp1and3() {
+  // app1対象
+  document.querySelectorAll(
+    '#app1 input.amount, #app1 input.num, #app1 input.card, #app1 input.total, #app1 input.honshi, #app1 input.table-number'
+  ).forEach(input => {
+    if (input._commaFormatApplied) return;
+    input._commaFormatApplied = true;
+
+    input.addEventListener('input', function () {
+      let val = this.value.replace(/,/g, '');
+      if (val === '' || !/^-?\d*$/.test(val)) {
+        this.value = '';
+        return;
+      }
+      this.value = addComma(val);
+    });
+    input.addEventListener('focus', function () {
+      this.value = this.value.replace(/,/g, '');
+    });
+    input.addEventListener('blur', function () {
+      this.value = addComma(this.value);
+    });
+    // 初期値にも即時カンマ
+    if (input.value) input.value = addComma(input.value);
+  });
+
+  // app3対象（#app3直下でinput[type="text"]の全部/disabled除外）
+  document.querySelectorAll('#app3 input[type="text"]:not([disabled])')
+    .forEach(input => {
+      if (input._commaFormatApplied) return;
+      input._commaFormatApplied = true;
+
+      input.addEventListener('input', function () {
+        let val = this.value.replace(/,/g, '');
+        if (val === '' || !/^-?\d*$/.test(val)) {
+          this.value = '';
+          return;
+        }
+        this.value = addComma(val);
+      });
+      input.addEventListener('focus', function () {
+        this.value = this.value.replace(/,/g, '');
+      });
+      input.addEventListener('blur', function () {
+        this.value = addComma(this.value);
+      });
+      if (input.value) input.value = addComma(input.value);
+    });
+}
+
+function attachCommaFormatApp3() {
+  document.querySelectorAll(
+    '#app3 input[type="text"], #app3 input[type="number"]'
+  ).forEach(input => {
+    if (input._commaFormatApplied) return;
+    input._commaFormatApplied = true;
+
+    input.addEventListener('input', function () {
+      let val = this.value.replace(/,/g, '');
+      if (val === '' || !/^-?\d*$/.test(val)) {
+        this.value = '';
+        return;
+      }
+      this.value = addComma(val);
+    });
+
+    input.addEventListener('focus', function () {
+      this.value = this.value.replace(/,/g, '');
+    });
+
+    input.addEventListener('blur', function () {
+      this.value = addComma(this.value);
+    });
+  });
+}
+
+// --- マトリックス風エフェクト ---
+let matrixInterval, matrixStopFlag = false;
+
+function startMatrixEffect(canvas) {
+  const ctx = canvas.getContext('2d');
+  let W = window.innerWidth;
+  let H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  let fontSize = 18;  // 少し小さく密度を増やす
+  let columns = Math.floor(W / fontSize) + 2;
+  let drops = [];
+  for (let i = 0; i < columns; i++) drops[i] = Math.random() * H / fontSize;
+
+  // 文字セット（カタカナ・ひらがな・英数大文字・英数小文字・数字）
+  const chars = [
+    ..."アイウエオカキクケコサシスセソタチツテトナニヌネノマミムメモヤユヨラリルレロワヲン",
+    ..."あいうえおかきくけこさしすせそたちつてとなにぬねのまみむめもやゆよらりるれろわをん",
+    ..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  ];
+
+  matrixStopFlag = false;
+
+  function draw() {
+    ctx.fillStyle = 'rgba(25,30,44,0.23)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = fontSize + "px monospace";
+    ctx.fillStyle = "#47f7ff";
+    // 列ごとに複数行ドロップして密度UP
+    for (let i = 0; i < columns; i++) {
+      for (let d = 0; d < 2; d++) { // 1列あたり2個
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, (drops[i] - d) * fontSize);
+      }
+      if (Math.random() > 0.975) drops[i] = 0;
+      drops[i] += Math.random() * 1.3 + 0.7; // 速さランダム
+    }
+    if (!matrixStopFlag) matrixInterval = requestAnimationFrame(draw);
+  }
+
+  draw();
+}
+
+function stopMatrixEffect() {
+  matrixStopFlag = true;
+  if (matrixInterval) cancelAnimationFrame(matrixInterval);
+  const canvas = document.getElementById('matrixCanvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
 
 </script>
 
