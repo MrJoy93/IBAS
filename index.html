@@ -881,6 +881,41 @@ input:focus, select:focus {
   animation: slideInRight 0.28s cubic-bezier(.77,.17,.3,1.11) forwards;
 }
 
+#app2-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  background: rgba(0, 34, 43, 0.95);
+  z-index: 1100;
+  padding: 13px 0 8px 0;
+  box-shadow: 0 -2px 16px #00f5ff44;
+  display: flex;
+  justify-content: center;
+  border-top: 2px solid #00f5ff33;
+}
+#app2-nav button {
+  background: linear-gradient(90deg, #009be6 40%, #072259 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 28px;
+  margin: 0 16px;
+  font-size: 19px;
+  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 0.07em;
+  box-shadow: 0 2px 8px #00f5ff66;
+  transition: background 0.25s, box-shadow 0.19s;
+}
+#app2-nav button:hover {
+  background: #00f5ff;
+  color: #121212;
+  box-shadow: 0 2px 22px #00f5ff88;
+}
+
 
 
 
@@ -959,6 +994,9 @@ input:focus, select:focus {
           <option value="X">X</option>
           <option value="Z">Z</option>
         </select>
+
+        
+
       </td>
       <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" /></td>
       <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" /></td>
@@ -969,8 +1007,16 @@ input:focus, select:focus {
   </tbody>
 </table>
 
-<button onclick="addRow()" style="font-size: 18px; padding: 15px 30px;">伝票を追加</button>
-</section>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+  <button onclick="addRow()" style="font-size: 18px; padding: 15px 30px;">伝票を追加</button>
+
+  <div>
+    <input type="text" id="searchAmount" placeholder="金額で検索" 
+           style="width: 160px; text-align: right;" inputmode="numeric">
+    <button onclick="searchByAmount()">検索</button>
+    <button onclick="resetSearch()">リセット</button>
+  </div>
+</div>
 
 <section id="summarySection">
 <p>総客数: <span id="totalCustomers">0</span></p>
@@ -1021,12 +1067,18 @@ input:focus, select:focus {
 
 
 <div id="app2" class="content" style="display:none;">
+  <nav id="app2-nav" style="position:sticky; top:80px; background-color:#111; padding:10px; z-index:100;">
+  <button data-target="app2-inputSection">入力</button>
+  <button data-target="app2-resultSection">計算結果表示</button>
+  <button data-target="app2-historySection">履歴</button>
+</nav>
 
   <div class="button-row" style="margin-top: 10px; justify-content: center;">
-  <<button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
+  <button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
 </div>
 
-<form onsubmit="event.preventDefault(); calculate();">
+<section id="app2-inputSection">
+  <form onsubmit="event.preventDefault(); calculate();">
   <div class="group" style="background:#2e2e2e">
     <label>キャスト名: <input type="text" id="castName" placeholder="名前を入力"></label>
     <label>体験及び貸出:<input type="checkbox" id="experienceAndRental"></label>
@@ -1066,23 +1118,32 @@ input:focus, select:focus {
       <div id="bottleFormsContainer"></div>
       <button type="button" onclick="addBottleForm()">ボトル追加</button>
     </div>
+ 
 
     <!-- ここでformの閉じタグ -->
     <div class="button-row" style="margin-top: 20px;">
       <button type="submit">計算する</button>
     </div>
-  </form>
+    
+    </form>
+    </section>
 
-  <div class="result" id="result"></div>
 
-  <div class="button-row" style="margin-top: 20px;">
+    <section id="app2-resultSection"></section>
+
+   <div class="result" id="result"></div>
+
+   <div class="button-row" style="margin-top: 20px;">
     <button type="button" class="print-button" onclick="preparePrint()">出力</button>
-  </div>
+   </div>
 
-  <div class="button-row" style="margin-top: 20px;">
+   <div class="button-row" style="margin-top: 20px;">
     <button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
-  </div>
+   </div>
 
+   </section>
+
+  <section id="app2-historySection">
   <div class="history">
     <h3>履歴</h3>
     <ul id="historyList"></ul>
@@ -1099,6 +1160,7 @@ input:focus, select:focus {
   <div class="button-row" style="margin-top: 40px;">
     <button type="button" class="red-btn" onclick="resetApp('app2', true)">完全クリア</button>
   </div>
+  </section>
 
 </div>
 
@@ -1186,7 +1248,7 @@ input:focus, select:focus {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 3.4
+  Ver. 3.5
 </div>
 
 </div>
@@ -1381,6 +1443,50 @@ document.addEventListener('touchmove', function (e) {
 
 
 //<app1 script---------------------------------------------------------------------------------------------------------------->
+//伝票検索機能
+function searchByAmount() {
+  const input = document.getElementById('searchAmount').value.replace(/,/g, '').trim();
+  const rows = document.querySelectorAll('#formRows tr');
+
+  rows.forEach(row => {
+    const totalValue = row.querySelector('.total')?.value.replace(/,/g, '') || '';
+    const shouldShow = (input === '' || totalValue.includes(input));
+
+    if (shouldShow && row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+}
+
+function resetSearch() {
+  document.getElementById('searchAmount').value = '';
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    if (row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+}
+
 document.querySelectorAll('#app1-nav button').forEach(button => {
   button.addEventListener('click', () => {
     const nav = document.querySelector('#app1-nav');
@@ -1828,7 +1934,24 @@ function renumberRows() {
 
 
 //<app2 script---------------------------------------------------------------------------------------------------------------->
-function createBottleForm(detail = '', split = '', quantity = '', amount = 0) {
+document.querySelectorAll('#app2-nav button').forEach(button => {
+  button.addEventListener('click', () => {
+    const nav = document.querySelector('#app2-nav');
+    const tabs = document.querySelector('.tabs');
+
+    const navTop = parseInt(window.getComputedStyle(nav).top) || 0;
+    const offset = nav.offsetHeight + tabs.offsetHeight + navTop + 20;
+
+    const targetId = button.getAttribute('data-target');
+    const target = document.getElementById(targetId);
+    if (target) {
+      const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+    }
+  });
+});
+
+  function createBottleForm(detail = '', split = '', quantity = '', amount = 0) {
   const form = document.createElement('div');
   form.className = 'bottle-form';
 
@@ -2106,7 +2229,16 @@ if (existingItem) {
   saveBottleForms();
 
   document.getElementById("result").innerHTML = resultText;
-  document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  const resultElem = document.getElementById("result");
+  const tabsHeight = document.querySelector('.tabs').offsetHeight || 0;
+  const navHeight = document.getElementById('app2-nav').offsetHeight || 0;
+  const extraOffset = 30; // ←ここを好きなだけ増やせる
+  const totalOffset = tabsHeight + navHeight + extraOffset;
+
+  const rect = resultElem.getBoundingClientRect();
+  const targetY = rect.top + window.pageYOffset - totalOffset;
+
+window.scrollTo({ top: targetY, behavior: "smooth" });
 
 
 }
@@ -2575,7 +2707,7 @@ function restoreInputs() {
     // totalBackAmount を catchBack に反映
     const totalBackAmountText = document.getElementById("totalBackAmount").textContent.replace(/,/g, "");
     const totalBackAmount = parseInt(totalBackAmountText) || 0;
-    document.getElementById("catchBack").value = totalBackAmount;
+    document.getElementById("catchBack").value = totalBackAmount.toLocaleString();
 
     const total = get('totalSales');
     const card = get('cardSales');
