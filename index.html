@@ -941,8 +941,8 @@ input:focus, select:focus {
 <div id="app1" class="content">
   
  <nav id="app1-nav" style="position:sticky; top:80px;  background-color: #111; padding:10px; z-index:100;">
-  <button data-target="editSection">編集セクション</button>
-  <button data-target="summarySection">集計セクション</button>
+  <button data-target="editSection">編集</button>
+  <button data-target="summarySection">集計</button>
   <button data-target="categorySection">CB</button>
 </nav>
 
@@ -1008,7 +1008,7 @@ input:focus, select:focus {
 </table>
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-  <button onclick="addRow()" style="font-size: 18px; padding: 15px 30px;">伝票を追加</button>
+  <button onclick="addRow()" style="font-size: 18px; padding: 15px 30px;">伝票追加</button>
 
   <div>
     <input type="text" id="searchAmount" placeholder="金額で検索" 
@@ -1143,11 +1143,12 @@ input:focus, select:focus {
 
    </section>
 
-  <section id="app2-historySection">
   <div class="history">
     <h3>履歴</h3>
+    <section id="app2-historySection"></section>
     <ul id="historyList"></ul>
   </div>
+
 
   <button id="deleteSelectedBtn" onclick="deleteSelectedHistory()">選択した履歴を削除</button>
 
@@ -1248,7 +1249,7 @@ input:focus, select:focus {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 3.5
+  Ver. 3.5.1
 </div>
 
 </div>
@@ -1521,57 +1522,65 @@ function restoreCheckboxStates() {
 
 let rowNumber = 2;
 
+function createEmptyRow(number) {
+  const tr = document.createElement('tr');
+  tr.className = "row";
+  tr.innerHTML = `
+    <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+    <td class="rowNumber">${number}</td>
+    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" onchange="updateTotals()" /></td>
+    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" onchange="updateTotals()" /></td>
+    <td>
+      <select class="c" onchange="updateRowColor(this); updateTotals()">
+        <option value="">-</option>
+        <option value="UK">UK</option>
+        <option value="K">K</option>
+        <option value="AB">AB</option>
+        <option value="LA">LA</option>
+        <option value="PA">PA</option>
+        <option value="BB">BB</option>
+        <option value="MS">MS</option>
+        <option value="GM">GM</option>
+        <option value="B">B</option>
+        <option value="JOE">JOE</option>
+        <option value="KOSE">KOSE</option>
+        <option value="HE">HE</option>
+        <option value="PB">PB</option>
+        <option value="X">X</option>
+        <option value="Z">Z</option>
+      </select>
+    </td>
+    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" onchange="updateTotals()" /></td>
+    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" onchange="updateTotals()" /></td>
+    <td><input class="detail" type="text" placeholder="詳細" /></td>
+    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" onchange="updateTotals()" /></td>
+    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" onchange="updateTotals()" /></td>
+  `;
+  return tr;
+}
+
 
 function addRow() {
   const table = document.getElementById("formRows");
-  const newRow = table.rows[0].cloneNode(true);
-
-  // 初期化
-  newRow.querySelectorAll("input").forEach(input => input.value = "");
-  newRow.querySelector(".rowNumber").textContent = rowNumber++;
-  newRow.className = "row";  // まず通常クラスにする
-
-  const select = newRow.querySelector(".c");
-  select.value = "";
-  updateRowColor(select);
-
-  // 削除ボタン確認
-  if (!newRow.querySelector(".delete-btn")) {
-    const deleteCell = document.createElement("td");
-    const deleteButton = document.createElement("button");
-    deleteButton.textContent = "削除";
-    deleteButton.className = "delete-btn";
-    deleteButton.onclick = function () {
-      deleteRow(this);
-    };
-    deleteCell.appendChild(deleteButton);
-    newRow.appendChild(deleteCell);
-  }
+  const newRow = createEmptyRow(rowNumber++);
 
   table.appendChild(newRow);
 
-  renumberRows();
-
-  // **ここでアニメーションを確実に発火させる**
-  requestAnimationFrame(() => {
-    newRow.classList.add('slide-in');
-  });
-
-  newRow.addEventListener('animationend', () => {
-    newRow.classList.remove('slide-in');
-  });
+  // アニメーション
+  requestAnimationFrame(() => newRow.classList.add('slide-in'));
+  newRow.addEventListener('animationend', () => newRow.classList.remove('slide-in'));
 
   // スクロール
-  const offset = 155;
   const rect = newRow.getBoundingClientRect();
+  const offset = 155;
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const targetY = rect.top + scrollTop - offset;
-  window.scrollTo({ top: targetY, behavior: 'smooth' });
+  window.scrollTo({ top: rect.top + scrollTop - offset, behavior: 'smooth' });
 
   attachCommaFormatApp1and3();
-
   saveForm();
+  renumberRows();
 }
+
 
 
 document.addEventListener('keydown', function (e) {
