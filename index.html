@@ -2874,42 +2874,70 @@ function attachApp3Listeners() {
 }
 
 function exportAsSelfContainedHTML() {
-  // ... 既存処理そのまま ...
+  // 1. ドキュメント全体をクローン
   const doc = document.documentElement.cloneNode(true);
-  const localStorageData = JSON.stringify(localStorage);
-  const savedDate = localStorage.getItem("workStartDate") || new Date().toISOString().slice(0, 10);
-  const fileName = `IBASD_${savedDate}.html`;
 
-  // ローカルストレージ再現用スクリプトの埋め込み
-  const storageScript = document.createElement("script");
+  // 2. localStorageのデータも取得（本当は再インポート用にスクリプト化推奨）
+  const localStorageData = JSON.stringify(localStorage);
+
+  // 3. localStorageのデータ埋め込み用スクリプト作成
+  const storageScript = document.createElement('script');
+  storageScript.type = 'text/javascript';
   storageScript.textContent = `
     (function() {
-      const savedData = ${localStorageData};
-      for (let key in savedData) {
-        localStorage.setItem(key, savedData[key]);
-      }
+      try {
+        var data = ${localStorageData};
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            localStorage.setItem(key, data[key]);
+          }
+        }
+      } catch (e) {}
     })();
   `;
 
+  // 4. <head>内に挿入
   const head = doc.querySelector("head");
   if (head) head.appendChild(storageScript);
 
+  // 5. HTML全体を文字列化
   const html = "<!DOCTYPE html>\n" + doc.outerHTML;
+
+  // 6. Blob生成
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
 
-  // ダウンロード開始
+  // 7. ダウンロード用リンク生成
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName;
+  a.download = getCustomFileName() + ".html";
   a.click();
   URL.revokeObjectURL(url);
 
-  // ↓保存後に自動リセット
+  // 8. 保存後リセット
   setTimeout(() => {
     resetAllApps();
-  }, 600); // ダイアログと演出に余裕をもたせる
+  }, 600);
 }
+
+
+function getCustomFileName() {
+  // JSTに補正（サーバーUTCなら+9）
+  const now = new Date();
+  now.setHours(now.getHours() + 9);
+
+  let fileDate = new Date(now);
+  const hour = now.getHours();
+  if (hour < 20) {
+    fileDate.setDate(fileDate.getDate() - 1);
+  }
+  const y = fileDate.getFullYear();
+  const m = String(fileDate.getMonth() + 1).padStart(2, '0');
+  const d = String(fileDate.getDate()).padStart(2, '0');
+
+  return `IBASD_${y}-${m}-${d}`;
+}
+
 
 
 
