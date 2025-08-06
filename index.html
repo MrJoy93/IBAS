@@ -854,16 +854,6 @@ input:focus, select:focus {
   animation: slideOutLeft 0.32s cubic-bezier(.77,.17,.3,1.11) forwards;
 }
 
-@keyframes slideOutLeft {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-120%);
-  }
-}
 @keyframes slideInRight {
   0% {
     opacity: 0;
@@ -1078,55 +1068,139 @@ input:focus, select:focus {
 </div>
 
 <section id="app2-inputSection">
-  <form onsubmit="event.preventDefault(); calculate();">
-  <div class="group" style="background:#2e2e2e">
-    <label>キャスト名: <input type="text" id="castName" placeholder="名前を入力"></label>
-    <label>体験及び貸出:<input type="checkbox" id="experienceAndRental"></label>
-    <label>送迎: <input type="text" inputmode="numeric" pattern="\d*" id="sendoffAmount" placeholder="送迎金額"></label>
-  </div>
+  <form autocomplete="off" onsubmit="event.preventDefault(); calculate();">
+    <div class="group" style="background:#2e2e2e">
+      <label>キャスト名:
+        <input type="text" id="castName"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="名前を入力">
+      </label>
+      <label>体験及び貸出:
+        <input type="checkbox" id="experienceAndRental"
+          autocomplete="off" autocapitalize="off" spellcheck="false">
+      </label>
+      <label>送迎:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="sendoffAmount"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="送迎金額">
+      </label>
+    </div>
 
     <div class="group group-basic">
       <h3>フリーバック</h3>
-      <label>F1（¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="f" placeholder="F1"></label>
-      <label>F2（¥2000）: <input type="text" inputmode="numeric" pattern="\d*" id="f2" placeholder="F2"></label>
-      <label>場内（¥1000）: <input type="text" inputmode="numeric" pattern="\d*" id="jounai" placeholder="場内"></label>
+      <label>F1（¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="f"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="F1">
+      </label>
+      <label>F2（¥2000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="f2"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="F2">
+      </label>
+      <label>場内（¥1000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="jounai"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="場内">
+      </label>
     </div>
 
     <div class="group group-shimei">
       <h3>指名・同伴・枝・HELP</h3>
-      <label>本指（¥0）: <input type="text" inputmode="numeric" pattern="\d*" id="honshiri" placeholder="本指"></label>
-      <label>同伴（¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="douhan" placeholder="同伴"></label>
-      <label>枝（¥500）: <input type="text" inputmode="numeric" pattern="\d*" id="eda" placeholder="枝"></label>
-      <label>HELP（-¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="help" placeholder="HELP"></label>
+      <label>本指（¥0）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="honshiri"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="本指">
+      </label>
+      <label>同伴（¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="douhan"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="同伴">
+      </label>
+      <label>枝（¥500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="eda"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="枝">
+      </label>
+      <label>HELP（-¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="help"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="HELP">
+      </label>
     </div>
 
     <div class="group group-set">
       <h3>セット・VIP</h3>
-      <label>SET40（¥5500）: <input type="text" inputmode="numeric" pattern="\d*" id="set40" placeholder="SET40"></label>
-      <label>SET20（¥3500）: <input type="text" inputmode="numeric" pattern="\d*" id="set20" placeholder="SET20"></label>
-      <label>VIP（¥2000）: <input type="text" inputmode="numeric" pattern="\d*" id="vip" placeholder="VIP"></label>
+      <label>SET40（¥5500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="set40"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="SET40">
+      </label>
+      <label>SET20（¥3500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="set20"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="SET20">
+      </label>
+      <label>VIP（¥2000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="vip"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="VIP">
+      </label>
     </div>
 
     <div class="group group-option">
       <h3>ドリンク・その他</h3>
-      <label>A（¥500）: <input type="text" inputmode="numeric" pattern="\d*" id="a" placeholder="A"></label>
-      <label>B（¥1000）: <input type="text" inputmode="numeric" pattern="\d*" id="b" placeholder="B"></label>
-      <label>C（¥1500）: <input type="text" inputmode="numeric" pattern="\d*" id="c" placeholder="C"></label>
-      <label>D（¥2000）: <input type="text" inputmode="numeric" pattern="\d*" id="d" placeholder="D"></label>
-      <label>E（¥2500）: <input type="text" inputmode="numeric" pattern="\d*" id="e" placeholder="E"></label>
+      <label>A（¥500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="a"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="A">
+      </label>
+      <label>B（¥1000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="b"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="B">
+      </label>
+      <label>C（¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="c"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="C">
+      </label>
+      <label>D（¥2000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="d"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="D">
+      </label>
+      <label>E（¥2500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="e"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="E">
+      </label>
 
       <div id="bottleFormsContainer"></div>
       <button type="button" onclick="addBottleForm()">ボトル追加</button>
     </div>
- 
 
-    <!-- ここでformの閉じタグ -->
     <div class="button-row" style="margin-top: 20px;">
       <button type="submit">計算する</button>
     </div>
-    
-    </form>
-    </section>
+  </form>
+</section>
 
 
     <section id="app2-resultSection"></section>
@@ -1249,7 +1323,7 @@ input:focus, select:focus {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 3.5.1
+  Ver. 3.5.2
 </div>
 
 </div>
@@ -1448,6 +1522,7 @@ document.addEventListener('touchmove', function (e) {
 function searchByAmount() {
   const input = document.getElementById('searchAmount').value.replace(/,/g, '').trim();
   const rows = document.querySelectorAll('#formRows tr');
+  let foundRow = null;
 
   rows.forEach(row => {
     const totalValue = row.querySelector('.total')?.value.replace(/,/g, '') || '';
@@ -1470,8 +1545,26 @@ function searchByAmount() {
         row.removeEventListener('animationend', onAnimEnd);
       });
     }
+
+    // スクロール用: 最初に見つかった行だけ記憶
+    if (shouldShow && !foundRow) {
+      foundRow = row;
+    }
   });
+
+  // 検索値が空欄でなければ、ヒット時はスクロール、なければダイアログ
+  if (input !== '') {
+    if (foundRow) {
+      // スクロール（スムーズ・中央寄せ）
+      foundRow.scrollIntoView({ behavior: "smooth", block: "center" });
+      // ハイライトしたい場合は下記も追加OK
+      // foundRow.classList.add('highlight');
+    } else {
+      window.alert("該当する伝票がありません。");
+    }
+  }
 }
+
 
 function resetSearch() {
   document.getElementById('searchAmount').value = '';
@@ -1960,17 +2053,20 @@ document.querySelectorAll('#app2-nav button').forEach(button => {
   });
 });
 
-  function createBottleForm(detail = '', split = '', quantity = '', amount = 0) {
+function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   const form = document.createElement('div');
   form.className = 'bottle-form';
 
   form.innerHTML = `
-    <input type="text" class="bottleDetails" value="${detail}" placeholder="詳細" style="width: 122px; margin-right: 5px;">
-    <input type="text" class="splitCount" value="${split}" placeholder="割" style="width: 30px; margin-right: 5px;">
-    <input type="text" class="bottleQuantity" value="${quantity}" placeholder="数量" style="width: 30px; margin-right: 5px;">
-    <input type="number" class="bottleAmount" value="${amount}" placeholder="金額" style="width: 202px;">
+    <input type="text" class="bottleDetails" value="${detail}" placeholder="詳細"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 122px; margin-right: 5px;">
+    <input type="text" class="splitCount" value="${split}" placeholder="割"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 30px; margin-right: 5px;">
+    <input type="text" class="bottleQuantity" value="${quantity}" placeholder="数量"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 30px; margin-right: 5px;">
+    <input type="text" class="bottleAmount" value="${amount}" placeholder="金額"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 202px;">
   `;
-
   return form;
 }
 
@@ -2655,6 +2751,96 @@ function restoreInputs() {
     if (el) el.value = value;
   });
 }
+
+// --- app2フォームの十字キー移動 ---
+// #app2内でのみ有効
+(function(){
+  // 移動対象input,selectの共通セレクタ（動的増減対応）
+  function getApp2Fields() {
+    // app2内のフォーム全体（bottle-form含む）
+    return Array.from(document.querySelectorAll(
+      '#app2 section#app2-inputSection input:not([type=hidden]):not([disabled]), ' +
+      '#app2 section#app2-inputSection select:not([disabled])'
+    )).filter(el => el.offsetParent !== null); // 表示のみ
+  }
+
+  document.addEventListener('keydown', function(e) {
+    // app2以外は無視
+    if (!document.getElementById('app2').classList.contains('active')) return;
+
+    // 矢印以外は無視
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+
+    const target = e.target;
+    // 対象がapp2内のinputかselectか
+    if (!target.closest('#app2')) return;
+    if (!['INPUT','SELECT'].includes(target.tagName)) return;
+
+    // input/textareaの左右はカーソル移動優先
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && (target.selectionStart !== target.selectionEnd)) {
+      // 入力値内でのキャレット移動を優先させる
+      if ((e.key === 'ArrowLeft' && target.selectionStart > 0) ||
+          (e.key === 'ArrowRight' && target.selectionStart < target.value.length)) {
+        return; // 何もしない
+      }
+    }
+
+    // ここでフォーム群取得
+    const fields = getApp2Fields();
+    const idx = fields.indexOf(target);
+    if (idx === -1) return;
+
+    // 配置を2次元配列化
+    const fieldMap = [];
+    let lastTop = null, row = [];
+    fields.forEach(f=>{
+      const top = f.getBoundingClientRect().top;
+      if (lastTop !== null && Math.abs(top-lastTop) > 8) {
+        fieldMap.push(row);
+        row = [];
+      }
+      row.push(f);
+      lastTop = top;
+    });
+    if (row.length) fieldMap.push(row);
+
+    // 現在位置を特定
+    let rowIdx = -1, colIdx = -1;
+    fieldMap.forEach((row,i)=>{
+      const j = row.indexOf(target);
+      if(j>=0){ rowIdx=i; colIdx=j; }
+    });
+    if(rowIdx===-1||colIdx===-1) return;
+
+    // 移動先を決定
+    let next;
+    if(e.key==='ArrowLeft'){
+      next = fieldMap[rowIdx][colIdx-1];
+    }
+    if(e.key==='ArrowRight'){
+      next = fieldMap[rowIdx][colIdx+1];
+    }
+    if(e.key==='ArrowUp'){
+      for(let up=rowIdx-1;up>=0;up--){
+        if(fieldMap[up][colIdx]){ next=fieldMap[up][colIdx]; break;}
+      }
+    }
+    if(e.key==='ArrowDown'){
+      for(let dn=rowIdx+1;dn<fieldMap.length;dn++){
+        if(fieldMap[dn][colIdx]){ next=fieldMap[dn][colIdx]; break;}
+      }
+    }
+
+    if(next){
+      e.preventDefault();
+      next.focus();
+      if(typeof next.select==='function') next.select();
+    }
+  });
+})();
+
+
+
 
 
 
