@@ -1068,7 +1068,7 @@ input:focus, select:focus {
 </div>
 
 <section id="app2-inputSection">
-  <form autocomplete="off" onsubmit="event.preventDefault(); calculate();">
+  <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
     <div class="group" style="background:#2e2e2e">
       <label>キャスト名:
         <input type="text" id="castName"
@@ -1323,7 +1323,7 @@ input:focus, select:focus {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 3.5.2
+  Ver. 3.5.3
 </div>
 
 </div>
@@ -2058,8 +2058,72 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   form.className = 'bottle-form';
 
   form.innerHTML = `
-    <input type="text" class="bottleDetails" value="${detail}" placeholder="詳細"
-      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 122px; margin-right: 5px;">
+    <button type="button" class="delete-btn" style="margin-right:4px;">×</button>
+    <select class="bottleDetails" style="width: 140px; margin-right: 5px;">
+      <option value="">選択してください</option>
+      <optgroup label="リステル等">
+        <option value="リステル">リステル</option>
+        <option value="パリ">パリ</option>
+        <option value="マバム">マバム</option>
+      </optgroup>
+      <optgroup label="モエ">
+        <option value="モエ白">モエ白</option>
+        <option value="モエロゼ">モエロゼ</option>
+        <option value="モエネク">モエネク</option>
+        <option value="モエピカ">モエピカ</option>
+      </optgroup>
+      <optgroup label="ヴーヴ">
+        <option value="ヴーヴ">ヴーヴ</option>
+        <option value="ヴーヴホワイト">ヴーヴホワイト</option>
+        <option value="ヴーヴローズ">ヴーヴローズ</option>
+      </optgroup>
+      <optgroup label="ベルエ">
+        <option value="ベルエ">ベルエ</option>
+        <option value="ベルエロゼ">ベルエロゼ</option>
+      </optgroup>
+      <optgroup label="ソウメイ">
+        <option value="ソウメイ">ソウメイ</option>
+      </optgroup>
+      <optgroup label="ドンペリ">
+        <option value="ドンペリ">ドンペリ</option>
+        <option value="ドンペリルミナス">ドンペリルミナス</option>
+        <option value="ドンペリロゼ">ドンペリロゼ</option>
+        <option value="ドンペリルミナスロゼ">ドンペリルミナスロゼ</option>
+        <option value="ドンペリP2">ドンペリP2</option>
+        <option value="ドンペリゴールド">ドンペリゴールド</option>
+      </optgroup>
+      <optgroup label="アルマンド">
+        <option value="アルマンド">アルマンド</option>
+        <option value="アルマンドロゼ">アルマンドロゼ</option>
+        <option value="アルマンドグリーン">アルマンドグリーン</option>
+      </optgroup>
+      <optgroup label="オリシャン">
+        <option value="オリシャンR">オリシャンR</option>
+        <option value="オリシャンB">オリシャンB</option>
+      </optgroup>
+      <optgroup label="焼酎・リキュール等">
+        <option value="柚子小町">柚子小町</option>
+        <option value="黒霧島">黒霧島</option>
+        <option value="吉四六">吉四六</option>
+        <option value="富乃宝山">富乃宝山</option>
+        <option value="赤霧島">赤霧島</option>
+      </optgroup>
+      <optgroup label="ウイスキー">
+        <option value="知多">知多</option>
+        <option value="山崎">山崎</option>
+      </optgroup>
+      <optgroup label="ワイン">
+        <option value="ベリンジャー">ベリンジャー</option>
+      </optgroup>
+      <optgroup label="テキーラ">
+        <option value="テキカン">テキカン</option>
+      </optgroup>
+      <optgroup label="その他">
+        <option value="枝">枝</option>
+        <option value="その他">その他</option>
+        <option value="保障補正">保障補正</option> <!-- ★修正 -->
+      </optgroup>
+    </select>
     <input type="text" class="splitCount" value="${split}" placeholder="割"
       autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 30px; margin-right: 5px;">
     <input type="text" class="bottleQuantity" value="${quantity}" placeholder="数量"
@@ -2067,36 +2131,191 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
     <input type="text" class="bottleAmount" value="${amount}" placeholder="金額"
       autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 202px;">
   `;
+
+  // ★ ここで detail を select に反映（存在しない場合は一時追加）
+  const sel = form.querySelector('.bottleDetails');
+   // ▼ 履歴マップに同名があれば、選択時に空欄へ自動入力
+
+ sel.addEventListener('change', () => {
+  if (BOTTLE_REFRESHING) return; // ←内部更新中は反応しない
+
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+
+  const splitInput  = form.querySelector('.splitCount');
+  const qtyInput    = form.querySelector('.bottleQuantity');
+  const amountInput = form.querySelector('.bottleAmount');
+
+  if (opt.dataset.from === 'history') {
+    splitInput.value  = opt.dataset.split  || '';
+    qtyInput.value    = opt.dataset.qty    || '';
+    amountInput.value = opt.dataset.amount ?? 0;
+  } else {
+    splitInput.value  = '';
+    qtyInput.value    = '';
+    amountInput.value = '';
+  }
+
+  saveBottleForms();
+ });
+
+  if (detail) {
+    // まずはそのまま選択を試みる
+    sel.value = detail;
+    if (sel.value !== detail) {
+      // 該当optionが無い → 一時的に追加して選択
+      const tmp = document.createElement('option');
+      tmp.value = detail;
+      tmp.textContent = detail;
+      // 「その他」optgroup があればそこへ、なければ末尾へ
+      const etcGroup = Array.from(sel.children).find(
+        n => n.tagName === 'OPTGROUP' && n.label === 'その他'
+      );
+      (etcGroup || sel).appendChild(tmp);
+      sel.value = detail;
+    }
+  }
+
+  form.querySelector('.delete-btn').addEventListener('click', function() {
+    if (confirm("このボトル明細を削除しますか？")) {
+      form.remove();
+      saveBottleForms();
+    }
+  });
+
   return form;
 }
+
+let BOTTLE_REFRESHING = false;
+
+// 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
+let BOTTLE_HISTORY = {};
+
+function buildBottleHistoryMap() {
+  BOTTLE_HISTORY = {};
+  const list = document.getElementById('historyList');
+  if (!list) return;
+
+  const items = Array.from(list.querySelectorAll('li'));
+  const re = /ボトル:\s*¥([\d,]+)（([^/（）]*?)(?:\s*\/\s*割:\s*([^\s/（）]+))?(?:\s*\/\s*数量:\s*([^\s/（）]+))?）/g;
+
+  const seen = new Set(); // 同一バリアント重複防止
+
+  for (const li of items) {
+    const html = li.innerHTML;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      const amount = parseInt(m[1].replace(/,/g, ''), 10) || 0;
+      const detail = (m[2] || '').trim();
+      const split  = (m[3] || '').trim();
+      const qty    = (m[4] || '').trim();
+      if (!detail) continue;
+
+      // バリアントID（品名＋割＋数量＋金額の組）
+      const id = encodeURIComponent(detail) + '|' +
+                 encodeURIComponent(split)  + '|' +
+                 encodeURIComponent(qty)    + '|' +
+                 amount;
+
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      (BOTTLE_HISTORY[detail] ||= []).push({ id, split, qty, amount });
+    }
+  }
+}
+
+function refreshBottleDropdownsFromHistory() {
+  buildBottleHistoryMap();
+
+  BOTTLE_REFRESHING = true; // ←開始
+
+  document.querySelectorAll('select.bottleDetails').forEach(sel => {
+    // 退避
+    const prevValue = sel.value;
+    const form = sel.closest('.bottle-form');
+    const prevSplit = form?.querySelector('.splitCount')?.value ?? '';
+    const prevQty   = form?.querySelector('.bottleQuantity')?.value ?? '';
+    const prevAmt   = form?.querySelector('.bottleAmount')?.value ?? '';
+
+    // 履歴グループを先頭に
+    let grp = Array.from(sel.children).find(n => n.tagName === 'OPTGROUP' && n.label === '履歴');
+    if (!grp) {
+      grp = document.createElement('optgroup');
+      grp.label = '履歴';
+      sel.insertBefore(grp, sel.firstChild);
+    }
+    grp.innerHTML = '';
+
+    // 各品名の履歴を再構築
+    Object.entries(BOTTLE_HISTORY).forEach(([detail, variants]) => {
+      // 静的に存在しない品名だけ「（新規）」を追加
+      const hasBlank = Array.from(sel.options).some(o => o.value === detail);
+      if (!hasBlank) {
+        const blankOpt = document.createElement('option');
+        blankOpt.value = detail;
+        blankOpt.textContent = `${detail}（新規）`;
+        blankOpt.dataset.base = detail;
+        grp.appendChild(blankOpt);
+      }
+
+      variants.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = `__HIST__${v.id}`;
+        opt.textContent = `${detail}（割:${v.split || '-'} / 数量:${v.qty || '-'} / ¥${v.amount.toLocaleString()}）`;
+        opt.dataset.from = 'history';
+        opt.dataset.base = detail;
+        opt.dataset.split = v.split;
+        opt.dataset.qty = v.qty;
+        opt.dataset.amount = v.amount;
+        grp.appendChild(opt);
+      });
+    });
+
+    // 選択を復元。失敗したら退避の入力値を戻す
+    sel.value = prevValue;
+    if (sel.value !== prevValue && form) {
+      form.querySelector('.splitCount').value     = prevSplit;
+      form.querySelector('.bottleQuantity').value = prevQty;
+      form.querySelector('.bottleAmount').value   = prevAmt;
+    }
+  });
+
+  BOTTLE_REFRESHING = false; // ←終了
+}
+
+
 
 function addBottleForm() {
   const container = document.getElementById('bottleFormsContainer');
   const newForm = createBottleForm(); // ←空のフォームを追加
   container.appendChild(newForm);
+  refreshBottleDropdownsFromHistory();
   saveBottleForms(); // 保存
 }
 
 function saveBottleForms() {
   const bottleForms = [];
-  const forms = document.querySelectorAll('.bottle-form');
+  document.querySelectorAll('.bottle-form').forEach(form => {
+    const sel = form.querySelector('.bottleDetails');
+    const opt = sel?.selectedOptions?.[0];
 
-  forms.forEach(form => {
-    const bottleDetails = form.querySelector('.bottleDetails')?.value || '';
+    const bottleDetails =
+      (opt?.dataset?.base) || (sel?.value || ''); // 履歴選択でも「品名」だけ保存
+
     const splitCount = form.querySelector('.splitCount')?.value || '';
     const bottleQuantity = form.querySelector('.bottleQuantity')?.value || '';
-    const bottleAmount = parseInt(form.querySelector('.bottleAmount')?.value) || 0;
+    const bottleAmount = parseInt(
+      (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''), 10
+    ) || 0;
 
-    bottleForms.push({
-      bottleDetails,
-      splitCount,
-      bottleQuantity,
-      bottleAmount
-    });
+    bottleForms.push({ bottleDetails, splitCount, bottleQuantity, bottleAmount });
   });
 
   localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
 }
+
+
 
 function loadBottleForms() {
   const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms')) || [];
@@ -2127,6 +2346,7 @@ function renumberHistory() {
 }
 
 function calculate() {
+   const historyList = document.getElementById('historyList');
   // 「体験及び貸出」のチェックボックスの状態を取得
   const isExperienceAndRentalChecked = document.getElementById('experienceAndRental').checked;
   let experienceText = isExperienceAndRentalChecked ? '体験及び貸出: 有り' : '体験及び貸出: 無し';
@@ -2146,7 +2366,9 @@ function calculate() {
    // 動的に追加されたボトルフォームから金額と詳細を取得
   const bottleForms = document.querySelectorAll('.bottle-form');
   bottleForms.forEach(form => {
-    const bottleAmount = parseInt(form.querySelector('.bottleAmount').value) || 0;
+    const bottleAmount = parseInt(
+   (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''), 10
+   ) || 0;
     const bottleDetails = form.querySelector('.bottleDetails').value || '詳細なし';
     total += bottleAmount;
   });
@@ -2236,10 +2458,14 @@ if (storeCoveredAmount > 0) {
 
 // 追加された全ボトル明細
 bottleForms.forEach(form => {
-  const bottleAmount = parseInt(form.querySelector('.bottleAmount')?.value) || 0;
-  const bottleDetail = form.querySelector('.bottleDetails')?.value || '詳細なし';
+  const sel = form.querySelector('.bottleDetails');
+  const opt = sel?.selectedOptions?.[0];
+  const bottleDetail = (opt?.dataset?.base) || (sel?.value) || '詳細なし';
+
   const split = form.querySelector('.splitCount')?.value || '';
   const quantity = form.querySelector('.bottleQuantity')?.value || '';
+  const amountStr = (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '');
+  const bottleAmount = parseInt(amountStr, 10) || 0;
 
   if (bottleAmount > 0 || bottleDetail || split || quantity) {
     detailsHTML += `<div>ボトル: ¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
@@ -2323,6 +2549,8 @@ if (existingItem) {
   localStorage.setItem('inputs', JSON.stringify(inputValues));
   localStorage.setItem('historyList', historyList.innerHTML);
   localStorage.setItem('result', resultText);
+    // 履歴に追加したので、ボトル候補を更新
+  refreshBottleDropdownsFromHistory();
 
   // チェックボックスの状態も保存
   const checkboxStates = {
@@ -2343,10 +2571,60 @@ if (existingItem) {
   const rect = resultElem.getBoundingClientRect();
   const targetY = rect.top + window.pageYOffset - totalOffset;
 
-window.scrollTo({ top: targetY, behavior: "smooth" });
-
-
+ window.scrollTo({ top: targetY, behavior: "smooth" });
 }
+
+function confirmAndCalculate() {
+  // 入力内容まとめ
+  const castName   = document.getElementById('castName').value || '（名前なし）';
+  const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
+  const sendoff    = document.getElementById('sendoffAmount').value || '0';
+
+  // メイン入力の集計
+  const labels = {
+    f:'F', f2:'F2', jounai:'場内', honshiri:'本指', douhan:'同伴', eda:'枝', help:'HELP',
+    set40:'SET40', set20:'SET20', vip:'VIP', a:'A', b:'B', c:'C', d:'D', e:'E'
+  };
+
+  const mainItems = [];
+  Object.keys(labels).forEach(key => {
+    const val = document.getElementById(key).value;
+    if (parseInt(val)) mainItems.push(`${labels[key]} ×${val}`);
+  });
+
+// ボトル明細の集計
+const bottles = [];
+document.querySelectorAll('.bottle-form').forEach(form => {
+  const sel = form.querySelector('.bottleDetails');
+  const opt = sel?.selectedOptions?.[0];
+  const det = (opt?.dataset?.base) || (sel?.value) || '';
+
+  const spl = form.querySelector('.splitCount')?.value || '';
+  const qty = form.querySelector('.bottleQuantity')?.value || '';
+  const amtNum = parseInt((form.querySelector('.bottleAmount')?.value || '').replace(/,/g,''), 10) || 0;
+  const amt = amtNum.toLocaleString();
+
+  if (det || spl || qty || amtNum) {
+    bottles.push(`¥${amt}（${det}${spl ? " / 割: "+spl : ""}${qty ? " / 数量: "+qty : ""}）`);
+  }
+});
+
+  // 確認メッセージ
+  let msg = `内容を確認してください。\n\n`
+    + `キャスト名: ${castName}\n`
+    + `体験及び貸出: ${experience}\n`
+    + `送迎金額: ¥${sendoff}\n`
+    + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
+    + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
+
+  if (confirm(msg)) {
+    calculate();  // ← OKなら計算
+  }
+
+  return false;    // ← フォーム送信を確実に中止（ページ上部スクロール防止）
+}
+
+
 
 function moveHistoryItem(button, direction) {
   const listItem = button.closest('li');
@@ -2495,6 +2773,8 @@ function deleteSelectedHistory() {
   // 削除後の保存
   localStorage.setItem('historyList', historyList.innerHTML);
   updateSummary();
+    // 履歴を削除したので、ボトル候補を更新
+  refreshBottleDropdownsFromHistory();
 
   // 削除結果の表示
   if (deletedNames.length > 0) {
@@ -2742,6 +3022,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateSummary();
   updateCalculations(); // 初期計算
   attachCommaFormatApp3();
+  refreshBottleDropdownsFromHistory();
 });
 
 function restoreInputs() {
@@ -2838,6 +3119,7 @@ function restoreInputs() {
     }
   });
 })();
+
 
 
 
@@ -3140,6 +3422,8 @@ function resetApp(appId, full = false) {
 
   if (appId === 'app1') {
     resetApp1(full);
+  } else if (appId === 'app2') {          // ← これを追加
+    resetApp2(full);
   } else if (appId === 'app3') {
     resetApp3(full);
   }
