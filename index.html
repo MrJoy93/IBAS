@@ -307,6 +307,122 @@ input:focus, select:focus { box-shadow: 0 0 12px #00f5ff77; }
 }
 /* 任意：回転が必要な時だけ class で明示 */
 @media print { .rotate180{ transform: rotate(180deg) !important; transform-origin: center center !important; } }
+
+/* =========================================
+   伝票フォーム & app2フォーム 安定化パッチ
+   （既存<style>の一番最後に追記）
+   ========================================= */
+
+/* 1) .group label を“2列グリッド”で安定化（PC） */
+@media (min-width: 701px) {
+  .group label {
+    display: grid !important;
+    grid-template-columns: minmax(120px, 220px) 1fr !important;
+    align-items: center !important;
+    gap: 10px 16px !important;
+    margin-bottom: 12px !important;
+  }
+  .group label > span,
+  .group label > strong,
+  .group label > b {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    text-align: left !important;
+    justify-self: start !important;
+  }
+  .group label input,
+  .group label select,
+  .group label button {
+    width: 100% !important;       /* ←右列は常に全幅で安定 */
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    justify-self: stretch !important;
+    text-align: right !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* 2) モバイルでは“縦積み”を強制（既存指定の上書き強化） */
+@media (max-width: 700px) {
+  .group label {
+    display: block !important;
+  }
+  .group label > span,
+  .group label > strong,
+  .group label > b {
+    display: block !important;
+    margin-bottom: 6px !important;
+  }
+  .group label input,
+  .group label select,
+  .group label button {
+    display: block !important;
+    width: 100% !important;
+  }
+}
+
+/* 3) 伝票フォーム（app1）のセル幅が他の汎用幅に影響されないようガード */
+#app1 td input,
+#app1 td select {
+  width: auto !important;        /* 既定の個別幅(#app1 input.amount など)を優先 */
+  max-width: 100% !important;
+}
+#app1 input.table-number{ width: 30px !important; }
+#app1 input.honshi{ width: 50px !important; }
+#app1 select.c{ width: 100px !important; }
+#app1 input.amount{ width: 120px !important; }
+#app1 input.num{ width: 40px !important; }
+#app1 input.detail{ width: 80px !important; }
+#app1 input.card,
+#app1 input.total{ width: 150px !important; }
+
+/* 4) app2 のボトルフォーム: 横寄せ→左寄せに、幅も柔軟に */
+.bottle-form {
+  display: grid !important;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 10px 14px !important;
+  justify-content: start !important;   /* ← flex-end をやめる */
+  align-items: center !important;
+}
+
+/* ラベルは最小幅にして詰め、入力は適度な幅に */
+.bottle-form label {
+  min-width: auto !important;
+  margin: 0 !important;
+  gap: 6px !important;
+}
+
+/* 入力幅：PCは小さめ固定、はみ出し防止 */
+.bottle-form input[type="text"],
+.bottle-form input[type="number"] {
+  width: 96px !important;       /* 74px → 96px に広げて操作性UP */
+  min-width: 80px !important;
+  max-width: 120px !important;
+  text-align: right !important;
+}
+
+/* モバイルは各フィールドを縦に積んで全幅 */
+@media (max-width: 700px) {
+  .bottle-form {
+    grid-auto-flow: row !important;
+    grid-template-columns: 1fr !important;
+    justify-items: stretch !important;
+  }
+  .bottle-form input[type="text"],
+  .bottle-form input[type="number"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+/* 5) 予期せぬ横スクロールの最終ガード */
+html, body {
+  overflow-x: hidden !important;
+}
+
 </style>
 
 </head>
