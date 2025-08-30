@@ -6,912 +6,309 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>IBASD β版</title>
 <style>
-
-  #resetOverlay {
-  position: fixed;
-  z-index: 99999;
-  left: 0; top: 0; width: 100vw; height: 100vh;
-  background: #191924;
-  opacity: 0;
-  transition: opacity 0.8s;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#resetOverlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-#matrixCanvas {
-  position: absolute;
-  left: 0; top: 0;
-  width: 100vw; height: 100vh;
-  z-index: 2;
-  pointer-events: none;
-}
-
-#resetFlash {
-  position: absolute;
-  left: 0; top: 0; width: 100vw; height: 100vh;
-  background: white;
-  opacity: 0;
-  z-index: 3;
-  transition: opacity 0.5s;
-  pointer-events: none;
-}
-
+/* フォント */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
 
-body {
+/* ベース */
+html, body {
+  margin: 0; padding: 0; min-height: 100vh;
+  font-family: 'Orbitron','Segoe UI',Arial,sans-serif;
+  font-size: 20px; letter-spacing: .02em; color: #eaf6ff;
   background: linear-gradient(135deg, #191924, #212c4a 80%);
-  color: #eaf6ff;
-  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
-  font-size: 20px;
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  letter-spacing: 0.02em;
+  overflow-x: hidden; /* iOS 横スクロール防止 */
 }
 
-/* --- タブバー --- */
+/* ====== オーバーレイ/リセット演出 ====== */
+#resetOverlay {
+  position: fixed; inset: 0;
+  z-index: 99999; background: #191924; opacity: 0;
+  transition: opacity .8s; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+#resetOverlay.active { opacity: 1; pointer-events: auto; }
+#matrixCanvas, #resetFlash {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100vh; pointer-events: none;
+}
+#matrixCanvas { z-index: 2; }
+#resetFlash   { z-index: 3; background: #fff; opacity: 0; transition: opacity .5s; }
+
+/* ====== タブバー ====== */
 .tabs {
-  display: flex;
-  background: rgba(24, 24, 48, 0.78);
-  backdrop-filter: blur(8px);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  border-bottom: 1.5px solid #0ff7ff55;
-  width: 100vw;
-  max-width: 1400px;
-  margin: 0 auto;
-  box-shadow: 0 4px 32px #161a2899;
+  display: flex; position: sticky; top: 0; z-index: 1000;
+  width: 100%; max-width: 1400px; margin: 0 auto;
+  background: rgba(24,24,48,.78); backdrop-filter: blur(8px);
+  border-bottom: 1.5px solid #0ff7ff55; box-shadow: 0 4px 32px #161a2899;
+  padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0);
 }
 .tab {
-  flex: 1;
-  padding: 16px 0;
-  text-align: center;
-  color: #97e4f5;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 3px solid transparent;
-  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
-  font-size: 20px;
-  letter-spacing: 0.07em;
-  transition: background 0.25s, border-bottom-color 0.3s, color 0.3s;
+  flex: 1; padding: 16px 0; text-align: center; cursor: pointer; user-select: none;
+  color: #97e4f5; border-bottom: 3px solid transparent;
+  font-size: 20px; letter-spacing: .07em;
+  transition: background .25s, border-bottom-color .3s, color .3s;
 }
-.tab:hover {
-  background: rgba(0,255,255,0.08);
-}
+.tab:hover { background: rgba(0,255,255,.08); }
 .tab.active {
-  background: rgba(16,16,48,0.8);
-  border-bottom-color: #00f5ff;
-  color: #00f5ff;
-  font-weight: 600;
+  background: rgba(16,16,48,.8); border-bottom-color: #00f5ff; color: #00f5ff; font-weight: 600;
   text-shadow: 0 0 8px #00f5ff55;
 }
 
-/* --- 共通セクション --- */
+/* ====== セクションコンテナ ====== */
 .content {
-  background: rgba(30, 38, 60, 0.78);
-  color: #eaf6ff;
-  padding: 30px 3vw 80px 3vw;
-  min-height: 300px;
-  width: 100vw;
-  max-width: 1400px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  border-radius: 0 0 18px 18px;
-  box-shadow: 0 10px 44px #18182f44;
-  text-align: left; /* ←左揃えの基準 */
+  width: 100%; max-width: 1400px; margin: 0 auto;
+  background: rgba(30,38,60,.78); color: #eaf6ff;
+  padding: 30px 3vw 80px; box-sizing: border-box;
+  border-radius: 0 0 18px 18px; box-shadow: 0 10px 44px #18182f44; text-align: left;
+  opacity: 0; transform: scale(.96) translateY(10px);
+  transition: opacity .4s ease, transform .4s ease;
 }
+.content.active { opacity: 1; transform: scale(1) translateY(0); }
 
-/* --- ボタン --- */
+/* ====== ボタン ====== */
 button {
   background: linear-gradient(90deg, #202056 60%, #009be6 120%);
-  color: #eaf6ff;
-  border: 1.5px solid #00eaff;
-  border-radius: 10px;
-  padding: 12px 28px;
-  font-size: 18px;
-  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
-  box-shadow: 0 0 10px #00eaff44;
-  margin: 3px 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  outline: none;
-  letter-spacing: 0.09em;
-  text-align: center;
-  min-width: 80px;
+  color: #eaf6ff; border: 1.5px solid #00eaff; border-radius: 10px;
+  padding: 12px 28px; margin: 3px 6px; min-width: 80px;
+  font-size: 18px; letter-spacing: .09em;
+  box-shadow: 0 0 10px #00eaff44; cursor: pointer; outline: none;
+  transition: all .2s;
 }
 button:hover, .tab.active {
   background: linear-gradient(90deg, #00f5ff 20%, #2636b3 80%);
-  color: #fff;
-  box-shadow: 0 0 18px #00f5ffbb;
-  transform: translateY(-2px) scale(1.02);
+  color: #fff; box-shadow: 0 0 18px #00f5ffbb; transform: translateY(-2px) scale(1.02);
 }
 
-/* --- テーブル --- */
-table {
-  border-radius: 16px;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: rgba(20,28,40,0.82);
-  box-shadow: 0 0 24px #00eaff33;
-  overflow: hidden;
-  width: 100%;
-  margin-bottom: 26px;
-}
-tbody {
-  border-radius: 14px;
-  overflow: hidden;
-}
-th, td {
-  border-bottom: 1.5px solid #00f5ff55;
-  padding: 10px 7px;
-  text-align: left; /* ←左揃え */
-  background: rgba(24,30,50,0.85);
-  font-size: 17px;
-}
-th {
-  color: #00f5ff;
-  font-size: 18px;
-  background: linear-gradient(90deg,#23467a 40%,#197b91 100%);
-  font-weight: bold;
-  letter-spacing: 0.05em;
-}
-tr:last-child td {
-  border-bottom: none;
-}
-tr.row:hover td {
-  background: rgba(0,245,255,0.09);
-}
-
-/* --- 各フォーム/グループ --- */
-.group {
-  padding: 24px 24px 16px 24px;
-  margin: 18px 0;
-  border-radius: 18px;
-  background: rgba(10, 20, 40, 0.87);
-  box-shadow: 0 2px 18px #00eaff12;
-}
-
-.group h3, .group-title {
-  text-align: left !important;
-  font-size: 22px;
-  margin: 0 0 18px 0;
-  padding-left: 3px;
-  color: #fff;
-  letter-spacing: 0.02em;
-}
-
-/* --- labelの横並び＋右寄せフォーム --- */
-.group label {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0;
-  margin-bottom: 12px;
-  width: 100%;
-}
-
-.group label > span,
-.group label > strong,
-.group label > b {
-  min-width: 140px;
-  max-width: 210px;
-  text-align: left;
-  letter-spacing: 0.03em;
-  font-size: 17px;
-  flex-shrink: 0;
-}
-
-.group label input,
-.group label select,
-.group label button {
-  margin-left: auto;
-  flex: 1 1 120px;
-  min-width: 120px;
-  max-width: 260px;
-  width: 150px;
-  text-align: right;
-  box-sizing: border-box;
-}
-
-.group label input[type="checkbox"] {
-  flex: 0 0 auto;
-  margin-left: 15px;
-  width: auto;
-}
-
-.group label button {
-  min-width: 100px;
-  max-width: 180px;
-  width: 120px;
-}
-
-/* --- 入力欄 --- */
-input, select, textarea {
-  background: rgba(38, 56, 77, 0.72);
-  color: #00f5ff;
-  border: 1.5px solid #25f1ff77;
-  border-radius: 7px;
-  font-size: 17px;
-  padding: 9px 14px;
-  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
-  margin: 3px 0;
-  outline: none;
-  box-shadow: 0 1px 8px #00eaff44;
-  transition: border 0.2s, background 0.19s;
-}
-input:focus, select:focus, textarea:focus {
-  border-color: #00eaff;
-  background: rgba(42, 86, 120, 0.95);
-  color: #fff;
-}
-
-/* --- テーブル行削除ボタン --- */
-.delete-btn {
-  background: linear-gradient(90deg, #f73378 40%, #0ff 160%);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 18px;
-  box-shadow: 0 0 12px #00eaff99;
-  cursor: pointer;
-  transition: background 0.23s, box-shadow 0.19s, transform 0.12s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-}
-.delete-btn:hover {
-  background: #ff007c;
-  color: #fff;
-  box-shadow: 0 0 24px #f7337888, 0 0 10px #0ff;
-  transform: scale(1.07);
-}
-
-/* --- 固定ナビ --- */
-#app1-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  background: rgba(0, 34, 43, 0.95);
-  z-index: 1100;
-  padding: 13px 0 8px 0;
-  box-shadow: 0 -2px 16px #00f5ff44;
-  display: flex;
-  justify-content: center;
-  border-top: 2px solid #00f5ff33;
-}
-#app1-nav button {
-  background: linear-gradient(90deg, #009be6 40%, #072259 100%);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 9px 28px;
-  margin: 0 16px;
-  font-size: 19px;
-  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
-  letter-spacing: 0.07em;
-  box-shadow: 0 2px 8px #00f5ff66;
-  transition: background 0.25s, box-shadow 0.19s;
-}
-#app1-nav button:hover {
-  background: #00f5ff;
-  color: #121212;
-  box-shadow: 0 2px 22px #00f5ff88;
-}
-body {
-  padding-bottom: 86px;
-}
-
-/* --- 履歴 --- */
-.history {
-  margin-top: 38px;
-  background: rgba(0,34,43,0.23);
-  border-radius: 10px;
-  box-shadow: 0 2px 12px #00f5ff12;
-}
-.history h3 {
-  color: #00f5ff;
-  margin-bottom: 8px;
-}
-.history li {
-  margin-bottom: 10px;
-  background: rgba(33,90,104,0.14);
-  border-radius: 8px;
-  box-shadow: 0 1px 8px #00eaff33;
-  padding: 9px 15px;
-  color: #97e4f5;
-}
-
-/* 赤系リセット・クリアボタン共通クラス */
+/* アクセントボタン（赤系） */
 .red-btn, .clear-btn, .reset-btn {
   background: linear-gradient(90deg, #f73378 30%, #d80032 100%);
-  color: #fff !important;
-  border: 1.5px solid #d80032;
-  box-shadow: 0 0 12px #ff006288;
+  color: #fff !important; border: 1.5px solid #d80032; box-shadow: 0 0 12px #ff006288;
 }
 .red-btn:hover, .clear-btn:hover, .reset-btn:hover {
   background: linear-gradient(90deg, #f44 10%, #b00020 90%);
-  color: #fff;
-  box-shadow: 0 0 20px #ff2e62aa;
-  transform: scale(1.05);
+  color: #fff; box-shadow: 0 0 20px #ff2e62aa; transform: scale(1.05);
 }
 
-/* --- モバイル対応 --- */
-@media (max-width: 700px) {
-  .tabs { font-size: 15px; }
-  .tab { font-size: 15px; padding: 9px 0; }
-  .content { padding: 7vw 2vw 100px 2vw; }
-  th, td { font-size: 15px; }
-  .result { padding: 19px; font-size: 16px; }
-  .group { padding: 12px 6px 8px 6px; margin: 10px 0; }
-  #app1-nav button { font-size: 14px; padding: 7px 11px; }
-  .group label { flex-direction: column; align-items: stretch; }
-  .group label > span,
-  .group label > strong,
-  .group label > b {
-    min-width: unset;
-    max-width: unset;
-    width: 100%;
+/* ====== テーブル ====== */
+table {
+  width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 26px;
+  border-radius: 16px; background: rgba(20,28,40,.82); box-shadow: 0 0 24px #00eaff33; overflow: hidden;
+}
+tbody { border-radius: 14px; overflow: hidden; }
+th, td {
+  background: rgba(24,30,50,.85); border-bottom: 1.5px solid #00f5ff55;
+  padding: 10px 7px; text-align: left; font-size: 17px;
+}
+th {
+  color: #00f5ff; font-size: 18px; font-weight: 700; letter-spacing: .05em;
+  background: linear-gradient(90deg, #23467a 40%, #197b91 100%);
+}
+tr:last-child td { border-bottom: none; }
+tr.row:hover td { background: rgba(0,245,255,.09); }
+
+/* ====== 入力系 ====== */
+input, select, textarea {
+  background: rgba(38,56,77,.72); color: #00f5ff; border: 1.5px solid #25f1ff77; border-radius: 7px;
+  font-size: 17px; padding: 9px 14px; margin: 3px 0; outline: none;
+  box-shadow: 0 1px 8px #00eaff44; transition: border .2s, background .19s;
+}
+input:focus, select:focus, textarea:focus { border-color: #00eaff; background: rgba(42,86,120,.95); color: #fff; }
+::-webkit-input-placeholder{ color:#60ecffcc }::-moz-placeholder{ color:#60ecffcc }
+:-ms-input-placeholder{ color:#60ecffcc }::placeholder{ color:#60ecffcc }
+input:focus, select:focus { box-shadow: 0 0 12px #00f5ff77; }
+
+/* ====== フォームグループ ====== */
+.group {
+  padding: 24px 24px 16px; margin: 18px 0;
+  border-radius: 18px; background: rgba(10,20,40,.87); box-shadow: 0 2px 18px #00eaff12;
+}
+.group h3, .group-title { font-size: 22px; margin: 0 0 18px; padding-left: 3px; color: #fff; text-align: left !important; letter-spacing: .02em; }
+.group label {
+  display: flex; align-items: center; justify-content: space-between; gap: 0; margin-bottom: 12px; width: 100%;
+}
+.group label > span, .group label > strong, .group label > b {
+  min-width: 140px; max-width: 210px; text-align: left; letter-spacing: .03em; font-size: 17px; flex-shrink: 0;
+}
+.group label input, .group label select, .group label button {
+  margin-left: auto; flex: 1 1 120px; min-width: 120px; max-width: 260px; width: 150px; text-align: right; box-sizing: border-box;
+}
+.group label input[type="checkbox"] { flex: 0 0 auto; margin-left: 15px; width: auto; }
+.group label button { min-width: 100px; max-width: 180px; width: 120px; }
+
+/* ====== 削除ボタン（テーブル行） ====== */
+.delete-btn{
+  display: flex; align-items: center; justify-content: center; margin: 0 auto;
+  width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+  background: linear-gradient(90deg, #f73378 40%, #0ff 160%); color: #fff; font-size: 18px;
+  box-shadow: 0 0 12px #00eaff99; transition: background .23s, box-shadow .19s, transform .12s;
+}
+.delete-btn:hover{ background:#ff007c; color:#fff; box-shadow:0 0 24px #f7337888, 0 0 10px #0ff; transform:scale(1.07); }
+
+/* ====== 固定/スティッキーナビ（#app1-nav, #app2-nav共通） ====== */
+#app1-nav, #app2-nav {
+  width: 100%; max-width: 1400px; margin: 0 auto;
+  background: rgba(0,34,43,.95); z-index: 1100; padding: 13px 0 8px;
+  box-shadow: 0 -2px 16px #00f5ff44; display: flex; justify-content: center;
+  border-top: 2px solid #00f5ff33;
+  position: sticky; top: 60px; bottom: auto;
+  padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0);
+}
+#app1-nav button, #app2-nav button {
+  background: linear-gradient(90deg, #009be6 40%, #072259 100%);
+  color: #fff; border: none; border-radius: 8px; padding: 9px 28px; margin: 0 16px;
+  font-size: 19px; letter-spacing: .07em; box-shadow: 0 2px 8px #00f5ff66; transition: background .25s, box-shadow .19s;
+}
+#app1-nav button:hover, #app2-nav button:hover { background: #00f5ff; color: #121212; box-shadow: 0 2px 22px #00f5ff88; }
+
+/* PC幅では下固定＋余白 */
+@media (min-width: 701px){
+  #app1-nav, #app2-nav { position: fixed; top: auto; bottom: 0; left: 0; right: 0; }
+  body { padding-bottom: 86px; }
+}
+
+/* ====== 履歴ボックス ====== */
+.history{ margin-top: 38px; background: rgba(0,34,43,.23); border-radius: 10px; box-shadow: 0 2px 12px #00f5ff12; }
+.history h3{ color:#00f5ff; margin-bottom:8px; }
+.history li{
+  margin-bottom:10px; background: rgba(33,90,104,.14); border-radius:8px;
+  box-shadow:0 1px 8px #00eaff33; padding:9px 15px; color:#97e4f5;
+}
+
+/* ====== ボトルフォーム ====== */
+.bottle-form{
+  display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-bottom:10px;
+}
+.bottle-form label{ display:flex; align-items:center; gap:5px; font-size:15px; min-width:58px; color:#eaf6ff; margin:0; }
+.bottle-form input[type="text"], .bottle-form input[type="number"]{
+  width:74px; min-width:52px; background: rgba(38,56,77,.72); color:#00f5ff;
+  border: 1.5px solid #25f1ff77; border-radius:7px; font-size:16px; padding:6px 10px; margin-left:2px; text-align:right; box-shadow:0 1px 8px #00eaff44; outline:none;
+}
+
+/* ====== 結果表示（result） ====== */
+.result, #result{
+  background: linear-gradient(180deg,#142944 90%,#123); border-radius: 18px; border: none;
+  color:#43eaff; padding:32px 34px 18px; margin-top:22px;
+  font-family:'Orbitron','Segoe UI',Arial,sans-serif; font-size:22px; letter-spacing:.02em;
+  box-shadow:0 0 24px #00f5ff1c; text-align:left;
+}
+.result span, .subtotal, .totalAmount, .finalAmount{
+  background:none !important; color:#fff !important; font-size:inherit !important; text-shadow:none !important; margin-bottom:0; padding:0;
+}
+.finalAmount, .print-highlight{ color:#00eaff !important; font-size:28px !important; font-weight:bold; }
+.subtotal{ color:#36ffe7 !important; }
+.totalAmount{ color:#feffb3 !important; }
+.result b, .result strong{ color:#fff; font-weight:bold; }
+.result .main-amount, .result .totalAmount{ color:#ffe99d; font-size:25px; font-weight:bold; }
+.result .finalAmount{
+  display:block; margin:22px 0 16px; padding:6px 0;
+  background: linear-gradient(90deg,#3e46ff 5%,#03f8ff 100%); color:#fff; font-size:31px; font-weight:bold;
+  border-radius:7px; letter-spacing:.04em; text-shadow:0 2px 12px #00f3ffbb; text-align:left;
+}
+.result .subnote{ color:#eafffa; font-size:15px; opacity:.88; }
+.result .bottle-list, #result .bottle-list{ margin:15px 0 0; color:#43eaff; font-size:17px; line-height:1.2; white-space:pre-line; }
+.result .right-note{ float:right; color:#fff4b7; font-size:15px; opacity:.95; }
+
+/* ====== app1 テーブル寸法 ====== */
+#app1 table, #app1 .row, #app1 input, #app1 select{
+  background: rgba(30,30,40,.85); color:#f6ffe8; font-size:18px; border-radius:10px; border:none; margin-bottom:8px; box-shadow:0 2px 12px #0ff3;
+}
+#app1 th, #app1 td{
+  background: rgba(24,30,50,.85); color:#81e1ff; font-size:17px; border-bottom:1.5px solid #00f5ff33; padding:8px 5px;
+}
+#app1 tr.row:hover td{ background: rgba(0,245,255,.13); }
+#app1 input[type="text"], #app1 input[type="number"], #app1 select{
+  background:#18344c; color:#fff; border:1.5px solid #25f1ff44; border-radius:5px; font-size:17px; padding:6px 11px; margin:2px 0; outline:none; box-shadow:0 1px 8px #00eaff22; text-align:right !important;
+}
+#app1 input[type="text"]:focus, #app1 input[type="number"]:focus{ border-color:#00eaff; background:#225a7a; color:#fff; }
+#app1 .delete-btn{ width:26px; height:26px; font-size:15px; box-shadow:0 0 12px #00eaff44; }
+#app1 input.table-number{ width:30px; }  #app1 input.honshi{ width:50px; }  #app1 select.c{ width:100px; }
+#app1 input.amount{ width:120px; }  #app1 input.num{ width:40px; }  #app1 input.detail{ width:80px; }
+#app1 input.card{ width:150px; }   #app1 input.total{ width:150px; }
+
+/* ====== アニメーション ====== */
+@keyframes slideInRow{ from{ transform:translateX(100%); opacity:0 } to{ transform:translateX(0); opacity:1 } }
+@keyframes slideOutLeft{ from{ opacity:1; transform:translateX(0) } to{ opacity:0; transform:translateX(-120%) } }
+@keyframes slideInRight{ from{ opacity:0; transform:translateX(120%) } to{ opacity:1; transform:translateX(0) } }
+.row.slide-in{ animation: slideInRow .5s ease-out; }
+.row.slide-out-left{ animation: slideOutLeft .32s cubic-bezier(.77,.17,.3,1.11) forwards; }
+.row.slide-in-right{ animation: slideInRight .28s cubic-bezier(.77,.17,.3,1.11); }
+
+/* ====== モバイル調整 ====== */
+@media (max-width: 700px){
+  .tabs{ font-size:15px; }
+  .tab{ font-size:15px; padding:9px 0; }
+  .content{ padding: 7vw 2vw 100px; }
+  th, td{ font-size:15px; }
+  .result{ padding:19px; font-size:16px; }
+  .group{ padding:12px 6px 8px; margin:10px 0; }
+  #app1-nav button, #app2-nav button{ font-size:14px; padding:7px 11px; }
+  .group label{ flex-direction: column; align-items: stretch; }
+  .group label > span, .group label > strong, .group label > b{
+    min-width: 0 !important; max-width: 100% !important; width: 100% !important;
   }
-  .group label input,
-  .group label select,
-  .group label button {
-    margin-left: 0;
-    width: 100%;
-    min-width: unset;
-    max-width: unset;
+  .group label input, .group label select, .group label button{
+    width: 100% !important; min-width: 0 !important; max-width: 100% !important;
+    margin-left: 0 !important; flex: 1 1 auto !important; box-sizing: border-box !important;
   }
+  .bottle-form{ flex-direction: column !important; align-items: stretch !important; gap: 6px !important; }
+  .bottle-form input[type="text"], .bottle-form input[type="number"]{ width: 100% !important; min-width: 0 !important; max-width: 100% !important; }
+  #app1 table, #app1 th, #app1 td{ font-size:14px; padding:5px 2px; }
+  #app1 input, #app1 select{ font-size:14px; padding:5px 6px; }
 }
 
-/* --- アニメーション・グロー --- */
-.tab, button, .result, .group, input, select, textarea {
-  transition: box-shadow 0.23s, background 0.23s, color 0.18s, border 0.16s;
-}
-input:focus, select:focus {
-  box-shadow: 0 0 12px #00f5ff77;
-}
+/* ====== 印刷（長形4号） ====== */
+/* 競合していた @media print を統合。iOSの逆さ回転を除去 */
+@media print{
+  @page { size: 90mm 205mm; margin: 0; }
 
-::-webkit-input-placeholder { color: #60ecffcc; }
-::-moz-placeholder          { color: #60ecffcc; }
-:-ms-input-placeholder      { color: #60ecffcc; }
-::placeholder              { color: #60ecffcc; }
-
-.bottle-form {
-  display: flex;
-  justify-content: flex-end;  /* ←右寄せ */
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.bottle-form label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 15px;
-  min-width: 58px;
-  color: #eaf6ff;
-  margin: 0;
-}
-
-.bottle-form input[type="text"], 
-.bottle-form input[type="number"] {
-  width: 74px;
-  min-width: 52px;
-  background: rgba(38, 56, 77, 0.72);
-  color: #00f5ff;
-  border: 1.5px solid #25f1ff77;
-  border-radius: 7px;
-  font-size: 16px;
-  padding: 6px 10px;
-  margin-left: 2px;
-  text-align: right;
-  box-shadow: 0 1px 8px #00eaff44;
-  outline: none;
-}
-
-@media (max-width:700px) {
-  .bottle-form {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
+  body{
+    all: unset; margin: 0; padding: 0; width: 90mm;
+    font-size: 8pt !important; line-height: 1.1 !important;
+    background: #fff !important; color: #000 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
-}
+  *{ background: transparent !important; color: #000 !important; }
 
-.result, #result {
-  background: #1e1e1e;
-  color: #fff;
-  padding: 22px 18px 12px 18px;
-  border-radius: 12px;
-  margin-top: 24px;
-  box-shadow: 0 0 8px rgba(0,0,0,0.08);
-  font-size: 22px;
-  font-family: Arial, sans-serif;
-  border: none;
-  letter-spacing: normal;
-}
+  body *{ visibility: hidden; }
+  #result, #result *{ visibility: visible; }
 
-.result span, .subtotal, .totalAmount, .finalAmount {
-  background: none !important;
-  color: #fff !important;
-  font-size: inherit !important;
-  text-shadow: none !important;
-  margin-bottom: 0;
-  padding: 0;
-}
-
-.finalAmount, .print-highlight {
-  color: #00eaff !important;
-  font-size: 28px !important;
-  font-weight: bold;
-  background: none !important;
-}
-
-.subtotal {
-  color: #36ffe7 !important;
-}
-
-.totalAmount {
-  color: #feffb3 !important;
-}
-
-/* 結果全体 */
-.result, #result {
-  background: linear-gradient(180deg,#142944 90%,#123);
-  border-radius: 18px;
-  color: #43eaff;
-  padding: 32px 34px 18px 34px;
-  margin-top: 22px;
-  font-family: 'Orbitron','Segoe UI',Arial,sans-serif;
-  font-size: 22px;
-  box-shadow: 0 0 24px #00f5ff1c;
-  border: none;
-  text-align: left;
-  letter-spacing: 0.02em;
-}
-
-.result b,
-.result strong {
-  color: #fff;
-  font-weight: bold;
-}
-
-/* 金額や重要数値 */
-.result .main-amount,
-.result .totalAmount {
-  color: #ffe99d;
-  font-size: 25px;
-  font-weight: bold;
-}
-
-.result .finalAmount {
-  display: block;
-  margin: 22px 0 16px 0;
-  padding: 6px 0 6px 0;   /* ← 左のパディング0 */
-  background: linear-gradient(90deg,#3e46ff 5%,#03f8ff 100%);
-  color: #fff;
-  font-size: 31px;
-  font-weight: bold;
-  border-radius: 7px;
-  letter-spacing: 0.04em;
-  text-shadow: 0 2px 12px #00f3ffbb;
-  text-align: left;      /* ← 追加！ */
-}
-
-/* 小計など */
-.result .subtotal {
-  color: #43eaff;
-  font-size: 22px;
-  margin-top: 10px;
-}
-
-/* 補助説明など */
-.result .subnote {
-  color: #eafffa;
-  font-size: 15px;
-  opacity: 0.88;
-}
-
-/* ボトル明細のリスト */
-.result .bottle-list,
-#result .bottle-list {
-  margin: 15px 0 0 0;
-  color: #43eaff;
-  font-size: 17px;
-  line-height: 1.2;
-  white-space: pre-line;
-}
-
-/* 「領収書記入」などは右寄せ */
-.result .right-note {
-  float: right;
-  color: #fff4b7;
-  font-size: 15px;
-  opacity: 0.95;
-}
-
-/* app1の伝票入力部分だけ調整する例 */
-
-#app1 table, #app1 .row, #app1 input, #app1 select {
-  /* 伝票テーブルや各行、入力欄の装飾 */
-  background: rgba(30, 30, 40, 0.85);
-  color: #f6ffe8;
-  font-size: 18px;
-  border-radius: 10px;
-  box-shadow: 0 2px 12px #0ff3;
-  border: none;
-  margin-bottom: 8px;
-}
-
-#app1 th, #app1 td {
-  background: rgba(24,30,50,0.85);
-  color: #81e1ff;
-  font-size: 17px;
-  border-bottom: 1.5px solid #00f5ff33;
-  padding: 8px 5px;
-}
-
-#app1 tr.row:hover td {
-  background: rgba(0,245,255,0.13);
-}
-
-#app1 input[type="text"], #app1 input[type="number"], #app1 select {
-  background: #18344c;
-  color: #fff;
-  border: 1.5px solid #25f1ff44;
-  border-radius: 5px;
-  font-size: 17px;
-  padding: 6px 11px;
-  margin: 2px 0;
-  outline: none;
-  box-shadow: 0 1px 8px #00eaff22;
-}
-
-#app1 input[type="text"]:focus, #app1 input[type="number"]:focus {
-  border-color: #00eaff;
-  background: #225a7a;
-  color: #fff;
-}
-
-#app1 .delete-btn {
-  background: linear-gradient(90deg, #f73378 40%, #0ff 160%);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  font-size: 15px;
-  box-shadow: 0 0 12px #00eaff44;
-  cursor: pointer;
-  margin: 0 auto;
-}
-
-#app1 input.table-number { width: 30px; }
-#app1 input.honshi { width: 50px; }
-#app1 select.c { width: 100px; }
-#app1 input.amount { width: 120px; }
-#app1 input.num { width: 40px; }
-#app1 input.detail { width: 80px; }
-#app1 input.card { width: 150px; }
-#app1 input.total { width: 150px; }
-
-#app1 input[type="text"],
-#app1 input[type="number"],
-#app1 select {
-  text-align: right !important;
-}
-
-/* モバイル用 */
-@media (max-width:700px) {
-  #app1 table, #app1 th, #app1 td {
-    font-size: 14px;
-    padding: 5px 2px;
-  }
-  #app1 input, #app1 select {
-    font-size: 14px;
-    padding: 5px 6px;
-  }
-}
-
-
-@media print {
-  @page {
-    size: 90mm 205mm;
-    margin: 0;
-  }
-
-  body {
-    all: unset;
-    margin: 0;
-    padding: 0;
-    width: 90mm;
-    font-size: 8pt !important;
-    line-height: 1.1 !important;
-    background: #fff !important;
-    color: #000 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  * {
-    background: transparent !important;
-    color: #000 !important;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-
-  #result,
-  #result * {
-    visibility: visible;
-  }
-
-  #result {
-    display: block !important;
-    position: static !important;
-    width: 90mm;
-    max-height: 205mm;
-    margin: 0 auto;
-    box-sizing: border-box;
-    background: transparent !important;
-    color: #000 !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    font-size: 9pt !important;
-    line-height: 1.1 !important;
-    overflow: hidden;
-    transform: rotate(180deg);
-    transform-origin: center center;
+  #result{
+    display: block !important; position: static !important;
+    width: 90mm; max-height: 205mm; margin: 0 auto; box-sizing: border-box;
+    background: transparent !important; color: #000 !important;
+    white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important;
+    font-size: 9pt !important; line-height: 1.1 !important; overflow: hidden;
+    transform: none !important; /* ← rotate(180deg) を無効化 */
   }
 
   /* 非表示項目 */
-  .button-row,
-  .clear-button,
-  .clear-all-button,
-  .print-button,
-  form,
-  .history,
-  .summary,
-  #deleteSelectedBtn {
-    display: none !important;
-  }
+  .button-row, .clear-button, .clear-all-button, .print-button, form, .history, .summary, #deleteSelectedBtn { display: none !important; }
 
-  details {
-    display: block !important;
-  }
-  details summary {
-    display: none !important;
-  }
+  details{ display:block !important; } details summary{ display:none !important; }
 
-  .castName {
-    font-size: 20pt !important;
-    font-weight: bold !important;
-  }
+  .castName{ font-size: 20pt !important; font-weight: bold !important; }
+  .totalAmount{ color: orange !important; font-size: 20pt !important; font-weight: bold !important; }
+  .finalAmount.print-highlight{ color: rgb(90,57,251) !important; font-size: 20pt !important; font-weight: bold !important; }
+  .subtotal{ font-size: 8pt !important; }
 
-  .totalAmount {
-    color: orange !important;
-    font-size: 20pt !important;
-    font-weight: bold !important;
+  /* result-print-block 互換（見た目調整） */
+  #result, .result, .result-print-block{
+    background: #fff !important; color: #000 !important;
+    padding: 18px 12px 12px 18px !important; border-radius: 0 !important; font-size: 10.8pt !important;
+    box-shadow: none !important; width: 88mm !important; max-width: 100% !important; margin: 0 !important;
   }
-
-  .finalAmount.print-highlight {
-    color: rgb(90, 57, 251) !important;
-    font-size: 20pt !important;
-    font-weight: bold !important;
-  }
-
-  .subtotal {
-    font-size: 8pt !important;
-  }
-
-  .page-break {
-    page-break-before: always;
-  }
+  .result-print-block .castName{ font-size: 1.3em !important; font-weight: bold !important; color:#222 !important; margin-bottom: 6px !important; display:block; }
+  .result-print-block .experienceAndRental{ font-size:.98em !important; color:#444 !important; margin-bottom: 8px !important; display:block; }
+  .result-print-block .subtotal, .result-print-block .tax, .result-print-block .welfare{ font-size:1em !important; margin-bottom: 3px !important; color:#222 !important; font-weight:normal !important; display:block; }
+  .result-print-block .totalAmount{ font-size:1.16em !important; color:#c87f07 !important; font-weight:bold !important; margin:10px 0 2px 0 !important; display:block; }
+  .result-print-block .sendoff{ font-size:.96em !important; color:#555 !important; margin-bottom:6px !important; margin-left:0 !important; display:block; }
+  .result-print-block .final-row, .result-print-block .finalAmount{ font-size:1.33em !important; font-weight:bold !important; color:#0a29b3 !important; margin:12px 0 8px 0 !important; display:block; }
+  .result-print-block .details{ border-top:1px solid #bbb !important; padding-top:6px !important; margin-top:8px !important; font-size:.96em !important; color:#111 !important; }
+  .print-only{ display:none !important; }
+  .print-note{ display:block !important; font-size:13px !important; margin:8px 0 0 !important; float:none !important; color:#333 !important; }
 }
-
-/* --- 別の@media printブロック（競合注意）--- */
-@media print {
-  #result, .result, .result-print-block {
-    background: #fff !important;
-    color: #000 !important;
-    padding: 18px 12px 12px 18px !important;
-    border-radius: 0 !important;
-    font-size: 10.8pt !important;
-    box-shadow: none !important;
-    width: 88mm !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-  }
-  .result-print-block .castName {
-    font-size: 1.3em !important;
-    font-weight: bold !important;
-    color: #222 !important;
-    margin-bottom: 6px !important;
-    display: block;
-  }
-  .result-print-block .experienceAndRental {
-    font-size: 0.98em !important;
-    color: #444 !important;
-    margin-bottom: 8px !important;
-    display: block;
-  }
-  .result-print-block .subtotal,
-  .result-print-block .tax,
-  .result-print-block .welfare {
-    font-size: 1em !important;
-    margin-bottom: 3px !important;
-    color: #222 !important;
-    font-weight: normal !important;
-    display: block;
-  }
-  .result-print-block .totalAmount {
-    font-size: 1.16em !important;
-    color: #c87f07 !important;
-    font-weight: bold !important;
-    margin: 10px 0 2px 0 !important;
-    display: block;
-  }
-  .result-print-block .sendoff {
-    font-size: 0.96em !important;
-    color: #555 !important;
-    margin-bottom: 6px !important;
-    margin-left: 0 !important;
-    display: block;
-  }
-  .result-print-block .final-row, .result-print-block .finalAmount {
-    font-size: 1.33em !important;
-    font-weight: bold !important;
-    color: #0a29b3 !important;
-    margin: 12px 0 8px 0 !important;
-    display: block;
-  }
-  .result-print-block .details {
-    border-top: 1px solid #bbb !important;
-    padding-top: 6px !important;
-    margin-top: 8px !important;
-    font-size: 0.96em !important;
-    color: #111 !important;
-  }
-  .result-print-block,
-  .result, #result {
-    box-shadow: none !important;
-    border: none !important;
-    background: #fff !important;
-  }
-  .print-only {
-    display: none !important;
-  }
-}
-
-/* 印刷時だけ表示するメモ（.print-note） */
-@media print {
-  .print-note {
-    display: block !important;
-    font-size: 13px !important;
-    margin-left: 0 !important;
-    margin-top: 8px !important;
-    float: none !important;
-    color: #333 !important;
-  }
-}
-
-/* コンテンツ切替時の近未来的なアニメーション */
-.content {
-  opacity: 0;
-  transform: scale(0.96) translateY(10px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-
-.content.active {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-}
-
-/* スライドインアニメーション */
-@keyframes slideInRow {
-  0% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* アニメーション用クラス */
-.row.slide-in {
-  animation: slideInRow 0.5s ease-out;
-}
-
-@keyframes slideOutLeft {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-120%);
-  }
-}
-.row.slide-out-left {
-  animation: slideOutLeft 0.32s cubic-bezier(.77,.17,.3,1.11) forwards;
-}
-
-@keyframes slideInRight {
-  0% {
-    opacity: 0;
-    transform: translateX(120%);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-.row.slide-out-left {
-  animation: slideOutLeft 0.28s cubic-bezier(.77,.17,.3,1.11) forwards;
-}
-.row.slide-in-right {
-  animation: slideInRight 0.28s cubic-bezier(.77,.17,.3,1.11) forwards;
-}
-
-#app2-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  background: rgba(0, 34, 43, 0.95);
-  z-index: 1100;
-  padding: 13px 0 8px 0;
-  box-shadow: 0 -2px 16px #00f5ff44;
-  display: flex;
-  justify-content: center;
-  border-top: 2px solid #00f5ff33;
-}
-#app2-nav button {
-  background: linear-gradient(90deg, #009be6 40%, #072259 100%);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 9px 28px;
-  margin: 0 16px;
-  font-size: 19px;
-  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
-  letter-spacing: 0.07em;
-  box-shadow: 0 2px 8px #00f5ff66;
-  transition: background 0.25s, box-shadow 0.19s;
-}
-#app2-nav button:hover {
-  background: #00f5ff;
-  color: #121212;
-  box-shadow: 0 2px 22px #00f5ff88;
-}
-
-
-
-
-
-
+/* 任意：回転が必要な時だけ class で明示 */
+@media print { .rotate180{ transform: rotate(180deg) !important; transform-origin: center center !important; } }
 </style>
+
 </head>
 <body>
 
