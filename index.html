@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -6,422 +5,747 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>IBASD β版</title>
 <style>
-/* フォント */
+/* =========================================================
+   RESET / BASE
+========================================================= */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
 
-/* ベース */
-html, body {
-  margin: 0; padding: 0; min-height: 100vh;
-  font-family: 'Orbitron','Segoe UI',Arial,sans-serif;
-  font-size: 20px; letter-spacing: .02em; color: #eaf6ff;
-  background: linear-gradient(135deg, #191924, #212c4a 80%);
-  overflow-x: hidden; /* iOS 横スクロール防止 */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height:100%; overflow-x:hidden; }
+
+:root{
+  --tabs-h: 64px;        /* 上部タブ高さ（PC） */
+  --subnav-h: 40px;      /* サブナビ高さ（PC） */
+  --content-pad: 30px 3vw 80px 3vw;
+  --font-base: 18px;
+  --font-tabs: 18px;
+  --font-nav: 16px;
+
+  --bg-a:#191924; --bg-b:#212c4a;
+  --text:#eaf6ff; --muted:#97e4f5; --neon:#00f5ff;
 }
 
-/* ====== オーバーレイ/リセット演出 ====== */
-#resetOverlay {
-  position: fixed; inset: 0;
-  z-index: 99999; background: #191924; opacity: 0;
-  transition: opacity .8s; pointer-events: none;
-  display: flex; align-items: center; justify-content: center;
-}
-#resetOverlay.active { opacity: 1; pointer-events: auto; }
-#matrixCanvas, #resetFlash {
-  position: absolute; left: 0; top: 0; width: 100%; height: 100vh; pointer-events: none;
-}
-#matrixCanvas { z-index: 2; }
-#resetFlash   { z-index: 3; background: #fff; opacity: 0; transition: opacity .5s; }
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font: 500 var(--font-base)/1.5 'Orbitron','Segoe UI',Arial,sans-serif;
+  background: linear-gradient(135deg,var(--bg-a),var(--bg-b) 80%);
+  letter-spacing:.02em;
 
-/* ====== タブバー ====== */
-.tabs {
-  display: flex; position: sticky; top: 0; z-index: 1000;
-  width: 100%; max-width: 1400px; margin: 0 auto;
-  background: rgba(24,24,48,.78); backdrop-filter: blur(8px);
-  border-bottom: 1.5px solid #0ff7ff55; box-shadow: 0 4px 32px #161a2899;
-  padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0);
-}
-.tab {
-  flex: 1; padding: 16px 0; text-align: center; cursor: pointer; user-select: none;
-  color: #97e4f5; border-bottom: 3px solid transparent;
-  font-size: 20px; letter-spacing: .07em;
-  transition: background .25s, border-bottom-color .3s, color .3s;
-}
-.tab:hover { background: rgba(0,255,255,.08); }
-.tab.active {
-  background: rgba(16,16,48,.8); border-bottom-color: #00f5ff; color: #00f5ff; font-weight: 600;
-  text-shadow: 0 0 8px #00f5ff55;
+  /* タブ固定分を押し下げ */
+  padding-top: calc(var(--tabs-h) + env(safe-area-inset-top, 0px));
 }
 
-/* ====== セクションコンテナ ====== */
-.content {
-  width: 100%; max-width: 1400px; margin: 0 auto;
-  background: rgba(30,38,60,.78); color: #eaf6ff;
-  padding: 30px 3vw 80px; box-sizing: border-box;
-  border-radius: 0 0 18px 18px; box-shadow: 0 10px 44px #18182f44; text-align: left;
-  opacity: 0; transform: scale(.96) translateY(10px);
-  transition: opacity .4s ease, transform .4s ease;
+/* =========================================================
+   RESET OVERLAY (そのまま)
+========================================================= */
+#resetOverlay{
+  position:fixed; inset:0; width:100vw; height:100vh;
+  z-index:99999; background:#191924; opacity:0;
+  transition:opacity .8s; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
 }
-.content.active { opacity: 1; transform: scale(1) translateY(0); }
+#resetOverlay.active{ opacity:1; pointer-events:auto; }
+#matrixCanvas{ position:absolute; inset:0; width:100vw; height:100vh; z-index:2; pointer-events:none; }
+#resetFlash{ position:absolute; inset:0; width:100vw; height:100vh; background:#fff; opacity:0; z-index:3; transition:opacity .5s; pointer-events:none; }
 
-/* ====== ボタン ====== */
-button {
-  background: linear-gradient(90deg, #202056 60%, #009be6 120%);
-  color: #eaf6ff; border: 1.5px solid #00eaff; border-radius: 10px;
-  padding: 12px 28px; margin: 3px 6px; min-width: 80px;
-  font-size: 18px; letter-spacing: .09em;
-  box-shadow: 0 0 10px #00eaff44; cursor: pointer; outline: none;
-  transition: all .2s;
+/* =========================================================
+   TOP TABS（固定）
+========================================================= */
+.tabs{
+  position:fixed !important; top:0; left:0; right:0; z-index:2000;
+  height:var(--tabs-h);
+  display:flex; align-items:stretch;
+  background:rgba(24,24,48,.78);
+  backdrop-filter:blur(8px);
+  border-bottom:1.5px solid #0ff7ff55;
+  box-shadow:0 4px 32px #161a2899;
+  max-width:1400px; margin:0 auto;
 }
-button:hover, .tab.active {
-  background: linear-gradient(90deg, #00f5ff 20%, #2636b3 80%);
-  color: #fff; box-shadow: 0 0 18px #00f5ffbb; transform: translateY(-2px) scale(1.02);
+.tab{
+  flex:1 1 0; display:flex; align-items:center; justify-content:center;
+  color:var(--muted); cursor:pointer; user-select:none;
+  border-bottom:3px solid transparent;
+  font:500 var(--font-tabs)/1 'Orbitron','Segoe UI',Arial,sans-serif;
+  letter-spacing:.07em;
+  transition:background .25s, color .25s, border-bottom-color .25s;
 }
-
-/* アクセントボタン（赤系） */
-.red-btn, .clear-btn, .reset-btn {
-  background: linear-gradient(90deg, #f73378 30%, #d80032 100%);
-  color: #fff !important; border: 1.5px solid #d80032; box-shadow: 0 0 12px #ff006288;
-}
-.red-btn:hover, .clear-btn:hover, .reset-btn:hover {
-  background: linear-gradient(90deg, #f44 10%, #b00020 90%);
-  color: #fff; box-shadow: 0 0 20px #ff2e62aa; transform: scale(1.05);
-}
-
-/* ====== テーブル ====== */
-table {
-  width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 26px;
-  border-radius: 16px; background: rgba(20,28,40,.82); box-shadow: 0 0 24px #00eaff33; overflow: hidden;
-}
-tbody { border-radius: 14px; overflow: hidden; }
-th, td {
-  background: rgba(24,30,50,.85); border-bottom: 1.5px solid #00f5ff55;
-  padding: 10px 7px; text-align: left; font-size: 17px;
-}
-th {
-  color: #00f5ff; font-size: 18px; font-weight: 700; letter-spacing: .05em;
-  background: linear-gradient(90deg, #23467a 40%, #197b91 100%);
-}
-tr:last-child td { border-bottom: none; }
-tr.row:hover td { background: rgba(0,245,255,.09); }
-
-/* ====== 入力系 ====== */
-input, select, textarea {
-  background: rgba(38,56,77,.72); color: #00f5ff; border: 1.5px solid #25f1ff77; border-radius: 7px;
-  font-size: 17px; padding: 9px 14px; margin: 3px 0; outline: none;
-  box-shadow: 0 1px 8px #00eaff44; transition: border .2s, background .19s;
-}
-input:focus, select:focus, textarea:focus { border-color: #00eaff; background: rgba(42,86,120,.95); color: #fff; }
-::-webkit-input-placeholder{ color:#60ecffcc }::-moz-placeholder{ color:#60ecffcc }
-:-ms-input-placeholder{ color:#60ecffcc }::placeholder{ color:#60ecffcc }
-input:focus, select:focus { box-shadow: 0 0 12px #00f5ff77; }
-
-/* ====== フォームグループ ====== */
-.group {
-  padding: 24px 24px 16px; margin: 18px 0;
-  border-radius: 18px; background: rgba(10,20,40,.87); box-shadow: 0 2px 18px #00eaff12;
-}
-.group h3, .group-title { font-size: 22px; margin: 0 0 18px; padding-left: 3px; color: #fff; text-align: left !important; letter-spacing: .02em; }
-.group label {
-  display: flex; align-items: center; justify-content: space-between; gap: 0; margin-bottom: 12px; width: 100%;
-}
-.group label > span, .group label > strong, .group label > b {
-  min-width: 140px; max-width: 210px; text-align: left; letter-spacing: .03em; font-size: 17px; flex-shrink: 0;
-}
-.group label input, .group label select, .group label button {
-  margin-left: auto; flex: 1 1 120px; min-width: 120px; max-width: 260px; width: 150px; text-align: right; box-sizing: border-box;
-}
-.group label input[type="checkbox"] { flex: 0 0 auto; margin-left: 15px; width: auto; }
-.group label button { min-width: 100px; max-width: 180px; width: 120px; }
-
-/* ====== 削除ボタン（テーブル行） ====== */
-.delete-btn{
-  display: flex; align-items: center; justify-content: center; margin: 0 auto;
-  width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
-  background: linear-gradient(90deg, #f73378 40%, #0ff 160%); color: #fff; font-size: 18px;
-  box-shadow: 0 0 12px #00eaff99; transition: background .23s, box-shadow .19s, transform .12s;
-}
-.delete-btn:hover{ background:#ff007c; color:#fff; box-shadow:0 0 24px #f7337888, 0 0 10px #0ff; transform:scale(1.07); }
-
-/* ====== 固定/スティッキーナビ（#app1-nav, #app2-nav共通） ====== */
-#app1-nav, #app2-nav {
-  width: 100%; max-width: 1400px; margin: 0 auto;
-  background: rgba(0,34,43,.95); z-index: 1100; padding: 13px 0 8px;
-  box-shadow: 0 -2px 16px #00f5ff44; display: flex; justify-content: center;
-  border-top: 2px solid #00f5ff33;
-  position: sticky; top: 60px; bottom: auto;
-  padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0);
-}
-#app1-nav button, #app2-nav button {
-  background: linear-gradient(90deg, #009be6 40%, #072259 100%);
-  color: #fff; border: none; border-radius: 8px; padding: 9px 28px; margin: 0 16px;
-  font-size: 19px; letter-spacing: .07em; box-shadow: 0 2px 8px #00f5ff66; transition: background .25s, box-shadow .19s;
-}
-#app1-nav button:hover, #app2-nav button:hover { background: #00f5ff; color: #121212; box-shadow: 0 2px 22px #00f5ff88; }
-
-/* PC幅では下固定＋余白 */
-@media (min-width: 701px){
-  #app1-nav, #app2-nav { position: fixed; top: auto; bottom: 0; left: 0; right: 0; }
-  body { padding-bottom: 86px; }
+.tab:hover{ background:rgba(0,255,255,.08); }
+.tab.active{
+  background:rgba(16,16,48,.8); color:var(--neon);
+  border-bottom-color:var(--neon); text-shadow:0 0 8px #00f5ff55;
 }
 
-/* ====== 履歴ボックス ====== */
-.history{ margin-top: 38px; background: rgba(0,34,43,.23); border-radius: 10px; box-shadow: 0 2px 12px #00f5ff12; }
+/* =========================================================
+   LAYOUT CONTAINERS
+========================================================= */
+.content{
+  max-width:1400px; margin:0 auto; width:100%;
+  padding: var(--content-pad);
+  background: rgba(30,38,60,.78);
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 10px 44px #18182f44;
+}
+
+/* =========================================================
+   SUB NAV（APP1/APP2）
+========================================================= */
+#app1-nav, #app2-nav{
+  position: sticky !important;
+  top: calc(var(--tabs-h) + env(safe-area-inset-top, 0px) - 55px); /* 0〜12pxで好み調整 */
+  margin-top: -4px;   /* さらに寄せたいなら -6〜-8px も可 */
+  z-index:1500;
+  display:flex; justify-content:center; align-items:center; gap:12px;
+  margin: 0 0 14px; padding:8px 10px;
+  background: rgba(0,34,43,.95); backdrop-filter: blur(6px);
+  border-radius: 12px;
+}
+
+#app1-nav button, #app2-nav button{
+  height: var(--subnav-h);
+  padding: 0 16px; min-width:0;
+  font: 500 var(--font-nav)/1 'Orbitron','Segoe UI',Arial,sans-serif;
+  letter-spacing:.07em;
+  background: linear-gradient(90deg,#009be6 40%, #072259 100%);
+  color:#fff; border:1px solid #00eaff55; border-radius:10px;
+  box-shadow:0 2px 8px #00f5ff66;
+  transition: background .2s, box-shadow .2s, transform .12s, color .2s;
+}
+#app1-nav button:hover, #app2-nav button:hover{
+  background:#00f5ff; color:#121212; box-shadow:0 2px 20px #00f5ff88; transform:translateY(-1px);
+}
+
+/* =========================================================
+   BUTTONS / INPUTS / GROUPS
+========================================================= */
+button{
+  cursor:pointer; border-radius:12px; border:1px solid #00eaff55;
+  background: linear-gradient(90deg,#202056 60%, #009be6 120%);
+  color:#fff; padding:12px 28px; margin:3px 6px;
+  font:500 15px/1 'Orbitron','Segoe UI',Arial,sans-serif; letter-spacing:.06em;
+  box-shadow:0 2px 8px #00f5ff55;
+  transition: background .2s, box-shadow .2s, transform .12s, color .2s;
+  min-width:80px;
+}
+button:hover{ background:#00f5ff; color:#121212; box-shadow:0 2px 20px #00f5ff88; transform:translateY(-2px) scale(1.02); }
+
+input, select, textarea{
+  background: rgba(38,56,77,.72); color: var(--neon);
+  border:1.5px solid #25f1ff77; border-radius:7px;
+  font:500 17px/1.3 'Orbitron','Segoe UI',Arial,sans-serif;
+  padding:9px 14px; margin:3px 0; outline:none;
+  box-shadow:0 1px 8px #00eaff44; transition:border .2s, background .19s;
+  text-align:right;
+}
+input:focus, select:focus, textarea:focus{ border-color:#00eaff; background: rgba(42,86,120,.95); color:#fff; }
+
+/* グループ枠 */
+.group{ padding:24px; margin:18px 0; border-radius:18px; background:rgba(10,20,40,.87); box-shadow:0 2px 18px #00eaff12; }
+.group h3{ font-size:22px; margin:0 0 18px; color:#fff; letter-spacing:.02em; text-align:left; }
+
+/* ラベル行（PCは横並び） */
+.group label{ display:flex; align-items:center; justify-content:space-between; gap:0; margin-bottom:12px; width:100%; }
+.group label > span, .group label > strong, .group label > b{ min-width:140px; max-width:210px; text-align:left; font-size:17px; flex-shrink:0; }
+.group label input, .group label select, .group label button{ margin-left:auto; flex:1 1 120px; min-width:120px; max-width:260px; }
+
+/* =========================================================
+   TABLES
+========================================================= */
+table{ width:100%; border-collapse:separate; border-spacing:0; margin:0 0 26px; background:rgba(20,28,40,.82); border-radius:16px; box-shadow:0 0 24px #00eaff33; overflow:hidden; }
+th, td{ border-bottom:1.5px solid #00f5ff55; padding:10px 7px; background:rgba(24,30,50,.85); font-size:17px; text-align:left; }
+th{ color:#00f5ff; font-size:18px; font-weight:700; letter-spacing:.05em; background:linear-gradient(90deg,#23467a 40%,#197b91 100%); }
+tr:last-child td{ border-bottom:none; }
+tr.row:hover td{ background:rgba(0,245,255,.09); }
+
+/* =========================================================
+   RESULT PANEL（領収書エリア）
+========================================================= */
+#result, .result{
+  background: linear-gradient(180deg,#142944 90%,#123);
+  color:#43eaff;
+  padding:32px 34px 18px; margin-top:22px;
+  border-radius:18px; font-size:22px; text-align:left;
+  box-shadow:0 0 24px #00f5ff1c; letter-spacing:.02em;
+}
+.result .finalAmount{ display:block; margin:22px 0 16px; padding:6px 0; background:linear-gradient(90deg,#3e46ff 5%,#03f8ff 100%); color:#fff; font-size:31px; font-weight:700; border-radius:7px; text-shadow:0 2px 12px #00f3ffbb; }
+.result .totalAmount{ color:#ffe99d; font-size:25px; font-weight:700; }
+.result .subtotal{ color:#43eaff; font-size:22px; margin-top:10px; }
+.result .bottle-list{ margin-top:15px; color:#43eaff; font-size:17px; line-height:1.2; white-space:pre-line; }
+.print-highlight{ color:#00eaff !important; }
+
+/* =========================================================
+   APP1 伝票テーブル（軽微な見た目）
+========================================================= */
+#app1 th, #app1 td{ color:#81e1ff; }
+#app1 input.table-number{ width:30px; }
+#app1 input.honshi{ width:50px; }
+#app1 select.c{ width:100px; }
+#app1 input.amount{ width:120px; }
+#app1 input.num{ width:40px; }
+#app1 input.detail{ width:80px; }
+#app1 input.card, #app1 input.total{ width:150px; }
+
+/* =========================================================
+   FILTER BAR（カテゴリ/抽出ボタン帯）
+========================================================= */
+.filter-bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:8px 0 12px; background:transparent; border:0; box-shadow:none; }
+.filter-bar .tablinks{ margin:0; min-width:80px; }
+
+/* =========================================================
+   BOTTLE FORM（品目/割人数/数量/金額）
+========================================================= */
+.bottle-form{ display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; }
+.bottle-form label{ display:flex; align-items:center; gap:5px; margin:0; }
+.bottle-form input[type="text"], .bottle-form input[type="number"]{ width:74px; min-width:52px; font-size:16px; padding:6px 10px; }
+.bottle-form label:nth-child(4){ flex:1 1 220px; min-width:180px; }
+.bottle-form label:nth-child(4) input{ width:100%; font-size:16px; padding:6px 10px; text-align:right; }
+
+/* =========================================================
+   HISTORY / SPECIAL BUTTONS
+========================================================= */
+.history{ margin-top:38px; background:rgba(0,34,43,.23); border-radius:10px; box-shadow:0 2px 12px #00f5ff12; }
 .history h3{ color:#00f5ff; margin-bottom:8px; }
-.history li{
-  margin-bottom:10px; background: rgba(33,90,104,.14); border-radius:8px;
-  box-shadow:0 1px 8px #00eaff33; padding:9px 15px; color:#97e4f5;
+.history li{ margin-bottom:10px; background:rgba(33,90,104,.14); border-radius:8px; box-shadow:0 1px 8px #00eaff33; padding:9px 15px; color:#97e4f5; }
+
+.red-btn,.clear-btn,.reset-btn{ background:linear-gradient(90deg,#f73378 30%,#d80032 100%); color:#fff!important; border:1.5px solid #d80032; box-shadow:0 0 12px #ff006288; }
+.red-btn:hover,.clear-btn:hover,.reset-btn:hover{ background:linear-gradient(90deg,#f44 10%,#b00020 90%); box-shadow:0 0 20px #ff2e62aa; transform:scale(1.05); }
+
+/* =========================================================
+   MOBILE (<=700px)
+========================================================= */
+@media (max-width:700px){
+  :root{ --tabs-h: 52px; --subnav-h: 36px; --content-pad: 20px 12px 110px 12px; --font-base:16px; --font-tabs:14px; --font-nav:14px; }
+
+  /* ラベル行は2列グリッドに（ラベル幅=変数化） */
+  #app2{ --app2-label-w:130px; }
+  #app3{ --app3-label-w:125px; }
+
+  #app2 .group, #app3 .group{ padding:10px 12px 8px; margin:10px 0; border-radius:12px; }
+  #app2 .group h3, #app3 .group h3{ font-size:18px; margin:0 0 10px; }
+
+  #app2 .group label, #app3 .group label{
+    display:grid; grid-template-columns: var(--app2-label-w, 130px) 1fr; column-gap:8px; align-items:center; margin-bottom:8px;
+  }
+  #app3 .group label{ grid-template-columns: var(--app3-label-w, 125px) 1fr; }
+
+  #app2 .group label > span, #app2 .group label > strong, #app2 .group label > b,
+  #app3 .group label > span, #app3 .group label > strong, #app3 .group label > b{
+    width:auto; min-width:0; text-align:left;
+  }
+  #app2 .group label input, #app2 .group label select, #app2 .group label button,
+  #app3 .group label input, #app3 .group label select, #app3 .group label button{ width:100%; min-width:0; }
+
+  /* 入力の“高さを薄く” */
+  #app2 input[type="text"], #app2 input[type="number"], #app2 select,
+  #app3 input[type="text"], #app3 input[type="number"], #app3 select{
+    font-size:16px; height:34px; min-height:34px; line-height:32px; padding-block:2px; padding-inline:10px;
+  }
+  #app2 textarea, #app3 textarea{ font-size:16px; min-height:64px; padding:6px 10px; line-height:1.25; }
+
+  /* 伝票カテゴリ帯：3列グリッド */
+  .filter-bar{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:8px 6px; }
+  .filter-bar .tablinks{ min-width:0; width:100%; padding:10px 0; font-size:14px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0; }
+  .filter-bar .tablinks:nth-child(1){ grid-column:1 / -1; } /* すべて表示＝全幅 */
+  .filter-bar .tablinks:nth-child(2){ grid-column:1; }      /* 現金抽出 */
+  .filter-bar .tablinks:nth-child(3){ grid-column:2; }      /* カード抽出 */
+
+  /* APP1 テーブルをカード化（スマホ専用） */
+  #app1 table, #app1 tbody, #app1 tr, #app1 td{ display:block; width:100% !important; }
+  #app1 tr.row{ position:relative; margin:14px 0; padding:12px; border-radius:12px; background:rgba(25,35,55,.9); box-shadow:0 2px 12px #00f5ff44; overflow:hidden; }
+  #app1 td{ border:none !important; padding:6px 2px !important; }
+  #app1 .delete-btn{ position:absolute; top:8px; right:8px; width:32px; height:32px; }
+  #app1 input, #app1 select{ width:100% !important; max-width:100% !important; text-align:left !important; margin-top:4px; }
 }
 
-/* ====== ボトルフォーム ====== */
-.bottle-form{
-  display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-bottom:10px;
-}
-.bottle-form label{ display:flex; align-items:center; gap:5px; font-size:15px; min-width:58px; color:#eaf6ff; margin:0; }
-.bottle-form input[type="text"], .bottle-form input[type="number"]{
-  width:74px; min-width:52px; background: rgba(38,56,77,.72); color:#00f5ff;
-  border: 1.5px solid #25f1ff77; border-radius:7px; font-size:16px; padding:6px 10px; margin-left:2px; text-align:right; box-shadow:0 1px 8px #00eaff44; outline:none;
-}
-
-/* ====== 結果表示（result） ====== */
-.result, #result{
-  background: linear-gradient(180deg,#142944 90%,#123); border-radius: 18px; border: none;
-  color:#43eaff; padding:32px 34px 18px; margin-top:22px;
-  font-family:'Orbitron','Segoe UI',Arial,sans-serif; font-size:22px; letter-spacing:.02em;
-  box-shadow:0 0 24px #00f5ff1c; text-align:left;
-}
-.result span, .subtotal, .totalAmount, .finalAmount{
-  background:none !important; color:#fff !important; font-size:inherit !important; text-shadow:none !important; margin-bottom:0; padding:0;
-}
-.finalAmount, .print-highlight{ color:#00eaff !important; font-size:28px !important; font-weight:bold; }
-.subtotal{ color:#36ffe7 !important; }
-.totalAmount{ color:#feffb3 !important; }
-.result b, .result strong{ color:#fff; font-weight:bold; }
-.result .main-amount, .result .totalAmount{ color:#ffe99d; font-size:25px; font-weight:bold; }
-.result .finalAmount{
-  display:block; margin:22px 0 16px; padding:6px 0;
-  background: linear-gradient(90deg,#3e46ff 5%,#03f8ff 100%); color:#fff; font-size:31px; font-weight:bold;
-  border-radius:7px; letter-spacing:.04em; text-shadow:0 2px 12px #00f3ffbb; text-align:left;
-}
-.result .subnote{ color:#eafffa; font-size:15px; opacity:.88; }
-.result .bottle-list, #result .bottle-list{ margin:15px 0 0; color:#43eaff; font-size:17px; line-height:1.2; white-space:pre-line; }
-.result .right-note{ float:right; color:#fff4b7; font-size:15px; opacity:.95; }
-
-/* ====== app1 テーブル寸法 ====== */
-#app1 table, #app1 .row, #app1 input, #app1 select{
-  background: rgba(30,30,40,.85); color:#f6ffe8; font-size:18px; border-radius:10px; border:none; margin-bottom:8px; box-shadow:0 2px 12px #0ff3;
-}
-#app1 th, #app1 td{
-  background: rgba(24,30,50,.85); color:#81e1ff; font-size:17px; border-bottom:1.5px solid #00f5ff33; padding:8px 5px;
-}
-#app1 tr.row:hover td{ background: rgba(0,245,255,.13); }
-#app1 input[type="text"], #app1 input[type="number"], #app1 select{
-  background:#18344c; color:#fff; border:1.5px solid #25f1ff44; border-radius:5px; font-size:17px; padding:6px 11px; margin:2px 0; outline:none; box-shadow:0 1px 8px #00eaff22; text-align:right !important;
-}
-#app1 input[type="text"]:focus, #app1 input[type="number"]:focus{ border-color:#00eaff; background:#225a7a; color:#fff; }
-#app1 .delete-btn{ width:26px; height:26px; font-size:15px; box-shadow:0 0 12px #00eaff44; }
-#app1 input.table-number{ width:30px; }  #app1 input.honshi{ width:50px; }  #app1 select.c{ width:100px; }
-#app1 input.amount{ width:120px; }  #app1 input.num{ width:40px; }  #app1 input.detail{ width:80px; }
-#app1 input.card{ width:150px; }   #app1 input.total{ width:150px; }
-
-/* ====== アニメーション ====== */
-@keyframes slideInRow{ from{ transform:translateX(100%); opacity:0 } to{ transform:translateX(0); opacity:1 } }
-@keyframes slideOutLeft{ from{ opacity:1; transform:translateX(0) } to{ opacity:0; transform:translateX(-120%) } }
-@keyframes slideInRight{ from{ opacity:0; transform:translateX(120%) } to{ opacity:1; transform:translateX(0) } }
+/* =========================================================
+   SIMPLE ROW ANIMATIONS（transformは子要素にのみ使用）
+========================================================= */
+@keyframes slideInRow{ from{ transform:translateX(100%); opacity:0; } to{ transform:none; opacity:1; } }
+@keyframes slideOutLeft{ from{ transform:none; opacity:1; } to{ transform:translateX(-120%); opacity:0; } }
 .row.slide-in{ animation: slideInRow .5s ease-out; }
 .row.slide-out-left{ animation: slideOutLeft .32s cubic-bezier(.77,.17,.3,1.11) forwards; }
-.row.slide-in-right{ animation: slideInRight .28s cubic-bezier(.77,.17,.3,1.11); }
 
-/* ====== モバイル調整 ====== */
-@media (max-width: 700px){
-  .tabs{ font-size:15px; }
-  .tab{ font-size:15px; padding:9px 0; }
-  .content{ padding: 7vw 2vw 100px; }
-  th, td{ font-size:15px; }
-  .result{ padding:19px; font-size:16px; }
-  .group{ padding:12px 6px 8px; margin:10px 0; }
-  #app1-nav button, #app2-nav button{ font-size:14px; padding:7px 11px; }
-  .group label{ flex-direction: column; align-items: stretch; }
-  .group label > span, .group label > strong, .group label > b{
-    min-width: 0 !important; max-width: 100% !important; width: 100% !important;
-  }
-  .group label input, .group label select, .group label button{
-    width: 100% !important; min-width: 0 !important; max-width: 100% !important;
-    margin-left: 0 !important; flex: 1 1 auto !important; box-sizing: border-box !important;
-  }
-  .bottle-form{ flex-direction: column !important; align-items: stretch !important; gap: 6px !important; }
-  .bottle-form input[type="text"], .bottle-form input[type="number"]{ width: 100% !important; min-width: 0 !important; max-width: 100% !important; }
-  #app1 table, #app1 th, #app1 td{ font-size:14px; padding:5px 2px; }
-  #app1 input, #app1 select{ font-size:14px; padding:5px 6px; }
+/* 視覚的な段差を減らす（任意） */
+.tabs{
+  border-bottom-width: 1px;  /* 1.5px→1pxにすると段差感が少し減る */
+  /* さらに詰めたいなら ↓ を一緒に入れる（影を弱める）
+  box-shadow: 0 2px 16px #161a2899;
+  */
 }
 
-/* ====== 印刷（長形4号） ====== */
-/* 競合していた @media print を統合。iOSの逆さ回転を除去 */
-@media print{
+/* もし .content の上がまだ空いて見えるなら（任意） */
+.content{
+  padding-top: 0;            /* 1px→0px に完全に詰める */
+}
+
+/* タブの下線を細くして段差感を減らす（任意） */
+.tabs {
+  border-bottom: 1px solid #0ff7ff55;  /* 1.5px → 1px */
+  box-shadow: none;                    /* 影を消すならここ */
+}
+
+/* ===== app2 ツールバー：PCは横一列、スマホは2段 ===== */
+
+/* PC（デフォルト）: 横一列 */
+.ticket-toolbar{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:nowrap;
+}
+
+/* 検索ボックス：PCは横並びで右寄せ */
+.ticket-toolbar .search-box{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:auto;             /* 右側へ寄せる */
+}
+
+/* 入力は伸縮して余白を埋める（右寄せ） */
+.ticket-toolbar #searchAmount{
+  flex: 1 1 260px;              /* 画面に合わせて伸びる */
+  min-width: 220px;             /* つぶれ防止 */
+  text-align: right;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+/* グローバルの min-width 等を抑えてコンパクトに */
+.ticket-toolbar button{
+  min-width: 0 !important;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* PCではボタン内の <br> を隠して1行表示に */
+.ticket-toolbar .add-btn br{ display:none; }
+
+/* ---------- スマホ（<=700px）: 2段グリッド ---------- */
+@media (max-width:700px){
+  /* コンテナを 2列×2行のグリッドに */
+  .ticket-toolbar{
+    display:grid;                     /* flex → grid 切替 */
+    grid-template-columns: 110px 1fr; /* 左: ボタン / 右: 入力・操作 */
+    grid-template-rows: auto auto;    /* 上: 入力 / 下: ボタン群 */
+    column-gap: 12px;
+    row-gap: 10px;
+    align-items: stretch;
+  }
+
+  /* 左の「伝票追加」ボタンを上下2行ぶち抜きに */
+  .ticket-toolbar .add-btn{
+    grid-column: 1;
+    grid-row: 1 / span 2;             /* 1〜2行ぶち抜き */
+    width: 100%;
+    height: auto;
+    padding: 8px 0;
+  }
+  /* スマホではボタン内の <br> を復活（2行表示） */
+  .ticket-toolbar .add-btn br{ display: initial; }
+
+  /* 右側：検索ボックスの中もグリッド化して 1行目=入力、2行目=ボタン×2 */
+  .ticket-toolbar .search-box{
+    display:grid;                      /* flex → grid 切替 */
+    grid-template-columns: 1fr 1fr;    /* 下段で 検索 / リセット を左右に */
+    grid-template-rows: auto auto;     /* 上段: 入力 / 下段: ボタン */
+    gap: 8px 10px;
+    margin-left: 0;                    /* PCの auto をリセット */
+  }
+
+  /* 1行目：入力はぶち抜き */
+  .ticket-toolbar #searchAmount{
+    grid-column: 1 / -1;               /* 2列ぶち抜き */
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 16px;                   /* iOSの拡大防止 */
+  }
+
+  /* 2行目：検索 / リセット を左右に配置 */
+  .ticket-toolbar .search-box button:nth-of-type(1){ grid-column: 1; }
+  .ticket-toolbar .search-box button:nth-of-type(2){ grid-column: 2; }
+
+  /* スマホでは少し薄く */
+  .ticket-toolbar button{
+    height: 34px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+}
+
+/* ===== APP1：CB表を常に“横一列のテーブル”で表示 ===== */
+/* 他のスマホ用ルール（#app1 table{display:block} 等）を打ち消す */
+#categorySection table,
+#categorySection thead,
+#categorySection tbody,
+#categorySection tr,
+#categorySection th,
+#categorySection td{
+  display: revert !important;          /* ← display:block を元に戻す */
+}
+
+/* 列幅と揃え方を固定（PC/スマホ共通で安定） */
+#categorySection table{
+  table-layout: fixed;
+  width: 100%;
+}
+#categorySection th, #categorySection td{
+  white-space: nowrap;
+  padding: 8px 6px;
+}
+
+/* 1列目：チェックは細く中央寄せ */
+#categorySection th:nth-child(1),
+#categorySection td:nth-child(1){
+  width: 42px;                          /* お好みで 36–48px */
+  text-align: center;
+}
+#categorySection td:nth-child(1) input[type="checkbox"]{
+  transform: scale(1.0);
+  margin: 0 auto; display: block;
+}
+
+/* 2列目：カテゴリ名（左寄せ・可変） */
+#categorySection th:nth-child(2),
+#categorySection td:nth-child(2){
+  width: auto;
+  text-align: left;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 3,4列目：本数・金額（右寄せ・固定気味） */
+#categorySection th:nth-child(3),
+#categorySection td:nth-child(3),
+#categorySection th:nth-child(4),
+#categorySection td:nth-child(4){
+  width: 90px;                           /* 本数と金額の目安幅 */
+  text-align: right;
+}
+
+/* スマホでは文字だけ少し小さく（1行維持） */
+@media (max-width:700px){
+  #categorySection th, #categorySection td{ font-size: 14px; }
+}
+
+/* ===== APP1：CB表の列幅を均一化。金額だけ少し広め ===== */
+#categorySection{
+  /* 好みで調整（PCの目安） */
+  --w-check : 42px;   /* チェック列 */
+  --w-count : 86px;   /* 本数列 */
+  --w-amount: 126px;  /* 金額列（本数より広め） */
+  --row-pad : 10px;   /* 行の上下左右パディング */
+}
+
+#categorySection table{
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#categorySection th,
+#categorySection td{
+  padding: var(--row-pad) 8px;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums; /* 数字幅を揃えて見やすく */
+}
+
+/* 1列目：チェック（細めセンター） */
+#categorySection th:nth-child(1),
+#categorySection td:nth-child(1){
+  width: var(--w-check);
+  text-align: center;
+  padding-left: 6px; padding-right: 6px;
+}
+#categorySection td:nth-child(1) input[type="checkbox"]{
+  transform: scale(1.0);
+  margin: 0 auto; display: block;
+}
+
+/* 3列目：本数（右寄せ 固定幅） */
+#categorySection th:nth-child(3),
+#categorySection td:nth-child(3){
+  width: var(--w-count);
+  text-align: right;
+}
+
+/* 4列目：金額（右寄せ 本数より少し広め） */
+#categorySection th:nth-child(4),
+#categorySection td:nth-child(4){
+  width: var(--w-amount);
+  text-align: right;
+}
+
+/* 2列目：カテゴリ（残り幅すべて） */
+#categorySection th:nth-child(2),
+#categorySection td:nth-child(2){
+  width: calc(100% - var(--w-check) - var(--w-count) - var(--w-amount));
+  text-align: left;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* スマホ：少しだけ詰める（1行表示は維持） */
+@media (max-width:700px){
+  #categorySection{
+    --w-check : 38px;
+    --w-count : 78px;
+    --w-amount: 118px;   /* まだ金額＞本数を維持 */
+    --row-pad : 8px;
+  }
+  #categorySection th, #categorySection td{
+    font-size: 14px;
+  }
+}
+
+/* CB表：ヘッダーの「チェック」「カテゴリ」を見た目だけ隠す */
+#categorySection thead th:nth-child(1),
+#categorySection thead th:nth-child(2){
+  font-size: 0;              /* 文字を不可視に（幅は保持） */
+  line-height: 0;
+  white-space: nowrap;
+}
+
+/* ===== APP2：ボトルフォームを右寄せ ===== */
+#app2 .bottle-form{
+  /* フォーム全体を必要幅だけに縮めて右端へ */
+  width: fit-content !important;
+  margin-left: auto !important;
+
+  display: flex;                 /* 念のため明示 */
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;                 /* お好みで */
+}
+
+/* ラベル内のテキストも右寄せ（見た目をそろえる） */
+#app2 .bottle-form label{
+  justify-content: flex-end;
+  text-align: right;
+}
+
+/* 入力値は右ぞろえ（数値が見やすい） */
+#app2 .bottle-form input[type="text"],
+#app2 .bottle-form input[type="number"]{
+  text-align: right;
+}
+
+/* 金額フィールド（4つ目）は伸び過ぎ防止＆右寄せ時に収まりよく */
+#app2 .bottle-form label:nth-of-type(4){
+  flex: 0 1 240px;      /* 200–280px で調整可 */
+  min-width: 180px;
+}
+#app2 .bottle-form label:nth-of-type(4) input{
+  width: 100%;
+}
+
+/* スマホでは全幅にしたい場合（任意：右寄せは維持） */
+@media (max-width:700px){
+  #app2 .bottle-form{
+    width: 100% !important;
+    justify-content: flex-end;
+    gap: 8px 10px;
+  }
+}
+
+/* タブ(上部)＋サブナビの合計高さを変数にしておく */
+:root{
+  --scroll-offset: calc(var(--tabs-h) + var(--subnav-h) + 12px);
+}
+
+/* スクロール先になる各セクションは、上にこの分の余白を確保 */
+#app1 section,
+#app2 section{
+  scroll-margin-top: var(--scroll-offset);
+}
+
+/* ついでにCSSベースのスムーススクロールにしてOK（JSでも可） */
+html { scroll-behavior: smooth; }
+
+/* ===== 印刷は #result だけ。空白ページを出さない強制版 ===== */
+/* ===== 印刷は #result だけ。1枚＆余白ゼロで出す ===== */
+
+@media print {
+  /* 用紙サイズ（長形4想定）。余白は html,body の padding で調整 */
   @page { size: 90mm 205mm; margin: 0; }
 
-  body{
-    all: unset; margin: 0; padding: 0; width: 90mm;
-    font-size: 8pt !important; line-height: 1.1 !important;
-    background: #fff !important; color: #000 !important;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  html, body {
+    margin: 0 !important;
+    padding: 25mm 3mm 3mm 3mm !important;
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  *{ background: transparent !important; color: #000 !important; }
 
-  body *{ visibility: hidden; }
-  #result, #result *{ visibility: visible; }
+  /* 他は非表示にして #result だけ表示 */
+  body * { display: none !important; }
+  html, body, #app2 { display: block !important; }
+  #result, #result * { display: revert !important; }
 
+  /* シンプル化: 装飾リセット（本体） */
+  #result {
+    position: static !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    color: #000 !important;
+  }
+
+  /* 子要素も黒文字＆装飾リセット */
+  #result * {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    color: #000 !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    filter: none !important;
+  }
+
+  /* テーブル体裁を完全OFF */
+  #result table,
+  #result thead,
+  #result tbody,
+  #result tr,
+  #result th,
+  #result td {
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  /* 余白をさらにタイトにしたい場合：
+     #result th, #result td { padding: 0 !important; } */
+
+  /* 擬似要素の装飾も殺す */
+  #result::before,
+  #result::after,
+  #result *::before,
+  #result *::after {
+    content: none !important;
+    display: none !important;
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* hr の保険 */
+  #result hr {
+    border: 0 !important;
+    height: 0 !important;
+  }
+
+    /* 親コンテナ（= .content の見た目）を完全オフ */
+  #app2,
+  .content {
+    background: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 0 !important;
+  }
+
+  /* 念のためテーブル体裁も強制ノンスタイル化（#result 内） */
+  #result table { border-collapse: separate !important; border-spacing: 0 !important; }
+  #result th, #result td { border: 0 !important; padding: 0 !important; outline: none !important; }
+
+   html, body {
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding-top: 0 !important;   /* 画面用のタブ押し下げも無効化 */
+  }
+
+  /* 親コンテナも同様に高さ制約を解除 */
+  #app2, .content {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  /* 結果ブロックはページ内で分割されないように */
+  #result {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+    /* ▼ 全体のフォントを約 75%（=2段階ダウン相当）に縮小 */
+  #result{ font-size: 0.75em !important; line-height: 1.35 !important; }
+
+  /* ▼ 子要素も “親サイズを継承” にして、px指定を打ち消す */
+  #result *{ font-size: inherit !important; }
+
+   /* 名前を少し大きく（classが無くても1行目をフォールバックで拡大） */
+  #result .print-name,
+  #result > :first-child{
+    font-size: 1.5em !important;   /* 他より約+15% */
+    font-weight: 700 !important;
+  }
+
+  /* 小計だけ少し大きく・太く */
+  #result .subtotal{
+    font-size: 1.30em !important;  /* 他より +10%（お好みで 1.12〜1.20em に調整可） */
+    font-weight: 700 !important;
+  }
+
+  /* 「合計」行（= totalAmount）をさらに大きく */
+  #result .totalAmount{
+    font-size: 1.5em !important;   /* 他より約+25% */
+    font-weight: 700 !important;
+  }
+
+  /* 「最終合計」行（= finalAmount）を一番大きく */
+  #result .finalAmount{
+    font-size: 1.5em !important;   /* 他より約+35% */
+    font-weight: 800 !important;
+  }
+
+    /* 例外：色を許可（他は黒のまま） */
+  /* 名前（classが無い場合は先頭要素をフォールバック） */
+  #result .print-name,
+  #result > :first-child{
+    color: #0066cc !important;   /* 青 */
+  }
+
+  /* 最終合計 */
+  #result .finalAmount{
+    color: #0066cc !important;   /* 青 */
+  }
+
+  /* 合計 */
+  #result .totalAmount{
+    color: #ff7a00 !important;   /* オレンジ */
+  }
+
+  /* 余白などはそのまま使う。必要ならここで上書きも可 */
   #result{
-    display: block !important; position: static !important;
-    width: 90mm; max-height: 205mm; margin: 0 auto; box-sizing: border-box;
-    background: transparent !important; color: #000 !important;
-    white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important;
-    font-size: 9pt !important; line-height: 1.1 !important; overflow: hidden;
-    transform: none !important; /* ← rotate(180deg) を無効化 */
+    transform: rotate(180deg) translateZ(0);  /* 反転 */
+    transform-origin: 50% 50%;               /* 中心で回転（はみ出し防止に安定） */
   }
 
-  /* 非表示項目 */
-  .button-row, .clear-button, .clear-all-button, .print-button, form, .history, .summary, #deleteSelectedBtn { display: none !important; }
-
-  details{ display:block !important; } details summary{ display:none !important; }
-
-  .castName{ font-size: 20pt !important; font-weight: bold !important; }
-  .totalAmount{ color: orange !important; font-size: 20pt !important; font-weight: bold !important; }
-  .finalAmount.print-highlight{ color: rgb(90,57,251) !important; font-size: 20pt !important; font-weight: bold !important; }
-  .subtotal{ font-size: 8pt !important; }
-
-  /* result-print-block 互換（見た目調整） */
-  #result, .result, .result-print-block{
-    background: #fff !important; color: #000 !important;
-    padding: 18px 12px 12px 18px !important; border-radius: 0 !important; font-size: 10.8pt !important;
-    box-shadow: none !important; width: 88mm !important; max-width: 100% !important; margin: 0 !important;
-  }
-  .result-print-block .castName{ font-size: 1.3em !important; font-weight: bold !important; color:#222 !important; margin-bottom: 6px !important; display:block; }
-  .result-print-block .experienceAndRental{ font-size:.98em !important; color:#444 !important; margin-bottom: 8px !important; display:block; }
-  .result-print-block .subtotal, .result-print-block .tax, .result-print-block .welfare{ font-size:1em !important; margin-bottom: 3px !important; color:#222 !important; font-weight:normal !important; display:block; }
-  .result-print-block .totalAmount{ font-size:1.16em !important; color:#c87f07 !important; font-weight:bold !important; margin:10px 0 2px 0 !important; display:block; }
-  .result-print-block .sendoff{ font-size:.96em !important; color:#555 !important; margin-bottom:6px !important; margin-left:0 !important; display:block; }
-  .result-print-block .final-row, .result-print-block .finalAmount{ font-size:1.33em !important; font-weight:bold !important; color:#0a29b3 !important; margin:12px 0 8px 0 !important; display:block; }
-  .result-print-block .details{ border-top:1px solid #bbb !important; padding-top:6px !important; margin-top:8px !important; font-size:.96em !important; color:#111 !important; }
-  .print-only{ display:none !important; }
-  .print-note{ display:block !important; font-size:13px !important; margin:8px 0 0 !important; float:none !important; color:#333 !important; }
-}
-/* 任意：回転が必要な時だけ class で明示 */
-@media print { .rotate180{ transform: rotate(180deg) !important; transform-origin: center center !important; } }
-
-/* =========================================
-   伝票フォーム & app2フォーム 安定化パッチ
-   （既存<style>の一番最後に追記）
-   ========================================= */
-
-/* 1) .group label を“2列グリッド”で安定化（PC） */
-@media (min-width: 701px) {
-  .group label {
-    display: grid !important;
-    grid-template-columns: minmax(120px, 220px) 1fr !important;
-    align-items: center !important;
-    gap: 10px 16px !important;
-    margin-bottom: 12px !important;
-  }
-  .group label > span,
-  .group label > strong,
-  .group label > b {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    text-align: left !important;
-    justify-self: start !important;
-  }
-  .group label input,
-  .group label select,
-  .group label button {
-    width: 100% !important;       /* ←右列は常に全幅で安定 */
-    min-width: 0 !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    justify-self: stretch !important;
-    text-align: right !important;
-    box-sizing: border-box !important;
-  }
 }
 
-/* 2) モバイルでは“縦積み”を強制（既存指定の上書き強化） */
-@media (max-width: 700px) {
-  .group label {
-    display: block !important;
-  }
-  .group label > span,
-  .group label > strong,
-  .group label > b {
-    display: block !important;
-    margin-bottom: 6px !important;
-  }
-  .group label input,
-  .group label select,
-  .group label button {
-    display: block !important;
-    width: 100% !important;
-  }
-}
 
-/* 3) 伝票フォーム（app1）のセル幅が他の汎用幅に影響されないようガード */
-#app1 td input,
-#app1 td select {
-  width: auto !important;        /* 既定の個別幅(#app1 input.amount など)を優先 */
-  max-width: 100% !important;
-}
-#app1 input.table-number{ width: 30px !important; }
-#app1 input.honshi{ width: 50px !important; }
-#app1 select.c{ width: 100px !important; }
-#app1 input.amount{ width: 120px !important; }
-#app1 input.num{ width: 40px !important; }
-#app1 input.detail{ width: 80px !important; }
-#app1 input.card,
-#app1 input.total{ width: 150px !important; }
 
-/* 4) app2 のボトルフォーム: 横寄せ→左寄せに、幅も柔軟に */
-.bottle-form {
-  display: grid !important;
-  grid-auto-flow: column;
-  grid-auto-columns: max-content;
-  gap: 10px 14px !important;
-  justify-content: start !important;   /* ← flex-end をやめる */
-  align-items: center !important;
-}
 
-/* ラベルは最小幅にして詰め、入力は適度な幅に */
-.bottle-form label {
-  min-width: auto !important;
-  margin: 0 !important;
-  gap: 6px !important;
-}
 
-/* 入力幅：PCは小さめ固定、はみ出し防止 */
-.bottle-form input[type="text"],
-.bottle-form input[type="number"] {
-  width: 96px !important;       /* 74px → 96px に広げて操作性UP */
-  min-width: 80px !important;
-  max-width: 120px !important;
-  text-align: right !important;
-}
 
-/* モバイルは各フィールドを縦に積んで全幅 */
-@media (max-width: 700px) {
-  .bottle-form {
-    grid-auto-flow: row !important;
-    grid-template-columns: 1fr !important;
-    justify-items: stretch !important;
-  }
-  .bottle-form input[type="text"],
-  .bottle-form input[type="number"] {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-  }
-}
 
-/* 5) 予期せぬ横スクロールの最終ガード */
-html, body {
-  overflow-x: hidden !important;
-}
+
+
 
 </style>
 
@@ -442,15 +766,14 @@ html, body {
 
 
 <div id="app1" class="content">
-  
- <nav id="app1-nav" style="position:sticky; top:80px;  background-color: #111; padding:10px; z-index:100;">
+<nav id="app1-nav">
   <button data-target="editSection">編集</button>
   <button data-target="summarySection">集計</button>
   <button data-target="categorySection">CB</button>
 </nav>
 
  <section id="editSection">
-<div class="tab">
+<div class="filter-bar">
   <button class="tablinks" onclick="filterCategory('all')">すべて表示</button>
   <button class="tablinks" onclick="filterCashOnlyRows()">現金のみ抽出</button>
   <button class="tablinks" onclick="filterCardInputRows()">カード抽出</button>
@@ -510,12 +833,11 @@ html, body {
   </tbody>
 </table>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-  <button onclick="addRow()" style="font-size: 18px; padding: 15px 30px;">伝票追加</button>
+<div class="ticket-toolbar">
+  <button class="add-btn" onclick="addRow()">伝票<br>追加</button>
 
-  <div>
-    <input type="text" id="searchAmount" placeholder="金額で検索" 
-           style="width: 160px; text-align: right;" inputmode="numeric">
+  <div class="search-box">
+    <input type="text" id="searchAmount" placeholder="金額で検索" inputmode="numeric">
     <button onclick="searchByAmount()">検索</button>
     <button onclick="resetSearch()">リセット</button>
   </div>
@@ -570,7 +892,7 @@ html, body {
 
 
 <div id="app2" class="content" style="display:none;">
-  <nav id="app2-nav" style="position:sticky; top:80px; background-color:#111; padding:10px; z-index:100;">
+  <nav id="app2-nav">
   <button data-target="app2-inputSection">入力</button>
   <button data-target="app2-resultSection">計算結果表示</button>
   <button data-target="app2-historySection">履歴</button>
@@ -721,7 +1043,7 @@ html, body {
    <div class="result" id="result"></div>
 
    <div class="button-row" style="margin-top: 20px;">
-    <button type="button" class="print-button" onclick="preparePrint()">出力</button>
+<button class="print-button" onclick="printResult()">出力</button>
    </div>
 
    <div class="button-row" style="margin-top: 20px;">
@@ -836,7 +1158,7 @@ html, body {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
 <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 3.5.3
+  Ver. 4.0
 </div>
 
 </div>
@@ -1094,22 +1416,14 @@ function resetSearch() {
   });
 }
 
-document.querySelectorAll('#app1-nav button').forEach(button => {
-  button.addEventListener('click', () => {
-    const nav = document.querySelector('#app1-nav');
-    const tabs = document.querySelector('.tabs');
-
-    const navTop = parseInt(window.getComputedStyle(nav).top) || 0;
-    const offset = nav.offsetHeight + tabs.offsetHeight + navTop + 20;
-
-    const targetId = button.getAttribute('data-target');
-    const target = document.getElementById(targetId);
-    if (target) {
-      const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-    }
-  });
-});
+  document.querySelectorAll('#app1-nav button, #app2-nav button')
+    .forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.target;
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
 
 function saveCheckboxStates() {
   const checkboxes = document.querySelectorAll("table input[type='checkbox']");
@@ -2251,8 +2565,34 @@ function restoreFromHistory(button) {
   // 保存処理（現在の復元状態を保存しておく）
   saveBottleForms();
 
-    // ページ上部にスクロール
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+// 1) 先に app2 を表示状態へ
+if (typeof activateTab === 'function') {
+  activateTab('app2');
+}
+
+// 2) レイアウト確定を2フレーム待ってからスクロール
+const gotoId = 'app2-inputSection'; // 目的に応じて 'app2-resultSection' / 'app2-historySection' に変更可
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const target = document.getElementById(gotoId) || document.getElementById('app2');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // 念のためのフォールバック：オフセット考慮の手動スクロール
+      const root = document.documentElement;
+      const styles = getComputedStyle(root);
+      const offsetStr = styles.getPropertyValue('--scroll-offset').trim();
+      const offset = parseInt(offsetStr) || 160; // 取得できない環境向けの保険
+      window.scrollTo({ top: 0 + Math.max(0, window.scrollY - offset), behavior: 'smooth' });
+    }
+
+    // 使い勝手向上：フォーカスと一時ハイライト（任意）
+    const nameInput = document.getElementById('castName');
+    if (nameInput) { nameInput.focus(); nameInput.select(); }
+    target?.classList.add('just-scrolled');
+    setTimeout(() => target?.classList.remove('just-scrolled'), 1200);
+  });
+});
 
 }
 
@@ -2397,63 +2737,6 @@ function calculateBack() {
   document.getElementById("total").textContent = "¥" + total.toLocaleString();
   document.getElementById("detail").value = detailLines.join("\n");
 }
-
-function printResult() {
-  const printContents = document.getElementById('result').innerHTML; // 計算結果を取得
-  const originalContents = document.body.innerHTML; // 元のページの内容を保存
-
-  document.body.innerHTML = printContents; // 印刷用に結果だけ表示
-
-  window.print(); // 印刷ダイアログを開く
-
-  document.body.innerHTML = originalContents; // 元のページ内容に戻す
-}
-
-function preparePrint() {
-
-    calculate();
-    
-      // 現在のスクロール位置を保存
-    const scrollX = window.scrollX || window.pageXOffset;
-    const scrollY = window.scrollY || window.pageYOffset;
-    const rows = document.querySelectorAll('.denpyou'); // 各伝票の親divなどに合わせて適切に変更
-
-    rows.forEach(row => {
-      const inputs = row.querySelectorAll('input, select, textarea');
-      let hasValue = false;
-
-      inputs.forEach(input => {
-        // チェックボックスまたはその他の入力
-        if ((input.type === 'checkbox' && input.checked) || 
-            (input.type !== 'checkbox' && input.value.trim() !== '')) {
-          hasValue = true;
-        }
-         // 印刷後、元のスクロール位置に戻す
-         setTimeout(() => {
-         window.scrollTo(scrollX, scrollY);
-         }, 100);
-      });
-    
-
-      // 例えば、hasValueがtrueの場合に何か処理するならここに記述
-      if (hasValue) {
-      }
-    });
-
-    window.print();
-}
-
-
-    // 印刷用スタイル（.hide-for-printを非表示に）
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @media print {
-        .hide-for-print {
-          display: none !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
 
     setTimeout(() => {
       document.querySelectorAll('.hide-for-print').forEach(row => {
@@ -3207,6 +3490,68 @@ function stopMatrixEffect() {
   }
 }
 
+/* === CB表を [チェック][カテゴリ][本数][金額] に変換 === */
+document.addEventListener('DOMContentLoaded', () => {
+  const table = document.querySelector('#categorySection table');
+  if (!table) return;
+
+  /* ヘッダを差し替え */
+  const thRow = table.querySelector('thead tr');
+  if (thRow) thRow.innerHTML = '<th>チェック</th><th>カテゴリ</th><th>本数</th><th>金額</th>';
+
+  /* 各行を4列化（1列目の「チェック＋カテゴリ名」を分離） */
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    // すでに4列ならスキップ
+    if (tr.children.length >= 4) return;
+
+    const firstTd = tr.children[0];
+    if (!firstTd) return;
+
+    const isTotal = /合計/.test(firstTd.textContent);
+
+    if (isTotal) {
+      // 合計行はチェック列を空、カテゴリ列に「合計」
+      const blank = document.createElement('td');          // [チェック]
+      tr.insertBefore(blank, firstTd);                     // 先頭に空列を追加
+      const catTd = document.createElement('td');          // [カテゴリ]
+      catTd.innerHTML = firstTd.innerHTML;                 // 「合計」
+      tr.replaceChild(catTd, firstTd);
+      return;
+    }
+
+    // 通常行：チェックとカテゴリ名を分離
+    const cb = firstTd.querySelector('input[type="checkbox"]');
+    const nameText = firstTd.textContent.replace(/\s+/g, ' ').trim();
+
+    // 先頭セルはチェックボックスだけに
+    firstTd.innerHTML = '';
+    if (cb) firstTd.appendChild(cb);
+
+    // チェックの次に「カテゴリ名」セルを挿入
+    const catTd = document.createElement('td');
+    catTd.textContent = nameText; // 例：UK
+    tr.insertBefore(catTd, tr.children[1]);
+  });
+});
+
+function handlePrint() {
+    if (typeof calculate === 'function') {
+      // 最新の計算結果を #result に反映
+      calculate();
+    }
+    window.print();
+  }
+
+  
+function printResult() {
+  const active = document.querySelector('.tab.active')?.dataset.target;
+
+  if (active === 'app1' && typeof calculate === 'function') calculate();
+  if (active === 'app2' && typeof calculate === 'function') calculate();   // ← ここ！
+  if (active === 'app3' && typeof dailyCalc === 'function') dailyCalc();
+
+  window.print();
+}
 
 </script>
 
