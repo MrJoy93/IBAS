@@ -1,1 +1,3281 @@
 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>IBASD β版</title>
+<style>
+/* =========================================================
+   RESET / BASE
+========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; overflow-x: hidden; }
+
+:root{
+  /* サイズ/余白 */
+  --tabs-h: 64px;           /* 上部タブ高さ（PC） */
+  --subnav-h: 40px;         /* サブナビ高さ（PC） */
+  --content-pad: 30px 3vw 80px 3vw;
+
+  /* フォント */
+  --font-base: 18px;
+  --font-tabs: 18px;
+  --font-nav: 16px;
+
+  /* 色 */
+  --bg-a:#191924; --bg-b:#212c4a;
+  --text:#eaf6ff; --muted:#97e4f5; --neon:#00f5ff;
+
+  /* スクロール位置補正（タブ＋サブナビ分） */
+  --scroll-offset: calc(var(--tabs-h) + var(--subnav-h) + 12px);
+}
+
+body{
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font: 500 var(--font-base)/1.5 'Orbitron','Segoe UI',Arial,sans-serif;
+  background: linear-gradient(135deg,var(--bg-a),var(--bg-b) 80%);
+  letter-spacing: .02em;
+  /* タブ固定分を押し下げ */
+  padding-top: calc(var(--tabs-h) + env(safe-area-inset-top, 0px));
+}
+
+/* =========================================================
+   RESET OVERLAY
+========================================================= */
+#resetOverlay{
+  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  z-index: 99999; background:#191924; opacity: 0;
+  transition: opacity .8s; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+#resetOverlay.active{ opacity: 1; pointer-events: auto; }
+#matrixCanvas{ position:absolute; inset:0; width:100vw; height:100vh; z-index:2; pointer-events:none; }
+#resetFlash{ position:absolute; inset:0; width:100vw; height:100vh; background:#fff; opacity:0; z-index:3; transition:opacity .5s; pointer-events:none; }
+
+/* =========================================================
+   TOP TABS（固定）
+========================================================= */
+.tabs{
+  position: fixed !important; top:0; left:0; right:0; z-index:2000;
+  height: var(--tabs-h);
+  display:flex; align-items:stretch;
+  background: rgba(24,24,48,.78);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #0ff7ff55;
+  box-shadow: 0 4px 32px #161a2899;
+  max-width: 1400px; margin: 0 auto;
+}
+.tab{
+  flex:1 1 0; display:flex; align-items:center; justify-content:center;
+  color: var(--muted); cursor: pointer; user-select: none;
+  border-bottom: 3px solid transparent;
+  font: 500 var(--font-tabs)/1 'Orbitron','Segoe UI',Arial,sans-serif;
+  letter-spacing: .07em;
+  transition: background .25s, color .25s, border-bottom-color .25s;
+}
+.tab:hover{ background: rgba(0,255,255,.08); }
+.tab.active{
+  background: rgba(16,16,48,.8); color: var(--neon);
+  border-bottom-color: var(--neon); text-shadow: 0 0 8px #00f5ff55;
+}
+
+/* =========================================================
+   LAYOUT CONTAINERS
+========================================================= */
+.content{
+  max-width: 1400px; margin: 0 auto; width: 100%;
+  padding: var(--content-pad);
+  background: rgba(30,38,60,.78);
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 10px 44px #18182f44;
+}
+
+/* =========================================================
+   SUB NAV（APP1/APP2）
+========================================================= */
+#app1-nav, #app2-nav{
+  position: sticky !important;
+  top: calc(var(--tabs-h) + env(safe-area-inset-top, 0px) - 55px);
+  z-index: 1500;
+  display: flex; justify-content: center; align-items: center; gap: 12px;
+  margin: 0 0 14px; padding: 8px 10px;
+  background: rgba(0,34,43,.95); backdrop-filter: blur(6px);
+  border-radius: 12px;
+}
+#app1-nav button, #app2-nav button{
+  height: var(--subnav-h);
+  padding: 0 16px;
+  font: 500 var(--font-nav)/1 'Orbitron','Segoe UI',Arial,sans-serif;
+  letter-spacing:.07em;
+  background: linear-gradient(90deg,#009be6 40%, #072259 100%);
+  color:#fff; border:1px solid #00eaff55; border-radius:10px;
+  box-shadow:0 2px 8px #00f5ff66;
+  transition: background .2s, box-shadow .2s, transform .12s, color .2s;
+}
+#app1-nav button:hover, #app2-nav button:hover{
+  background:#00f5ff; color:#121212; box-shadow:0 2px 20px #00f5ff88; transform:translateY(-1px);
+}
+
+/* =========================================================
+   BUTTONS / INPUTS / GROUPS
+========================================================= */
+button{
+  cursor:pointer; border-radius:12px; border:1px solid #00eaff55;
+  background: linear-gradient(90deg,#202056 60%, #009be6 120%);
+  color:#fff; padding:12px 28px; margin:3px 6px;
+  font:500 15px/1 'Orbitron','Segoe UI',Arial,sans-serif; letter-spacing:.06em;
+  box-shadow:0 2px 8px #00f5ff55;
+  transition: background .2s, box-shadow .2s, transform .12s, color .2s;
+  min-width:80px;
+}
+button:hover{ background:#00f5ff; color:#121212; box-shadow:0 2px 20px #00f5ff88; transform:translateY(-2px) scale(1.02); }
+
+input, select, textarea{
+  background: rgba(38,56,77,.72); color: var(--neon);
+  border:1.5px solid #25f1ff77; border-radius:7px;
+  font:500 17px/1.3 'Orbitron','Segoe UI',Arial,sans-serif;
+  padding:9px 14px; margin:3px 0; outline:none;
+  box-shadow:0 1px 8px #00eaff44; transition:border .2s, background .19s;
+  text-align:right;
+}
+input:focus, select:focus, textarea:focus{ border-color:#00eaff; background: rgba(42,86,120,.95); color:#fff; }
+
+.group{ padding:24px; margin:18px 0; border-radius:18px; background:rgba(10,20,40,.87); box-shadow:0 2px 18px #00eaff12; }
+.group h3{ font-size:22px; margin:0 0 18px; color:#fff; letter-spacing:.02em; text-align:left; }
+.group label{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; width:100%; }
+.group label > span, .group label > strong, .group label > b{ min-width:140px; max-width:210px; text-align:left; font-size:17px; flex-shrink:0; }
+.group label input, .group label select, .group label button{ margin-left:auto; flex:1 1 120px; min-width:120px; max-width:260px; }
+
+/* =========================================================
+   TABLES
+========================================================= */
+table{ width:100%; border-collapse:separate; border-spacing:0; margin:0 0 26px; background:rgba(20,28,40,.82); border-radius:16px; box-shadow:0 0 24px #00eaff33; overflow:hidden; }
+th, td{ border-bottom:1.5px solid #00f5ff55; padding:10px 7px; background:rgba(24,30,50,.85); font-size:17px; text-align:left; }
+th{ color:#00f5ff; font-size:18px; font-weight:700; letter-spacing:.05em; background:linear-gradient(90deg,#23467a 40%,#197b91 100%); }
+tr:last-child td{ border-bottom:none; }
+tr.row:hover td{ background:rgba(0,245,255,.09); }
+
+/* =========================================================
+   RESULT PANEL（領収書エリア）
+========================================================= */
+#result, .result{
+  background: linear-gradient(180deg,#142944 90%,#123);
+  color:#43eaff;
+  padding:32px 34px 18px; margin-top:22px;
+  border-radius:18px; font-size:22px; text-align:left;
+  box-shadow:0 0 24px #00f5ff1c; letter-spacing:.02em;
+}
+.result .finalAmount{ display:block; margin:22px 0 16px; padding:6px 0; background:linear-gradient(90deg,#3e46ff 5%,#03f8ff 100%); color:#fff; font-size:31px; font-weight:700; border-radius:7px; text-shadow:0 2px 12px #00f3ffbb; }
+.result .totalAmount{ color:#ffe99d; font-size:25px; font-weight:700; }
+.result .subtotal{ color:#43eaff; font-size:22px; margin-top:10px; }
+.result .bottle-list{ margin-top:15px; color:#43eaff; font-size:17px; line-height:1.2; white-space:pre-line; }
+.print-highlight{ color:#00eaff !important; }
+
+/* =========================================================
+   APP1 伝票
+========================================================= */
+#app1 th, #app1 td{ color:#81e1ff; }
+#app1 input.table-number{ width:30px; }
+#app1 input.honshi{ width:50px; }
+#app1 select.c{ width:100px; }
+#app1 input.amount{ width:120px; }
+#app1 input.num{ width:40px; }
+#app1 input.detail{ width:80px; }
+#app1 input.card, #app1 input.total{ width:150px; }
+
+/* =========================================================
+   FILTER BAR
+========================================================= */
+.filter-bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:8px 0 12px; background:transparent; border:0; box-shadow:none; }
+.filter-bar .tablinks{ margin:0; min-width:80px; }
+
+/* =========================================================
+   BOTTLE FORM
+========================================================= */
+.bottle-form{ display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; }
+.bottle-form label{ display:flex; align-items:center; gap:5px; margin:0; }
+.bottle-form input[type="text"], .bottle-form input[type="number"]{ width:74px; min-width:52px; font-size:16px; padding:6px 10px; }
+.bottle-form label:nth-child(4){ flex:1 1 220px; min-width:180px; }
+.bottle-form label:nth-child(4) input{ width:100%; font-size:16px; padding:6px 10px; text-align:right; }
+
+/* =========================================================
+   HISTORY / SPECIAL BUTTONS
+========================================================= */
+.history{ margin-top:38px; background:rgba(0,34,43,.23); border-radius:10px; box-shadow:0 2px 12px #00f5ff12; }
+.history h3{ color:#00f5ff; margin-bottom:8px; }
+.history li{ margin-bottom:10px; background:rgba(33,90,104,.14); border-radius:8px; box-shadow:0 1px 8px #00eaff33; padding:9px 15px; color:#97e4f5; }
+.red-btn,.clear-btn,.reset-btn{ background:linear-gradient(90deg,#f73378 30%,#d80032 100%); color:#fff!important; border:1.5px solid #d80032; box-shadow:0 0 12px #ff006288; }
+.red-btn:hover,.clear-btn:hover,.reset-btn:hover{ background:linear-gradient(90deg,#f44 10%,#b00020 90%); box-shadow:0 0 20px #ff2e62aa; transform:scale(1.05); }
+
+/* =========================================================
+   MOBILE (<=700px)
+========================================================= */
+@media (max-width:700px){
+  :root{ --tabs-h:52px; --subnav-h:36px; --content-pad:20px 12px 110px 12px; --font-base:16px; --font-tabs:14px; --font-nav:14px; }
+
+  #app2{ --app2-label-w:130px; }
+  #app3{ --app3-label-w:125px; }
+
+  #app2 .group, #app3 .group{ padding:10px 12px 8px; margin:10px 0; border-radius:12px; }
+  #app2 .group h3, #app3 .group h3{ font-size:18px; margin:0 0 10px; }
+
+  #app2 .group label, #app3 .group label{
+    display:grid; grid-template-columns: var(--app2-label-w,130px) 1fr; column-gap:8px; align-items:center; margin-bottom:8px;
+  }
+  #app3 .group label{ grid-template-columns: var(--app3-label-w,125px) 1fr; }
+
+  #app2 .group label > span, #app2 .group label > strong, #app2 .group label > b,
+  #app3 .group label > span, #app3 .group label > strong, #app3 .group label > b{
+    width:auto; min-width:0; text-align:left;
+  }
+  #app2 .group label input, #app2 .group label select, #app2 .group label button,
+  #app3 .group label input, #app3 .group label select, #app3 .group label button{ width:100%; min-width:0; }
+
+  /* 入力を薄く */
+  #app2 input[type="text"], #app2 input[type="number"], #app2 select,
+  #app3 input[type="text"], #app3 input[type="number"], #app3 select{
+    font-size:16px; height:34px; min-height:34px; line-height:32px; padding-block:2px; padding-inline:10px;
+  }
+  #app2 textarea, #app3 textarea{ font-size:16px; min-height:64px; padding:6px 10px; line-height:1.25; }
+
+  /* 伝票カテゴリ帯：3列グリッド */
+  .filter-bar{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:8px 6px; }
+  .filter-bar .tablinks{ min-width:0; width:100%; padding:10px 0; font-size:14px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0; }
+  .filter-bar .tablinks:nth-child(1){ grid-column:1 / -1; }
+
+  /* APP1 テーブルをカード化（スマホ専用） */
+  #app1 table, #app1 tbody, #app1 tr, #app1 td{ display:block; width:100% !important; }
+  #app1 tr.row{ position:relative; margin:14px 0; padding:12px; border-radius:12px; background:rgba(25,35,55,.9); box-shadow:0 2px 12px #00f5ff44; overflow:hidden; }
+  #app1 td{ border:none !important; padding:6px 2px !important; }
+  #app1 .delete-btn{ position:absolute; top:8px; right:8px; width:32px; height:32px; }
+  #app1 input, #app1 select{ width:100% !important; max-width:100% !important; text-align:left !important; margin-top:4px; }
+
+  /* APP2 ボトルフォーム：スマホは全幅で右寄せ */
+  #app2 .bottle-form{ width:100% !important; justify-content:flex-end; gap:8px 10px; }
+}
+
+/* ===== APP2：ボトルフォームを右寄せ（デスクトップ） ===== */
+#app2 .bottle-form{
+  width: fit-content !important;   /* 必要分だけの幅に */
+  margin-left: auto !important;    /* 右端へ寄せる */
+  justify-content: flex-end !important;
+  display: flex;                    /* 念のため明示 */
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* ラベル内のテキストも右寄せ */
+#app2 .bottle-form label{
+  justify-content: flex-end !important;
+  text-align: right !important;
+}
+
+/* 数値入力は右寄せ */
+#app2 .bottle-form input[type="text"],
+#app2 .bottle-form input[type="number"]{
+  text-align: right !important;
+}
+
+/* 金額フィールド（4つ目）は伸び過ぎ防止＆収まり調整 */
+#app2 .bottle-form label:nth-of-type(4){
+  flex: 0 1 240px;   /* 200–280pxで調整可 */
+  min-width: 180px;
+}
+#app2 .bottle-form label:nth-of-type(4) input{
+  width: 100%;
+}
+
+
+/* =========================================================
+   TOOLBAR（app2）
+========================================================= */
+.ticket-toolbar{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+.ticket-toolbar .search-box{ display:flex; align-items:center; gap:10px; margin-left:auto; }
+.ticket-toolbar #searchAmount{ flex:1 1 260px; min-width:220px; text-align:right; padding:10px 12px; font-size:16px; }
+.ticket-toolbar button{ min-width:0 !important; height:36px; padding:0 12px; font-size:14px; line-height:1; }
+.ticket-toolbar .add-btn br{ display:none; }
+
+@media (max-width:700px){
+  .ticket-toolbar{
+    display:grid; grid-template-columns:110px 1fr; grid-template-rows:auto auto;
+    column-gap:12px; row-gap:10px; align-items:stretch;
+  }
+  .ticket-toolbar .add-btn{ grid-column:1; grid-row:1 / span 2; width:100%; padding:8px 0; }
+  .ticket-toolbar .add-btn br{ display:initial; }
+  .ticket-toolbar .search-box{
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 10px; margin-left:0;
+  }
+  .ticket-toolbar #searchAmount{ grid-column:1 / -1; width:100%; min-width:0; padding:8px 10px; font-size:16px; }
+  .ticket-toolbar .search-box button:nth-of-type(1){ grid-column:1; }
+  .ticket-toolbar .search-box button:nth-of-type(2){ grid-column:2; }
+  .ticket-toolbar button{ height:34px; padding:0 10px; font-size:14px; }
+}
+
+/* =========================================================
+   CATEGORY TABLE（APP1：CB表は常にテーブル表示）
+========================================================= */
+#categorySection table,
+#categorySection thead,
+#categorySection tbody,
+#categorySection tr,
+#categorySection th,
+#categorySection td{ display: revert !important; }
+
+#categorySection{
+  --w-check : 42px;   /* チェック列 */
+  --w-count : 86px;   /* 本数列 */
+  --w-amount: 126px;  /* 金額列（本数より広め） */
+  --row-pad : 10px;   /* 行の上下左右パディング */
+}
+#categorySection table{ table-layout: fixed; width: 100%; border-collapse:separate; border-spacing:0; }
+#categorySection th, #categorySection td{
+  padding: var(--row-pad) 8px; white-space: nowrap; vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+#categorySection th:nth-child(1), #categorySection td:nth-child(1){
+  width: var(--w-check); text-align: center; padding-left:6px; padding-right:6px;
+}
+#categorySection td:nth-child(1) input[type="checkbox"]{ transform: scale(1.0); margin:0 auto; display:block; }
+#categorySection th:nth-child(3), #categorySection td:nth-child(3){ width: var(--w-count); text-align: right; }
+#categorySection th:nth-child(4), #categorySection td:nth-child(4){ width: var(--w-amount); text-align: right; }
+#categorySection th:nth-child(2), #categorySection td:nth-child(2){
+  width: calc(100% - var(--w-check) - var(--w-count) - var(--w-amount));
+  text-align: left; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width:700px){
+  #categorySection{ --w-check:38px; --w-count:78px; --w-amount:118px; --row-pad:8px; }
+  #categorySection th, #categorySection td{ font-size:14px; }
+}
+/* 見出し「チェック」「カテゴリ」を見た目だけ隠す */
+#categorySection thead th:nth-child(1),
+#categorySection thead th:nth-child(2){ font-size:0; line-height:0; white-space:nowrap; }
+
+/* =========================================================
+   SCROLL BEHAVIOR
+========================================================= */
+#app1 section, #app2 section{ scroll-margin-top: var(--scroll-offset); }
+html{ scroll-behavior: smooth; }
+
+/* =========================================================
+   ROW ANIMATIONS
+========================================================= */
+@keyframes slideInRow{ from{ transform:translateX(100%); opacity:0; } to{ transform:none; opacity:1; } }
+@keyframes slideOutLeft{ from{ transform:none; opacity:1; } to{ transform:translateX(-120%); opacity:0; } }
+.row.slide-in{ animation: slideInRow .5s ease-out; }
+.row.slide-out-left{ animation: slideOutLeft .32s cubic-bezier(.77,.17,.3,1.11) forwards; }
+
+/* =========================================================
+   PRINT (長形4・文字のみ出力。スマホ時だけ反転対応)
+========================================================= */
+@media print {
+  @page { size: 90mm 205mm; margin: 0; }
+
+  /* 余白：上25mm 右3mm 下3mm 左3mm、全体モノクロ基調 */
+  html, body{
+    margin:0 !important;
+    padding:3mm 3mm 3mm 3mm !important;
+    background:#fff !important;
+    color:#000 !important;
+    min-height:0 !important; height:auto !important; overflow:visible !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  /* #result 以外は非表示、祖先は表示化 */
+  body *{ display:none !important; }
+  html, body, #app2{ display:block !important; }
+  #result, #result *{ display: revert !important; }
+
+  /* 親コンテナの見た目殺し */
+  #app2, .content{
+    background:transparent !important; background-image:none !important;
+    border:0 !important; border-radius:0 !important; box-shadow:none !important;
+    outline:none !important; padding:0 !important;
+  }
+
+  /* #result をテキストだけに */
+  #result{
+    position:static !important; width:auto !important; margin:0 !important; padding:0 !important;
+    background:#fff !important; border:none !important; box-shadow:none !important; text-shadow:none !important;
+    color:#000 !important;
+    page-break-inside: avoid; break-inside: avoid;
+    font-size: .75em !important; line-height: 1.35 !important;   /* 全体を相対2段階ダウン */
+  }
+  #result *{
+    background:transparent !important; background-image:none !important;
+    border:none !important; box-shadow:none !important; text-shadow:none !important;
+    color:#000 !important; border-radius:0 !important; outline:none !important; filter:none !important;
+    font-size: inherit !important;
+  }
+
+  /* テーブル体裁OFF */
+  #result table, #result thead, #result tbody, #result tr, #result th, #result td{
+    background:transparent !important; background-image:none !important;
+    border:none !important; box-shadow:none !important; outline:none !important;
+  }
+  /* 必要ならセルの余白もゼロ化
+     #result th, #result td{ padding:0 !important; } */
+
+  /* 擬似要素OFF */
+  #result::before, #result::after, #result *::before, #result *::after{
+    content:none !important; display:none !important; background:transparent !important; border:none !important; box-shadow:none !important;
+  }
+
+  /* 強調（サイズ） */
+  #result .print-name, #result > :first-child{ font-size: 1.5em !important; font-weight:700 !important; }
+  #result .subtotal{ font-size: 1.30em !important; font-weight:700 !important; }
+  #result .totalAmount{ font-size: 1.5em !important; font-weight:700 !important; }
+  #result .finalAmount{ font-size: 1.5em !important; font-weight:800 !important; }
+
+  /* 強調（色：名前/最終=青、合計=オレンジ） */
+  #result .print-name, #result > :first-child{ color:#0066cc !important; }
+  #result .finalAmount{ color:#0066cc !important; }
+  #result .totalAmount{ color:#ff7a00 !important; }
+
+  /* PCでは回転なし（プレフィックス付きで明示） */
+  body:not(.mobile-print) #result{
+    -webkit-transform: none !important;
+    transform: none !important;
+    -webkit-transform-origin: 50% 50% !important;
+    transform-origin: 50% 50% !important;
+  }
+
+  /* スマホ印刷だけ180°反転（最後に置く） */
+  body.mobile-print #result,
+  body.is-mobile #result{ /* ←共有シート印刷用の保険 */
+    -webkit-transform: rotate(180deg) translateZ(0) !important;
+    transform: rotate(180deg) translateZ(0) !important;
+    -webkit-transform-origin: 50% 50% !important;
+    transform-origin: 50% 50% !important;
+  }
+}
+
+</style>
+
+
+</head>
+<body>
+
+<div id="resetOverlay" style="display:none;">
+  <canvas id="matrixCanvas"></canvas>
+  <div id="resetFlash"></div>
+</div>
+  
+<div class="tabs">
+  <div class="tab active" data-target="app1">伝票入力</div>
+  <div class="tab" data-target="app2">報酬計算</div>
+  <div class="tab" data-target="app3">日計計算</div>
+</div>
+
+
+
+<div id="app1" class="content">
+<nav id="app1-nav">
+  <button data-target="editSection">編集</button>
+  <button data-target="summarySection">集計</button>
+  <button data-target="categorySection">CB</button>
+</nav>
+
+ <section id="editSection">
+<div class="filter-bar">
+  <button class="tablinks" onclick="filterCategory('all')">すべて表示</button>
+  <button class="tablinks" onclick="filterCashOnlyRows()">現金のみ抽出</button>
+  <button class="tablinks" onclick="filterCardInputRows()">カード抽出</button>
+  <button class="tablinks" onclick="filterCategory('UK')">UK</button>
+  <button class="tablinks" onclick="filterCategory('K')">K</button>
+  <button class="tablinks" onclick="filterCategory('AB')">AB</button>
+  <button class="tablinks" onclick="filterCategory('LA')">LA</button>
+  <button class="tablinks" onclick="filterCategory('PA')">PA</button>
+  <button class="tablinks" onclick="filterCategory('BB')">BB</button>
+  <button class="tablinks" onclick="filterCategory('MS')">MS</button>
+  <button class="tablinks" onclick="filterCategory('GM')">GM</button>
+  <button class="tablinks" onclick="filterCategory('B')">B</button>
+  <button class="tablinks" onclick="filterCategory('JOE')">JOE</button>
+  <button class="tablinks" onclick="filterCategory('KOSE')">KOSE</button>
+  <button class="tablinks" onclick="filterCategory('HE')">HE</button>
+  <button class="tablinks" onclick="filterCategory('PB')">PB</button>
+  <button class="tablinks" onclick="filterCategory('X')">X</button>
+  <button class="tablinks" onclick="filterCategory('Z')">Z</button>
+</div>
+
+<table>
+  <tbody id="formRows">
+    <tr class="row">
+      <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+      <td class="rowNumber">1</td>
+      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" onchange="updateTotals()" /></td>
+      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" onchange="updateTotals()" /></td>
+      <td>
+        <select class="c" onchange="updateRowColor(this); updateTotals()">
+          <option value="">-</option>
+          <option value="UK">UK</option>
+          <option value="K">K</option>
+          <option value="AB">AB</option>
+          <option value="LA">LA</option>
+          <option value="PA">PA</option>
+          <option value="BB">BB</option>
+          <option value="MS">MS</option>
+          <option value="GM">GM</option>
+          <option value="B">B</option>
+          <option value="JOE">JOE</option>
+          <option value="KOSE">KOSE</option>
+          <option value="HE">HE</option>
+          <option value="PB">PB</option>
+          <option value="X">X</option>
+          <option value="Z">Z</option>
+        </select>
+
+        
+
+      </td>
+      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" /></td>
+      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" /></td>
+      <td><input class="detail" type="text" placeholder="詳細" /></td>
+      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" /></td>
+      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="ticket-toolbar">
+  <button class="add-btn" onclick="addRow()">伝票<br>追加</button>
+
+  <div class="search-box">
+    <input type="text" id="searchAmount" placeholder="金額で検索" inputmode="numeric">
+    <button onclick="searchByAmount()">検索</button>
+    <button onclick="resetSearch()">リセット</button>
+  </div>
+</div>
+
+<section id="summarySection">
+<p>総客数: <span id="totalCustomers">0</span></p>
+<p>現金合計: <span id="cashTotal">0</span></p>
+<p>カード合計: <span id="cardTotal">0</span></p>
+<p>総合計金額: <span id="totalAmount">0</span></p>
+</section>
+
+<section id="categorySection">
+<table>
+  <thead>
+    <tr>
+      <th>カテゴリ</th>
+      <th>人数</th>
+      <th>バック金額</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><input type="checkbox"> UK</td><td id="UKcount">0</td><td id="UKtotal">0</td></tr>
+    <tr><td><input type="checkbox"> K</td><td id="Kcount">0</td><td id="Ktotal">0</td></tr>
+    <tr><td><input type="checkbox"> AB</td><td id="ABcount">0</td><td id="ABtotal">0</td></tr>
+    <tr><td><input type="checkbox"> LA</td><td id="LAcount">0</td><td id="LAtotal">0</td></tr>
+    <tr><td><input type="checkbox"> PA</td><td id="PAcount">0</td><td id="PAtotal">0</td></tr>
+    <tr><td><input type="checkbox"> BB</td><td id="BBcount">0</td><td id="BBtotal">0</td></tr>
+    <tr><td><input type="checkbox"> MS</td><td id="MScount">0</td><td id="MStotal">0</td></tr>
+    <tr><td><input type="checkbox"> GM</td><td id="GMcount">0</td><td id="GMtotal">0</td></tr>
+    <tr><td><input type="checkbox"> B</td><td id="Bcount">0</td><td id="Btotal">0</td></tr>
+    <tr><td><input type="checkbox"> JOE</td><td id="JOEcount">0</td><td id="JOEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> KOSE</td><td id="KOSEcount">0</td><td id="KOSEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td id="HEtotal">0</td></tr>
+    <tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td id="PBtotal">0</td></tr>
+    <tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td id="Xtotal">0</td></tr>
+    <tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td id="Ztotal">0</td></tr>
+    <tr>
+      <td><strong>合計</strong></td>
+      <td id="totalCount">0</td>
+      <td id="totalBackAmount">0</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<div style="text-align: center; margin-top: 30px;">
+ <button onclick="resetApp('app1')" class="red-btn">リセット</button>
+</div>
+
+</div>
+
+
+<div id="app2" class="content" style="display:none;">
+  <nav id="app2-nav">
+  <button data-target="app2-inputSection">入力</button>
+  <button data-target="app2-resultSection">計算結果表示</button>
+  <button data-target="app2-historySection">履歴</button>
+</nav>
+
+  <div class="button-row" style="margin-top: 10px; justify-content: center;">
+  <button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
+</div>
+
+<section id="app2-inputSection">
+  <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
+    <div class="group" style="background:#2e2e2e">
+      <label>キャスト名:
+        <input type="text" id="castName"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="名前を入力">
+      </label>
+      <label>体験及び貸出:
+        <input type="checkbox" id="experienceAndRental"
+          autocomplete="off" autocapitalize="off" spellcheck="false">
+      </label>
+      <label>送迎:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="sendoffAmount"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="送迎金額">
+      </label>
+    </div>
+
+    <div class="group group-basic">
+      <h3>フリーバック</h3>
+      <label>F1（¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="f"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="F1">
+      </label>
+      <label>F2（¥2000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="f2"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="F2">
+      </label>
+      <label>場内（¥1000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="jounai"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="場内">
+      </label>
+    </div>
+
+    <div class="group group-shimei">
+      <h3>指名・同伴・枝・HELP</h3>
+      <label>本指（¥0）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="honshiri"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="本指">
+      </label>
+      <label>同伴（¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="douhan"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="同伴">
+      </label>
+      <label>枝（¥500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="eda"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="枝">
+      </label>
+      <label>HELP（-¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="help"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="HELP">
+      </label>
+    </div>
+
+    <div class="group group-set">
+      <h3>セット・VIP</h3>
+      <label>SET40（¥5500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="set40"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="SET40">
+      </label>
+      <label>SET20（¥3500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="set20"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="SET20">
+      </label>
+      <label>VIP（¥2000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="vip"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="VIP">
+      </label>
+    </div>
+
+    <div class="group group-option">
+      <h3>ドリンク・その他</h3>
+      <label>A（¥500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="a"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="A">
+      </label>
+      <label>B（¥1000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="b"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="B">
+      </label>
+      <label>C（¥1500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="c"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="C">
+      </label>
+      <label>D（¥2000）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="d"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="D">
+      </label>
+      <label>E（¥2500）:
+        <input type="text" inputmode="numeric" pattern="\d*"
+          id="e"
+          autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="E">
+      </label>
+
+      <div id="bottleFormsContainer"></div>
+      <button type="button" onclick="addBottleForm()">ボトル追加</button>
+    </div>
+
+    <div class="button-row" style="margin-top: 20px;">
+      <button type="submit">計算する</button>
+    </div>
+  </form>
+</section>
+
+
+    <section id="app2-resultSection"></section>
+
+   <div class="result" id="result"></div>
+
+   <div class="button-row" style="margin-top: 20px;">
+<button class="print-button" onclick="printResult()">出力</button>
+   </div>
+
+   <div class="button-row" style="margin-top: 20px;">
+    <button type="button" class="red-btn" onclick="clearApp2Inputs()">入力をクリア</button>
+   </div>
+
+   </section>
+
+  <div class="history">
+    <h3>履歴</h3>
+    <section id="app2-historySection"></section>
+    <ul id="historyList"></ul>
+  </div>
+
+
+  <button id="deleteSelectedBtn" onclick="deleteSelectedHistory()">選択した履歴を削除</button>
+
+  <div class="summary" id="summary">
+  履歴の合計人数: <span id="summaryTotalPeople">0人</span> |
+  合計金額: <span id="summaryTotalAmount">¥0</span> |
+  合計源泉費: <span id="summaryTotalTax">¥0</span>
+  </div>
+
+  <div class="button-row" style="margin-top: 40px;">
+    <button type="button" class="red-btn" onclick="resetApp('app2', true)">完全クリア</button>
+  </div>
+  </section>
+
+</div>
+
+
+
+
+<div id="app3" class="content" style="display:none;">
+
+  <div class="group no-bg">
+    <label><span>開始時金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="updateCalculations()"></label>
+  </div>
+
+ <table class="outer-table" style="width: 100%; border: 2px solid #333; border-collapse: collapse; margin-bottom: 20px;">
+  <tr>
+    <td style="padding: 10px;">
+
+      <div class="group" id="salesGroup">
+        <label><span>現金売上:</span> <input type="text" id="cashSales" disabled></label>
+        <label><span>カード売上:</span> <input type="text" id="cardSales" disabled></label>
+        <label><span>売上合計:</span> <input type="text" id="totalSales" disabled></label>
+      </div>
+
+      <div class="group" id="laborGroup">
+        <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
+        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="updateCalculations()"></label>
+        <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
+        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="updateCalculations()"></label>
+        <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
+        <label><span>ドライバー代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="driverFee" oninput="updateCalculations()"></label>
+        <label><span>人件費合計:</span> <input type="text" id="totalLaborCosts" disabled></label>
+      </div>
+
+      <div class="group" id="taxGroup">
+        <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
+        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="updateCalculations()"></label>
+        <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
+      </div>
+
+      <div class="group" id="expensesGroup">
+        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="updateCalculations()"></label>
+        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="updateCalculations()"></label>
+        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="updateCalculations()"></label>
+        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="updateCalculations()"></label>
+        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="updateCalculations()"></label>
+        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="updateCalculations()"></label>
+        <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
+        <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
+      </div>
+
+      <div class="group" id="resultsGroup">
+        <label><span>粗利益:</span> <input type="text" id="grossProfit" disabled></label>
+        <label><span>現金残:</span> <input type="text" id="remainingCash" disabled></label>
+      </div>
+
+    </td>
+  </tr>
+</table>
+
+<table class="outer-table" style="width: 100%; border: 2px solid #333; border-collapse: collapse; margin-bottom: 20px;">
+  <tr>
+    <td style="padding: 10px; background-color: #3e3e5a;">
+
+      <div class="group" id="extraGroup">
+        <label><span>粗利益:</span> <input type="text" id="grossProfit_extra" disabled></label>
+        <label><span>カード売上:</span> <input type="text" id="cardSales_extra" disabled></label>
+        <label><span>現金残:</span> <input type="text" id="remainingCash_extra" disabled></label>
+        <label><span>源泉費合計:</span> <input type="text" id="totalWithholdingTax" disabled></label>
+
+        <div style="height: 1em;"></div>
+
+        <label><span>合計（現金残 + 源泉費）:</span> <input type="text" id="totalGrossPlusTax" disabled></label>
+      </div>
+
+    </td>
+  </tr>
+</table>
+
+  <div class="group no-bg">
+    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="updateCalculations()"></label>
+    <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
+  </div>
+
+  <button type="button" onclick="resetApp('app3')" class="red-btn">リセット</button>
+  <button type="button" onclick="resetAllApps()" class="red-btn">完全リセット</button>
+  <div style="text-align: center; margin-top: 20px;">
+  <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
+<div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
+  Ver. 4.0
+</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+//<base script---------------------------------------------------------------------------------------------------------------->
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.content');
+
+  // タブをアクティブ化・コンテンツ表示切替する共通関数
+const scrollPositions = {};  // ← タブごとのスクロール位置を保持
+
+function activateTab(target) {
+  // スクロール位置を保存
+  const currentTab = document.querySelector('.tab.active');
+  if (currentTab) {
+    const currentTarget = currentTab.getAttribute('data-target');
+    if (currentTarget) {
+      scrollPositions[currentTarget] = window.scrollY;
+    }
+  }
+
+  // すべてのタブとコンテンツからactiveクラスを外す
+  tabs.forEach(t => t.classList.remove('active'));
+  contents.forEach(c => c.classList.remove('active'));
+
+  // 選択されたタブにactiveを付与
+  const tab = Array.from(tabs).find(t => t.getAttribute('data-target') === target);
+  if (tab) tab.classList.add('active');
+
+  // 選択されたコンテンツをフェードイン
+  const el = document.getElementById(target);
+  if (el) {
+    el.style.display = 'block';
+    setTimeout(() => el.classList.add('active'), 20); // 遅延してアニメ発火
+  }
+
+  // 非表示にする他のコンテンツ
+  contents.forEach(c => {
+    if (c !== el) {
+      c.classList.remove('active');
+      setTimeout(() => { c.style.display = 'none'; }, 400);
+    }
+  });
+
+  // スクロール復元
+  const savedScroll = scrollPositions[target] || 0;
+  window.scrollTo({ top: savedScroll, behavior: 'auto' });
+
+  localStorage.setItem('selectedTab', target);
+  updateCalculations();
+}
+
+  function updateAdviserFeeFromTotalCount() {
+    const countEl = document.getElementById('totalCount');
+    const adviserFeeInput = document.getElementById('adviserFee');
+
+    if (!countEl || !adviserFeeInput) return;
+
+    const count = parseInt(countEl.textContent.replace(/,/g, ''), 10) || 0;
+    const fee = count * 1000;
+    adviserFeeInput.value = fee;
+
+    updateCalculations(); // 必要に応じて再計算
+  }
+
+  function observeTotalCountForAdviserFee() {
+    const target = document.getElementById('totalCount');
+    if (!target) return;
+
+    const observer = new MutationObserver(() => {
+      updateAdviserFeeFromTotalCount();
+    });
+
+    observer.observe(target, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+    let scrollPosition = 0;
+
+    function showTab(tabId) {
+      // スクロール位置を保存
+      scrollPosition = window.scrollY;
+
+      // すべてのタブを非表示
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => tab.style.display = 'none');
+
+      // 選択したタブだけを表示
+      const selectedTab = document.getElementById(tabId);
+      if (selectedTab) selectedTab.style.display = 'block';
+
+      // スクロール位置を復元
+      window.scrollTo(0, scrollPosition);
+    }
+
+document.addEventListener('gesturestart', function (e) {
+  e.preventDefault();
+});
+
+let startY = 0;
+
+document.addEventListener('touchstart', function (e) {
+  startY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchmove', function (e) {
+  const currentY = e.touches[0].clientY;
+
+  // 上方向へスクロールしようとしていて、ページが一番上にいるとき
+  if (currentY > startY && window.scrollY === 0) {
+    e.preventDefault(); // iOS Safari でPull-to-Refreshを防止
+  }
+}, { passive: false });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//<app1 script---------------------------------------------------------------------------------------------------------------->
+//伝票検索機能
+function searchByAmount() {
+  const input = document.getElementById('searchAmount').value.replace(/,/g, '').trim();
+  const rows = document.querySelectorAll('#formRows tr');
+  let foundRow = null;
+
+  rows.forEach(row => {
+    const totalValue = row.querySelector('.total')?.value.replace(/,/g, '') || '';
+    const shouldShow = (input === '' || totalValue.includes(input));
+
+    if (shouldShow && row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+
+    // スクロール用: 最初に見つかった行だけ記憶
+    if (shouldShow && !foundRow) {
+      foundRow = row;
+    }
+  });
+
+  // 検索値が空欄でなければ、ヒット時はスクロール、なければダイアログ
+  if (input !== '') {
+    if (foundRow) {
+      // スクロール（スムーズ・中央寄せ）
+      foundRow.scrollIntoView({ behavior: "smooth", block: "center" });
+      // ハイライトしたい場合は下記も追加OK
+      // foundRow.classList.add('highlight');
+    } else {
+      window.alert("該当する伝票がありません。");
+    }
+  }
+}
+
+
+function resetSearch() {
+  document.getElementById('searchAmount').value = '';
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    if (row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+}
+
+  document.querySelectorAll('#app1-nav button, #app2-nav button')
+    .forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.target;
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+function saveCheckboxStates() {
+  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
+  const states = Array.from(checkboxes).map(cb => cb.checked);
+  localStorage.setItem("checkboxStates", JSON.stringify(states));
+}
+
+function restoreCheckboxStates() {
+  const states = JSON.parse(localStorage.getItem("checkboxStates"));
+  if (!states) return;
+  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
+  checkboxes.forEach((cb, index) => {
+    cb.checked = states[index];
+  });
+}
+
+let rowNumber = 2;
+
+function createEmptyRow(number) {
+  const tr = document.createElement('tr');
+  tr.className = "row";
+  tr.innerHTML = `
+    <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+    <td class="rowNumber">${number}</td>
+    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" onchange="updateTotals()" /></td>
+    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" onchange="updateTotals()" /></td>
+    <td>
+      <select class="c" onchange="updateRowColor(this); updateTotals()">
+        <option value="">-</option>
+        <option value="UK">UK</option>
+        <option value="K">K</option>
+        <option value="AB">AB</option>
+        <option value="LA">LA</option>
+        <option value="PA">PA</option>
+        <option value="BB">BB</option>
+        <option value="MS">MS</option>
+        <option value="GM">GM</option>
+        <option value="B">B</option>
+        <option value="JOE">JOE</option>
+        <option value="KOSE">KOSE</option>
+        <option value="HE">HE</option>
+        <option value="PB">PB</option>
+        <option value="X">X</option>
+        <option value="Z">Z</option>
+      </select>
+    </td>
+    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" onchange="updateTotals()" /></td>
+    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" onchange="updateTotals()" /></td>
+    <td><input class="detail" type="text" placeholder="詳細" /></td>
+    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" onchange="updateTotals()" /></td>
+    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" onchange="updateTotals()" /></td>
+  `;
+  return tr;
+}
+
+
+function addRow() {
+  const table = document.getElementById("formRows");
+  const newRow = createEmptyRow(rowNumber++);
+
+  table.appendChild(newRow);
+
+  // アニメーション
+  requestAnimationFrame(() => newRow.classList.add('slide-in'));
+  newRow.addEventListener('animationend', () => newRow.classList.remove('slide-in'));
+
+  // スクロール
+  const rect = newRow.getBoundingClientRect();
+  const offset = 155;
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  window.scrollTo({ top: rect.top + scrollTop - offset, behavior: 'smooth' });
+
+  attachCommaFormatApp1and3();
+  saveForm();
+  renumberRows();
+}
+
+
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    const target = e.target;
+    if (target.matches('input, select')) {
+      e.preventDefault();
+
+      // アクティブタブの中身だけを対象に
+      const activeTab = document.querySelector('.tab.active');
+      const targetId = activeTab?.dataset.target;
+      const scope = targetId ? document.getElementById(targetId) : document.body;
+
+      // 非表示の要素を除外
+      const formElements = Array.from(
+        scope.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled])')
+      ).filter(el => el.offsetParent !== null);
+
+      const index = formElements.indexOf(target);
+      if (index > -1 && index < formElements.length - 1) {
+        const next = formElements[index + 1];
+        next.focus();
+        if (typeof next.select === 'function') next.select();
+      }
+    }
+  }
+});
+
+function updateRowColor(select) {
+  const row = select.closest("tr");
+  row.className = "row";
+  if (select.value) {
+    row.classList.add("category-" + select.value);
+  }
+}
+
+function updateTotals() {
+  let totalCustomers = 0, cardTotal = 0, totalAmount = 0;
+  const catchbackTotals = {};
+  const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
+  categories.forEach(cat => catchbackTotals[cat] = { amount: 0, count: 0 });
+
+  document.querySelectorAll(".row").forEach(row => {
+    const num = parseInt(row.querySelector(".num")?.value.replace(/,/g, '')) || 0;
+    const honshi = parseInt(row.querySelector(".honshi")?.value.replace(/,/g, '')) || 0;
+    const amount = parseInt(row.querySelector(".amount")?.value.replace(/,/g, '')) || 0;
+    const card = parseInt(row.querySelector(".card")?.value.replace(/,/g, '')) || 0;
+    const total = parseInt(row.querySelector(".total")?.value.replace(/,/g, '')) || 0;
+    const category = row.querySelector(".c")?.value;
+
+    totalCustomers += num + honshi;
+    cardTotal += card;
+    totalAmount += total;
+
+    if (category && catchbackTotals[category]) {
+      const backAmount = (amount <= 5999) ? amount * num * 0.2 : amount * num * 0.3;
+      if (category === "X") {
+        catchbackTotals[category].amount += backAmount;
+        catchbackTotals[category].count += num;
+      } else if (category !== "Z") {
+        catchbackTotals[category].amount += backAmount;
+        catchbackTotals[category].count += num;
+      }
+    }
+  });
+
+  let totalCount = 0, totalBackAmount = 0;
+  categories.forEach(cat => {
+    if (cat !== "X") {
+      totalCount += catchbackTotals[cat].count;
+      totalBackAmount += catchbackTotals[cat].amount;
+    } else {
+      totalBackAmount += catchbackTotals[cat].amount;
+    }
+
+    document.getElementById(`${cat}count`).textContent = catchbackTotals[cat].count.toLocaleString();
+    document.getElementById(`${cat}total`).textContent = Math.floor(catchbackTotals[cat].amount).toLocaleString();
+  });
+
+  document.getElementById("totalCustomers").textContent = totalCustomers.toLocaleString();
+  document.getElementById("cardTotal").textContent = cardTotal.toLocaleString();
+  document.getElementById("cashTotal").textContent = (totalAmount - cardTotal).toLocaleString();
+  document.getElementById("totalAmount").textContent = totalAmount.toLocaleString();
+  document.getElementById("totalCount").textContent = totalCount.toLocaleString();
+  document.getElementById("totalBackAmount").textContent = Math.floor(totalBackAmount).toLocaleString();
+
+  // ↓ここまとめて定義
+  const cardSalesInput = document.getElementById("cardSales");
+  if (cardSalesInput) {
+    cardSalesInput.value = formatNumber(cardTotal);
+  }
+  const totalSalesInput = document.getElementById("totalSales");
+  if (totalSalesInput) {
+    totalSalesInput.value = formatNumber(totalAmount);
+  }
+
+  saveForm();
+}
+
+function saveForm() {
+  const formData = [];
+  document.querySelectorAll(".row").forEach((row, index) => {
+    const rowNumber = parseInt(row.querySelector(".rowNumber")?.textContent) || index + 1;
+
+    const rowData = {
+      rowNumber: rowNumber,
+      honshi: row.querySelector(".honshi")?.value || "",
+      category: row.querySelector(".c")?.value || "",
+      amount: row.querySelector(".amount")?.value || "",
+      num: row.querySelector(".num")?.value || "",
+      detail: row.querySelector(".detail")?.value || "",
+      card: row.querySelector(".card")?.value || "",
+      total: row.querySelector(".total")?.value || "",
+      checkboxes: {}
+    };
+
+    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      rowData.checkboxes[checkbox.parentElement.textContent.trim()] = checkbox.checked;
+    });
+
+    formData.push(rowData);
+  });
+
+  localStorage.setItem("formData", JSON.stringify(formData));
+}
+
+
+function restoreForm() {
+  const savedData = localStorage.getItem("formData");
+  if (savedData) {
+    const formData = JSON.parse(savedData);
+    const table = document.getElementById("formRows");
+
+    // 最初の行以外を削除
+    while (table.rows.length > 1) {
+      table.deleteRow(1);
+    }
+
+    formData.forEach((data, index) => {
+      let row;
+      if (index === 0) {
+        row = table.rows[0];
+      } else {
+        row = table.rows[0].cloneNode(true);
+        table.appendChild(row);
+      }
+
+      // セルの復元
+      row.querySelector(".rowNumber").textContent = data.rowNumber || index + 1;
+      row.querySelector(".honshi").value = data.honshi || "";
+      row.querySelector(".c").value = data.category || "";
+      row.querySelector(".amount").value = data.amount || "";
+      row.querySelector(".num").value = data.num || "";
+      row.querySelector(".detail").value = data.detail || "";
+      row.querySelector(".card").value = data.card || "";
+      row.querySelector(".total").value = data.total || "";
+
+      updateRowColor(row.querySelector(".c"));
+
+      // 削除ボタンが存在しない場合は追加
+      if (!row.querySelector(".delete-btn")) {
+        const deleteCell = document.createElement("td");
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "削除";
+        deleteButton.className = "delete-btn";
+        deleteButton.onclick = function () {
+          deleteRow(this);
+        };
+        deleteCell.appendChild(deleteButton);
+        row.appendChild(deleteCell);
+      }
+    });
+
+    // 最大行番号を更新
+    const maxRowNum = formData.reduce((max, data) => {
+      const num = parseInt(data.rowNumber, 10);
+      return (!isNaN(num) && num > max) ? num : max;
+    }, 0);
+    rowNumber = maxRowNum + 1;
+
+    updateTotals();
+  } else {
+    rowNumber = 2; // データなしなら初期値に戻す
+  }
+}
+
+function filterCategory(category) {
+  currentCategory = category;
+  localStorage.setItem("selectedCategory", category); // ← 保存
+
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const select = row.querySelector('select.c');
+    const value = select ? select.value : '';
+
+    const shouldShow = (category === 'all' || value === category);
+
+    if (shouldShow && row.style.display === 'none') {
+      // 表示する必要あり→右からスライドイン
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      // スライドインアニメを付ける
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      // 非表示にする必要あり→左スライドで消す
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = Array.from(document.querySelectorAll('.tab button')).find(btn => {
+    return btn.textContent === category || (category === 'all' && btn.textContent.includes('すべて表示'));
+  });
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+function filterCashOnlyRows() {
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const cardInput = row.querySelector('.card');
+    const cardValue = parseInt(cardInput?.value || "0");
+    const shouldShow = (!cardValue || cardValue === 0);
+
+    if (shouldShow && row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+
+  currentCategory = 'cashOnly';
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+}
+
+
+function filterCardInputRows() {
+  const rows = document.querySelectorAll('#formRows tr');
+  rows.forEach(row => {
+    const cardInput = row.querySelector('.card');
+    const hasCardValue = cardInput && cardInput.value.trim() !== '';
+    const shouldShow = hasCardValue;
+
+    if (shouldShow && row.style.display === 'none') {
+      row.style.display = '';
+      row.classList.remove('slide-out-left');
+      row.classList.add('slide-in-right');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.classList.remove('slide-in-right');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    } else if (!shouldShow && row.style.display !== 'none') {
+      row.classList.remove('slide-in-right');
+      row.classList.add('slide-out-left');
+      row.addEventListener('animationend', function onAnimEnd() {
+        row.style.display = 'none';
+        row.classList.remove('slide-out-left');
+        row.removeEventListener('animationend', onAnimEnd);
+      });
+    }
+  });
+
+  currentCategory = 'cardInputOnly';
+  document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+}
+
+function deleteRow(button) {
+  const row = button.closest('tr');
+  const formRows = document.getElementById('formRows');
+
+  if (formRows.rows.length <= 1) {
+    alert("これ以上削除できません");
+    return;
+  }
+
+  if (confirm("この伝票を削除しますか？")) {
+    // まずアニメーション用クラスを付ける
+    row.classList.add('slide-out-left');
+
+    // アニメーション終了後にDOMから削除
+    row.addEventListener('animationend', function onAnimEnd() {
+      row.removeEventListener('animationend', onAnimEnd); // 多重登録防止
+      formRows.removeChild(row);
+      renumberRows();
+      updateTotals();
+      saveForm();
+    });
+  }
+}
+
+function renumberRows() {
+  const rows = document.querySelectorAll("#formRows tr");
+  rows.forEach((row, index) => {
+    const cell = row.querySelector(".rowNumber");
+    if (cell) {
+      cell.textContent = index + 1;
+    }
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//<app2 script---------------------------------------------------------------------------------------------------------------->
+document.querySelectorAll('#app2-nav button').forEach(button => {
+  button.addEventListener('click', () => {
+    const nav = document.querySelector('#app2-nav');
+    const tabs = document.querySelector('.tabs');
+
+    const navTop = parseInt(window.getComputedStyle(nav).top) || 0;
+    const offset = nav.offsetHeight + tabs.offsetHeight + navTop + 20;
+
+    const targetId = button.getAttribute('data-target');
+    const target = document.getElementById(targetId);
+    if (target) {
+      const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+    }
+  });
+});
+
+function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
+  const form = document.createElement('div');
+  form.className = 'bottle-form';
+
+  form.innerHTML = `
+    <button type="button" class="delete-btn" style="margin-right:4px;">×</button>
+    <select class="bottleDetails" style="width: 140px; margin-right: 5px;">
+      <option value="">選択してください</option>
+      <optgroup label="リステル等">
+        <option value="リステル">リステル</option>
+        <option value="パリ">パリ</option>
+        <option value="マバム">マバム</option>
+      </optgroup>
+      <optgroup label="モエ">
+        <option value="モエ白">モエ白</option>
+        <option value="モエロゼ">モエロゼ</option>
+        <option value="モエネク">モエネク</option>
+        <option value="モエピカ">モエピカ</option>
+      </optgroup>
+      <optgroup label="ヴーヴ">
+        <option value="ヴーヴ">ヴーヴ</option>
+        <option value="ヴーヴホワイト">ヴーヴホワイト</option>
+        <option value="ヴーヴローズ">ヴーヴローズ</option>
+      </optgroup>
+      <optgroup label="ベルエ">
+        <option value="ベルエ">ベルエ</option>
+        <option value="ベルエロゼ">ベルエロゼ</option>
+      </optgroup>
+      <optgroup label="ソウメイ">
+        <option value="ソウメイ">ソウメイ</option>
+      </optgroup>
+      <optgroup label="ドンペリ">
+        <option value="ドンペリ">ドンペリ</option>
+        <option value="ドンペリルミナス">ドンペリルミナス</option>
+        <option value="ドンペリロゼ">ドンペリロゼ</option>
+        <option value="ドンペリルミナスロゼ">ドンペリルミナスロゼ</option>
+        <option value="ドンペリP2">ドンペリP2</option>
+        <option value="ドンペリゴールド">ドンペリゴールド</option>
+      </optgroup>
+      <optgroup label="アルマンド">
+        <option value="アルマンド">アルマンド</option>
+        <option value="アルマンドロゼ">アルマンドロゼ</option>
+        <option value="アルマンドグリーン">アルマンドグリーン</option>
+      </optgroup>
+      <optgroup label="オリシャン">
+        <option value="オリシャンR">オリシャンR</option>
+        <option value="オリシャンB">オリシャンB</option>
+      </optgroup>
+      <optgroup label="焼酎・リキュール等">
+        <option value="柚子小町">柚子小町</option>
+        <option value="黒霧島">黒霧島</option>
+        <option value="吉四六">吉四六</option>
+        <option value="富乃宝山">富乃宝山</option>
+        <option value="赤霧島">赤霧島</option>
+      </optgroup>
+      <optgroup label="ウイスキー">
+        <option value="知多">知多</option>
+        <option value="山崎">山崎</option>
+      </optgroup>
+      <optgroup label="ワイン">
+        <option value="ベリンジャー">ベリンジャー</option>
+      </optgroup>
+      <optgroup label="テキーラ">
+        <option value="テキカン">テキカン</option>
+      </optgroup>
+      <optgroup label="その他">
+        <option value="枝">枝</option>
+        <option value="その他">その他</option>
+        <option value="保障補正">保障補正</option> <!-- ★修正 -->
+      </optgroup>
+    </select>
+    <input type="text" class="splitCount" value="${split}" placeholder="割"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 30px; margin-right: 5px;">
+    <input type="text" class="bottleQuantity" value="${quantity}" placeholder="数量"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 30px; margin-right: 5px;">
+    <input type="text" class="bottleAmount" value="${amount}" placeholder="金額"
+      autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 202px;">
+  `;
+
+  // ★ ここで detail を select に反映（存在しない場合は一時追加）
+  const sel = form.querySelector('.bottleDetails');
+   // ▼ 履歴マップに同名があれば、選択時に空欄へ自動入力
+
+ sel.addEventListener('change', () => {
+  if (BOTTLE_REFRESHING) return; // ←内部更新中は反応しない
+
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+
+  const splitInput  = form.querySelector('.splitCount');
+  const qtyInput    = form.querySelector('.bottleQuantity');
+  const amountInput = form.querySelector('.bottleAmount');
+
+  if (opt.dataset.from === 'history') {
+    splitInput.value  = opt.dataset.split  || '';
+    qtyInput.value    = opt.dataset.qty    || '';
+    amountInput.value = opt.dataset.amount ?? 0;
+  } else {
+    splitInput.value  = '';
+    qtyInput.value    = '';
+    amountInput.value = '';
+  }
+
+  saveBottleForms();
+ });
+
+  if (detail) {
+    // まずはそのまま選択を試みる
+    sel.value = detail;
+    if (sel.value !== detail) {
+      // 該当optionが無い → 一時的に追加して選択
+      const tmp = document.createElement('option');
+      tmp.value = detail;
+      tmp.textContent = detail;
+      // 「その他」optgroup があればそこへ、なければ末尾へ
+      const etcGroup = Array.from(sel.children).find(
+        n => n.tagName === 'OPTGROUP' && n.label === 'その他'
+      );
+      (etcGroup || sel).appendChild(tmp);
+      sel.value = detail;
+    }
+  }
+
+  form.querySelector('.delete-btn').addEventListener('click', function() {
+    if (confirm("このボトル明細を削除しますか？")) {
+      form.remove();
+      saveBottleForms();
+    }
+  });
+
+  return form;
+}
+
+let BOTTLE_REFRESHING = false;
+
+// 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
+let BOTTLE_HISTORY = {};
+
+function buildBottleHistoryMap() {
+  BOTTLE_HISTORY = {};
+  const list = document.getElementById('historyList');
+  if (!list) return;
+
+  const items = Array.from(list.querySelectorAll('li'));
+  const re = /ボトル:\s*¥([\d,]+)（([^/（）]*?)(?:\s*\/\s*割:\s*([^\s/（）]+))?(?:\s*\/\s*数量:\s*([^\s/（）]+))?）/g;
+
+  const seen = new Set(); // 同一バリアント重複防止
+
+  for (const li of items) {
+    const html = li.innerHTML;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      const amount = parseInt(m[1].replace(/,/g, ''), 10) || 0;
+      const detail = (m[2] || '').trim();
+      const split  = (m[3] || '').trim();
+      const qty    = (m[4] || '').trim();
+      if (!detail) continue;
+
+      // バリアントID（品名＋割＋数量＋金額の組）
+      const id = encodeURIComponent(detail) + '|' +
+                 encodeURIComponent(split)  + '|' +
+                 encodeURIComponent(qty)    + '|' +
+                 amount;
+
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      (BOTTLE_HISTORY[detail] ||= []).push({ id, split, qty, amount });
+    }
+  }
+}
+
+function refreshBottleDropdownsFromHistory() {
+  buildBottleHistoryMap();
+
+  BOTTLE_REFRESHING = true; // ←開始
+
+  document.querySelectorAll('select.bottleDetails').forEach(sel => {
+    // 退避
+    const prevValue = sel.value;
+    const form = sel.closest('.bottle-form');
+    const prevSplit = form?.querySelector('.splitCount')?.value ?? '';
+    const prevQty   = form?.querySelector('.bottleQuantity')?.value ?? '';
+    const prevAmt   = form?.querySelector('.bottleAmount')?.value ?? '';
+
+    // 履歴グループを先頭に
+    let grp = Array.from(sel.children).find(n => n.tagName === 'OPTGROUP' && n.label === '履歴');
+    if (!grp) {
+      grp = document.createElement('optgroup');
+      grp.label = '履歴';
+      sel.insertBefore(grp, sel.firstChild);
+    }
+    grp.innerHTML = '';
+
+    // 各品名の履歴を再構築
+    Object.entries(BOTTLE_HISTORY).forEach(([detail, variants]) => {
+      // 静的に存在しない品名だけ「（新規）」を追加
+      const hasBlank = Array.from(sel.options).some(o => o.value === detail);
+      if (!hasBlank) {
+        const blankOpt = document.createElement('option');
+        blankOpt.value = detail;
+        blankOpt.textContent = `${detail}（新規）`;
+        blankOpt.dataset.base = detail;
+        grp.appendChild(blankOpt);
+      }
+
+      variants.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = `__HIST__${v.id}`;
+        opt.textContent = `${detail}（割:${v.split || '-'} / 数量:${v.qty || '-'} / ¥${v.amount.toLocaleString()}）`;
+        opt.dataset.from = 'history';
+        opt.dataset.base = detail;
+        opt.dataset.split = v.split;
+        opt.dataset.qty = v.qty;
+        opt.dataset.amount = v.amount;
+        grp.appendChild(opt);
+      });
+    });
+
+    // 選択を復元。失敗したら退避の入力値を戻す
+    sel.value = prevValue;
+    if (sel.value !== prevValue && form) {
+      form.querySelector('.splitCount').value     = prevSplit;
+      form.querySelector('.bottleQuantity').value = prevQty;
+      form.querySelector('.bottleAmount').value   = prevAmt;
+    }
+  });
+
+  BOTTLE_REFRESHING = false; // ←終了
+}
+
+
+
+function addBottleForm() {
+  const container = document.getElementById('bottleFormsContainer');
+  const newForm = createBottleForm(); // ←空のフォームを追加
+  container.appendChild(newForm);
+  refreshBottleDropdownsFromHistory();
+  saveBottleForms(); // 保存
+}
+
+function saveBottleForms() {
+  const bottleForms = [];
+  document.querySelectorAll('.bottle-form').forEach(form => {
+    const sel = form.querySelector('.bottleDetails');
+    const opt = sel?.selectedOptions?.[0];
+
+    const bottleDetails =
+      (opt?.dataset?.base) || (sel?.value || ''); // 履歴選択でも「品名」だけ保存
+
+    const splitCount = form.querySelector('.splitCount')?.value || '';
+    const bottleQuantity = form.querySelector('.bottleQuantity')?.value || '';
+    const bottleAmount = parseInt(
+      (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''), 10
+    ) || 0;
+
+    bottleForms.push({ bottleDetails, splitCount, bottleQuantity, bottleAmount });
+  });
+
+  localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
+}
+
+
+
+function loadBottleForms() {
+  const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms')) || [];
+  const container = document.getElementById('bottleFormsContainer');
+  container.innerHTML = '';
+
+  bottleFormsData.forEach(data => {
+    const form = createBottleForm(
+      data.bottleDetails || '',
+      data.splitCount || '',
+      data.bottleQuantity || '',
+      data.bottleAmount || 0
+    );
+    container.appendChild(form);
+  });
+}
+
+function renumberHistory() {
+  const items = Array.from(document.querySelectorAll('#historyList li')).reverse(); // 下から順に1,2,3
+  items.forEach((item, index) => {
+    const castElem = item.querySelector('.castName');
+    if (castElem) {
+      let text = castElem.textContent.replace(/^\s*\d+\.\s*/, ' '); // 旧番号を削除
+      const nameOnly = text.replace(/^\s*/, '').trim();
+      castElem.innerHTML = `<strong></strong> ${index + 1}. ${nameOnly}`;
+    }
+  });
+}
+
+function calculate() {
+   const historyList = document.getElementById('historyList');
+  // 「体験及び貸出」のチェックボックスの状態を取得
+  const isExperienceAndRentalChecked = document.getElementById('experienceAndRental').checked;
+  let experienceText = isExperienceAndRentalChecked ? '体験及び貸出: 有り' : '体験及び貸出: 無し';
+
+  const values = {
+    f: 1500, f2: 2000, jounai: 1000, honshiri: 0, douhan: 1500,
+    eda: 500, help: -1500, set40: 5500, set20: 3500, vip: 2000,
+    a: 500, b: 1000, c: 1500, d: 2000, e: 2500
+  };
+
+  let total = 0;
+  for (let key in values) {
+    const count = parseInt(document.getElementById(key).value) || 0;
+    total += count * values[key];
+  }
+
+   // 動的に追加されたボトルフォームから金額と詳細を取得
+  const bottleForms = document.querySelectorAll('.bottle-form');
+  bottleForms.forEach(form => {
+    const bottleAmount = parseInt(
+   (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''), 10
+   ) || 0;
+    const bottleDetails = form.querySelector('.bottleDetails').value || '詳細なし';
+    total += bottleAmount;
+  });
+
+  const kousei = 1000;
+  const gensen = Math.ceil((total * 0.1) / 100) * 100;
+
+  let afterGensen = total - gensen;
+
+  let actualKousei = 0;
+
+  // 厚生費の引き方を変更
+  if (!isExperienceAndRentalChecked) {
+    if (afterGensen - kousei >= 5000) {
+      actualKousei = kousei;
+    } else {
+      actualKousei = Math.max(0, afterGensen - 5000);
+    }
+  }
+
+const kouseiStoreCovered = (actualKousei === 0) ? 1000 : 0;
+const kouseiCastCovered = 0;
+
+let welfareText = `厚生費：¥${actualKousei.toLocaleString()} (店舗負担：¥${kouseiStoreCovered.toLocaleString()})`;
+
+  // 送迎金額の取得
+  let sendoffAmount = parseInt(document.getElementById('sendoffAmount').value) || 0;
+
+// 合計 = 小計 - 源泉費 - 厚生費
+let totalAmount = afterGensen - actualKousei;
+
+let adjustedSendoff = 0;
+
+if (!isExperienceAndRentalChecked) {
+  adjustedSendoff = sendoffAmount;
+  const tempFinalAmount = totalAmount - adjustedSendoff;
+
+  if (tempFinalAmount < 5000) {
+    const maxDeductible = totalAmount - 5000;
+    adjustedSendoff = Math.max(0, maxDeductible);
+  }
+}
+
+// 最終合計
+let finalAmount = totalAmount - adjustedSendoff;
+
+// 店舗負担・本人負担の計算
+const castCoveredAmount = adjustedSendoff;
+const storeCoveredAmount = sendoffAmount - adjustedSendoff;
+
+let sendoffText = `送迎：¥${sendoffAmount.toLocaleString()} (本人負担：¥${castCoveredAmount.toLocaleString()}`;
+if (storeCoveredAmount > 0) {
+  sendoffText += ` 店舗負担：¥${storeCoveredAmount.toLocaleString()})`;
+} else {
+  sendoffText += `)`; // ←これを追加すると安心
+}
+
+  const labels = {
+    f: 'F',
+    f2: 'F2',
+    jounai: '場内',
+    honshiri: '本指',
+    douhan: '同伴',
+    eda: '枝',
+    help: 'HELP',
+    set40: 'SET40',
+    set20: 'SET20',
+    vip: 'VIP',
+    a: 'A',
+    b: 'B',
+    c: 'C',
+    d: 'D',
+    e: 'E'
+  };
+
+  let detailsHTML = '<div class="details" style="font-size: 14px; margin-top: 10px;">';
+ 
+  for (let key in values) {
+    const count = parseInt(document.getElementById(key).value) || 0;
+    if (count > 0) {
+      const label = labels[key] || key.toUpperCase();
+      const unitPrice = values[key];
+      const subtotal = count * unitPrice;
+      detailsHTML += `<div>${label} ×${count}（¥${unitPrice.toLocaleString()}）= ¥${subtotal.toLocaleString()}</div>`;
+    }
+  }
+
+// 追加された全ボトル明細
+bottleForms.forEach(form => {
+  const sel = form.querySelector('.bottleDetails');
+  const opt = sel?.selectedOptions?.[0];
+  const bottleDetail = (opt?.dataset?.base) || (sel?.value) || '詳細なし';
+
+  const split = form.querySelector('.splitCount')?.value || '';
+  const quantity = form.querySelector('.bottleQuantity')?.value || '';
+  const amountStr = (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '');
+  const bottleAmount = parseInt(amountStr, 10) || 0;
+
+  if (bottleAmount > 0 || bottleDetail || split || quantity) {
+    detailsHTML += `<div>ボトル: ¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
+    if (split) detailsHTML += ` / 割: ${split}`;
+    if (quantity) detailsHTML += ` / 数量: ${quantity}`;
+    detailsHTML += `）</div>`;
+  }
+});
+
+detailsHTML += '</div>';
+
+  const castName = document.getElementById('castName').value || '（名前なし）';
+
+const resultText = `
+  <div class="castName"><strong></strong> ${castName}</div>
+  <div class="experienceAndRental">${experienceText}</div>
+  <div class="subtotal"><strong>小計:</strong> ¥${total.toLocaleString()}</div>
+  <div class="tax" style="font-size: 16px; font-weight: bold;">
+    <strong>源泉費:</strong> ¥${gensen.toLocaleString()}
+  </div>
+  <div class="welfare" style="font-size: 16px; font-weight: bold;">
+    <strong>${welfareText}</strong>
+  </div>
+  <div class="totalAmount" style="font-size: 25px; font-weight: bold;">
+    <strong>合計:</strong> ¥${totalAmount.toLocaleString()}
+    <span class="print-only" right; font-size: 14px; margin-left: 10px;">←領収書記入</span>
+  </div>
+  <div class="sendoff"><strong>${sendoffText}</strong></div>
+  <div class="finalAmount print-highlight"><strong>最終合計:</strong> ¥${finalAmount.toLocaleString()}</div>
+  ${detailsHTML}
+`;
+
+  // 履歴に新しい項目を追加
+const existingItem = Array.from(historyList.children).find(item => {
+  const nameElem = item.querySelector('.castName');
+  if (!nameElem) return false;
+
+  // 🔽 正規表現で先頭の番号（例: "1. "）を削除
+  const nameText = nameElem.textContent.replace(/^\s*\d+\.\s*/, '').trim();
+  
+  return nameText === castName;
+});
+
+
+// detailsHTMLを囲んで非表示にする
+const detailsHiddenHTML = `<div class="details-html-container" style="display:none; font-size:14px; margin-top:5px;">${detailsHTML}</div>`;
+
+const fullHTML = `
+  <div>
+    <label><input type="checkbox" class="history-checkbox"> 削除対象</label>
+    ${resultText.replace(detailsHTML, '')}
+    ${detailsHiddenHTML}
+    <div style="margin-top: 5px;">
+      <button onclick="restoreFromHistory(this)" style="margin-right: 5px; font-size: 12px;">復元</button>
+      <button onclick="moveHistoryItem(this, 'up')" style="font-size: 12px;">↑</button>
+      <button onclick="moveHistoryItem(this, 'down')" style="font-size: 12px;">↓</button>
+    </div>
+  </div>
+`;
+
+if (existingItem) {
+  existingItem.innerHTML = fullHTML;
+} else {
+  const listItem = document.createElement('li');
+  listItem.innerHTML = fullHTML;
+  historyList.prepend(listItem);
+}
+
+  renumberHistory();
+
+  // サマリーを更新
+  updateSummary();
+
+
+  // 保存処理
+  const inputElements = document.querySelectorAll('input[type="number"], input[type="text"]');
+  const inputValues = {};
+  inputElements.forEach(input => {
+    inputValues[input.id] = input.value;
+  });
+  localStorage.setItem('inputs', JSON.stringify(inputValues));
+  localStorage.setItem('historyList', historyList.innerHTML);
+  localStorage.setItem('result', resultText);
+    // 履歴に追加したので、ボトル候補を更新
+  refreshBottleDropdownsFromHistory();
+
+  // チェックボックスの状態も保存
+  const checkboxStates = {
+  experienceAndRental: document.getElementById('experienceAndRental').checked
+   };
+  localStorage.setItem('checkboxes', JSON.stringify(checkboxStates));
+
+    // 🔽 ここを追加：ボトルフォームの内容も保存する
+  saveBottleForms();
+
+  document.getElementById("result").innerHTML = resultText;
+  const resultElem = document.getElementById("result");
+  const tabsHeight = document.querySelector('.tabs').offsetHeight || 0;
+  const navHeight = document.getElementById('app2-nav').offsetHeight || 0;
+  const extraOffset = 30; // ←ここを好きなだけ増やせる
+  const totalOffset = tabsHeight + navHeight + extraOffset;
+
+  const rect = resultElem.getBoundingClientRect();
+  const targetY = rect.top + window.pageYOffset - totalOffset;
+
+ window.scrollTo({ top: targetY, behavior: "smooth" });
+}
+
+function confirmAndCalculate() {
+  // 入力内容まとめ
+  const castName   = document.getElementById('castName').value || '（名前なし）';
+  const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
+  const sendoff    = document.getElementById('sendoffAmount').value || '0';
+
+  // メイン入力の集計
+  const labels = {
+    f:'F', f2:'F2', jounai:'場内', honshiri:'本指', douhan:'同伴', eda:'枝', help:'HELP',
+    set40:'SET40', set20:'SET20', vip:'VIP', a:'A', b:'B', c:'C', d:'D', e:'E'
+  };
+
+  const mainItems = [];
+  Object.keys(labels).forEach(key => {
+    const val = document.getElementById(key).value;
+    if (parseInt(val)) mainItems.push(`${labels[key]} ×${val}`);
+  });
+
+// ボトル明細の集計
+const bottles = [];
+document.querySelectorAll('.bottle-form').forEach(form => {
+  const sel = form.querySelector('.bottleDetails');
+  const opt = sel?.selectedOptions?.[0];
+  const det = (opt?.dataset?.base) || (sel?.value) || '';
+
+  const spl = form.querySelector('.splitCount')?.value || '';
+  const qty = form.querySelector('.bottleQuantity')?.value || '';
+  const amtNum = parseInt((form.querySelector('.bottleAmount')?.value || '').replace(/,/g,''), 10) || 0;
+  const amt = amtNum.toLocaleString();
+
+  if (det || spl || qty || amtNum) {
+    bottles.push(`¥${amt}（${det}${spl ? " / 割: "+spl : ""}${qty ? " / 数量: "+qty : ""}）`);
+  }
+});
+
+  // 確認メッセージ
+  let msg = `内容を確認してください。\n\n`
+    + `キャスト名: ${castName}\n`
+    + `体験及び貸出: ${experience}\n`
+    + `送迎金額: ¥${sendoff}\n`
+    + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
+    + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
+
+  if (confirm(msg)) {
+    calculate();  // ← OKなら計算
+  }
+
+  return false;    // ← フォーム送信を確実に中止（ページ上部スクロール防止）
+}
+
+
+
+function moveHistoryItem(button, direction) {
+  const listItem = button.closest('li');
+  if (!listItem) return;
+
+  const parentList = listItem.parentNode;
+  let targetItem = null;
+
+  if (direction === 'up' && listItem.previousElementSibling) {
+    targetItem = listItem.previousElementSibling;
+    parentList.insertBefore(listItem, targetItem);
+  } else if (direction === 'down' && listItem.nextElementSibling) {
+    targetItem = listItem.nextElementSibling;
+    parentList.insertBefore(targetItem, listItem);
+  }
+
+  // ↓ 移動後の要素に強制スクロール（DOM反映後に実行）
+  requestAnimationFrame(() => {
+    listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  renumberHistory(); // ← 連番再振り
+  localStorage.setItem('historyList', parentList.innerHTML);
+  updateSummary();
+}
+
+
+function restoreFromHistory(button) {
+  const historyItem = button.closest('li') || button.closest('div');
+  if (!historyItem) return;
+
+  // キャスト名の復元
+  const castNameElem = historyItem.querySelector('.castName');
+  const castName = castNameElem ? castNameElem.textContent.replace(/^\s*\d+\.\s*/, '').trim() : '';
+  document.getElementById('castName').value = castName;
+
+  // ラベル対応表を定義（calculate関数と同じ内容）
+  const labels = {
+    f: 'F',
+    f2: 'F2',
+    jounai: '場内',
+    honshiri: '本指',
+    douhan: '同伴',
+    eda: '枝',
+    help: 'HELP',
+    set40: 'SET40',
+    set20: 'SET20',
+    vip: 'VIP',
+    a: 'A',
+    b: 'B',
+    c: 'C',
+    d: 'D',
+    e: 'E'
+  };
+
+  // 数値入力欄を復元
+  const inputIds = Object.keys(labels);
+  inputIds.forEach(id => {
+    const label = labels[id];
+    const regex = new RegExp(`${label} ×(\\d+)`);
+    const match = historyItem.textContent.match(regex);
+    if (match) {
+      document.getElementById(id).value = match[1];
+    } else {
+      document.getElementById(id).value = '';
+    }
+  });
+
+  // 送迎金額を復元
+  const sendoffMatch = historyItem.textContent.match(/送迎：¥([\d,]+)/);
+  if (sendoffMatch) {
+    document.getElementById('sendoffAmount').value = parseInt(sendoffMatch[1].replace(/,/g, ''), 10);
+  } else {
+    document.getElementById('sendoffAmount').value = 0;
+  }
+
+  // 体験及び貸出チェックボックスを復元（textContentかinnerHTMLにキーワードがあるか確認）
+  const experienceElem = historyItem.querySelector('.experienceAndRental');
+  const experienceText = experienceElem ? experienceElem.textContent : '';
+  const experienceChecked = experienceText.includes('体験及び貸出: 有り');
+  document.getElementById('experienceAndRental').checked = experienceChecked;
+
+  // ボトル明細を復元
+  const bottleRegex = /ボトル: ¥([\d,]+)（([^/（）]*)(?: ?\/ 割: ?([^\s/（）]+))?(?: ?\/ 数量: ?([^\s/（）]+))?）/g;
+
+  // 復元用のループ
+  const bottles = [];
+  let match;
+  while ((match = bottleRegex.exec(historyItem.innerHTML)) !== null) {
+  bottles.push({
+    bottleAmount: parseInt(match[1].replace(/,/g, '')),
+    bottleDetails: match[2] || '',
+    splitCount: match[3] || '',
+    bottleQuantity: match[4] || ''
+  });
+  }
+
+  // 復元して配置
+  const container = document.getElementById('bottleFormsContainer');
+  container.innerHTML = '';
+  bottles.forEach(data => {
+  const bottleForm = createBottleForm(
+    data.bottleDetails,
+    data.splitCount,
+    data.bottleQuantity,
+    data.bottleAmount
+  );
+  container.appendChild(bottleForm);
+  });
+
+  // 保存処理（現在の復元状態を保存しておく）
+  saveBottleForms();
+
+// 1) 先に app2 を表示状態へ
+if (typeof activateTab === 'function') {
+  activateTab('app2');
+}
+
+// 2) レイアウト確定を2フレーム待ってからスクロール
+const gotoId = 'app2-inputSection'; // 目的に応じて 'app2-resultSection' / 'app2-historySection' に変更可
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const target = document.getElementById(gotoId) || document.getElementById('app2');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // 念のためのフォールバック：オフセット考慮の手動スクロール
+      const root = document.documentElement;
+      const styles = getComputedStyle(root);
+      const offsetStr = styles.getPropertyValue('--scroll-offset').trim();
+      const offset = parseInt(offsetStr) || 160; // 取得できない環境向けの保険
+      window.scrollTo({ top: 0 + Math.max(0, window.scrollY - offset), behavior: 'smooth' });
+    }
+
+    // 使い勝手向上：フォーカスと一時ハイライト（任意）
+    const nameInput = document.getElementById('castName');
+    if (nameInput) { nameInput.focus(); nameInput.select(); }
+    target?.classList.add('just-scrolled');
+    setTimeout(() => target?.classList.remove('just-scrolled'), 1200);
+  });
+});
+
+}
+
+function deleteSelectedHistory() {
+  const historyList = document.getElementById('historyList');
+  const items = historyList.querySelectorAll('li');
+
+  const checkedItems = Array.from(items).filter(item => {
+    const checkbox = item.querySelector('.history-checkbox');
+    return checkbox && checkbox.checked;
+  });
+
+  if (checkedItems.length === 0) {
+    alert('削除する履歴を選択してください');
+    return;
+  }
+
+  const deletedNames = [];
+
+  checkedItems.forEach(item => {
+    const nameElem = item.querySelector('.castName');
+    const name = nameElem ? nameElem.textContent.replace('', '').trim() : '不明';
+
+    const confirmed = confirm(`「${name}」の履歴を削除しますか？`);
+    if (confirmed) {
+      deletedNames.push(name);
+      item.remove();
+    }
+  });
+
+  // 削除後の保存
+  localStorage.setItem('historyList', historyList.innerHTML);
+  updateSummary();
+    // 履歴を削除したので、ボトル候補を更新
+  refreshBottleDropdownsFromHistory();
+
+  // 削除結果の表示
+  if (deletedNames.length > 0) {
+    const msg = deletedNames.map(name => `${name} の履歴は削除されました。`).join('\n');
+    alert(msg);
+  }
+}
+
+function updateSummary() {
+  const historyItems = document.querySelectorAll('#historyList li');
+  let totalPeople = 0;
+  let totalAmount = 0;
+  let totalGensen = 0;
+
+  historyItems.forEach(item => {
+    const text = item.innerText;
+    const amountMatch = text.match(/合計:\s*¥([\d,]+)/);
+    const gensenMatch = text.match(/源泉費:\s*¥([\d,]+)/);
+
+    if (amountMatch) {
+      const amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+      totalAmount += amount;
+    }
+
+    if (gensenMatch) {
+      const gensen = parseInt(gensenMatch[1].replace(/,/g, ''), 10);
+      totalGensen += gensen;
+    }
+
+    totalPeople += 1;
+  });
+
+  document.getElementById('summaryTotalPeople').innerText = `${totalPeople}人`;
+  document.getElementById('summaryTotalAmount').innerText = `¥${totalAmount.toLocaleString()}`;
+  document.getElementById('summaryTotalTax').innerText = `¥${totalGensen.toLocaleString()}`;
+
+  // カンマ付きでセット
+  document.getElementById('femaleSalary').value = totalAmount.toLocaleString();
+  document.getElementById('femaleTax').value = totalGensen.toLocaleString();
+}
+
+
+function toggleDetails(button) {
+  const container = button.nextElementSibling.nextElementSibling; 
+  // ボタンのすぐ次のボタンの次のdiv（details-html-container）を取得
+  if (container.style.display === 'none' || container.style.display === '') {
+    container.style.display = 'block';
+    button.textContent = '詳細を隠す';
+  } else {
+    container.style.display = 'none';
+    button.textContent = '詳細を表示';
+  }
+}
+
+function calculateBack() {
+  const values = {
+    f: 1500,
+    f2: 2000,
+    jounai: 1000,
+    honshiri: 0,
+    douhan: 1500,
+    eda: 500,
+    help: -1500,
+    set40: 5500,
+    set20: 3500,
+    vip: 2000,
+    a: 500,
+    b: 1000,
+    c: 1500,
+    d: 2000,
+    e: 2500
+  };
+
+  const inputs = {
+    f: document.getElementById("f"),
+    f2: document.getElementById("f2"),
+    jounai: document.getElementById("jounai"),
+    honshiri: document.getElementById("honshiri"),
+    douhan: document.getElementById("douhan"),
+    eda: document.getElementById("eda"),
+    help: document.getElementById("help"),
+    set40: document.getElementById("set40"),
+    set20: document.getElementById("set20"),
+    vip: document.getElementById("vip"),
+    a: document.getElementById("a"),
+    b: document.getElementById("b"),
+    c: document.getElementById("c"),
+    d: document.getElementById("d"),
+    e: document.getElementById("e")
+  };
+
+  let total = 0;
+  let detailLines = [];
+
+  Object.keys(values).forEach(key => {
+    const count = parseInt(inputs[key]?.value || 0);
+    if (count > 0) {
+      const unitPrice = values[key];
+      const itemTotal = count * unitPrice;
+      total += itemTotal;
+
+      const sign = unitPrice < 0 ? "-" : "";
+      detailLines.push(`${key.toUpperCase()} ×${count}（¥${Math.abs(unitPrice).toLocaleString()}）= ${sign}¥${Math.abs(itemTotal).toLocaleString()}`);
+    }
+  });
+
+  document.getElementById("total").textContent = "¥" + total.toLocaleString();
+  document.getElementById("detail").value = detailLines.join("\n");
+}
+
+    setTimeout(() => {
+      document.querySelectorAll('.hide-for-print').forEach(row => {
+        row.classList.remove('hide-for-print');
+      });
+      document.head.removeChild(style);
+    }, 1000);
+
+document.addEventListener('DOMContentLoaded', function () {});
+
+function restoreCheckboxes() {
+  const checkboxStates = JSON.parse(localStorage.getItem('checkboxes')) || {};
+  document.getElementById('experienceAndRental').checked = checkboxStates.experienceAndRental || false;
+}
+
+
+document.getElementById('experienceAndRental').addEventListener('change', function(event) {
+  if (this.checked) {
+    const confirmed = confirm('「体験及び貸出」にチェックが入りました。');
+    if (!confirmed) {
+      this.checked = false; // チェックをキャンセル
+    }
+  }
+});
+
+// 統一された初期化処理
+document.addEventListener('DOMContentLoaded', () => {
+  // APP2
+  loadBottleForms();
+  restoreCheckboxes();
+  restoreInputs(); 
+
+  // APP1
+  restoreForm();
+  restoreCheckboxStates();
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", saveCheckboxStates);
+  });
+
+  // APP3
+  restoreApp3Data();
+  attachApp3Listeners();
+
+  // 顧問料自動反映
+  observeTotalCountForAdviserFee(); // ←これを追加
+
+  attachCommaFormatApp1and3();
+
+  // タブ切替
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-target');
+      if (target) activateTab(target);
+    });
+  });
+
+  // 前回選択タブの復元
+  const savedTab = localStorage.getItem('selectedTab') || 'app1';
+  activateTab(savedTab);
+
+  // Enterキーで次の入力欄へ
+  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
+  inputs.forEach((input, index) => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const next = inputs[index + 1];
+        if (next) next.focus();
+      }
+    });
+  });
+
+    const historyList = document.getElementById('historyList');
+  if (historyList) {
+    historyList.innerHTML = localStorage.getItem('historyList') || '';
+  }
+
+  updateSummary();
+  updateCalculations(); // 初期計算
+  attachCommaFormatApp3();
+  refreshBottleDropdownsFromHistory();
+});
+
+function restoreInputs() {
+  const inputValues = JSON.parse(localStorage.getItem('inputs') || '{}');
+  Object.entries(inputValues).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
+
+// --- app2フォームの十字キー移動 ---
+// #app2内でのみ有効
+(function(){
+  // 移動対象input,selectの共通セレクタ（動的増減対応）
+  function getApp2Fields() {
+    // app2内のフォーム全体（bottle-form含む）
+    return Array.from(document.querySelectorAll(
+      '#app2 section#app2-inputSection input:not([type=hidden]):not([disabled]), ' +
+      '#app2 section#app2-inputSection select:not([disabled])'
+    )).filter(el => el.offsetParent !== null); // 表示のみ
+  }
+
+  document.addEventListener('keydown', function(e) {
+    // app2以外は無視
+    if (!document.getElementById('app2').classList.contains('active')) return;
+
+    // 矢印以外は無視
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+
+    const target = e.target;
+    // 対象がapp2内のinputかselectか
+    if (!target.closest('#app2')) return;
+    if (!['INPUT','SELECT'].includes(target.tagName)) return;
+
+    // input/textareaの左右はカーソル移動優先
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && (target.selectionStart !== target.selectionEnd)) {
+      // 入力値内でのキャレット移動を優先させる
+      if ((e.key === 'ArrowLeft' && target.selectionStart > 0) ||
+          (e.key === 'ArrowRight' && target.selectionStart < target.value.length)) {
+        return; // 何もしない
+      }
+    }
+
+    // ここでフォーム群取得
+    const fields = getApp2Fields();
+    const idx = fields.indexOf(target);
+    if (idx === -1) return;
+
+    // 配置を2次元配列化
+    const fieldMap = [];
+    let lastTop = null, row = [];
+    fields.forEach(f=>{
+      const top = f.getBoundingClientRect().top;
+      if (lastTop !== null && Math.abs(top-lastTop) > 8) {
+        fieldMap.push(row);
+        row = [];
+      }
+      row.push(f);
+      lastTop = top;
+    });
+    if (row.length) fieldMap.push(row);
+
+    // 現在位置を特定
+    let rowIdx = -1, colIdx = -1;
+    fieldMap.forEach((row,i)=>{
+      const j = row.indexOf(target);
+      if(j>=0){ rowIdx=i; colIdx=j; }
+    });
+    if(rowIdx===-1||colIdx===-1) return;
+
+    // 移動先を決定
+    let next;
+    if(e.key==='ArrowLeft'){
+      next = fieldMap[rowIdx][colIdx-1];
+    }
+    if(e.key==='ArrowRight'){
+      next = fieldMap[rowIdx][colIdx+1];
+    }
+    if(e.key==='ArrowUp'){
+      for(let up=rowIdx-1;up>=0;up--){
+        if(fieldMap[up][colIdx]){ next=fieldMap[up][colIdx]; break;}
+      }
+    }
+    if(e.key==='ArrowDown'){
+      for(let dn=rowIdx+1;dn<fieldMap.length;dn++){
+        if(fieldMap[dn][colIdx]){ next=fieldMap[dn][colIdx]; break;}
+      }
+    }
+
+    if(next){
+      e.preventDefault();
+      next.focus();
+      if(typeof next.select==='function') next.select();
+    }
+  });
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//<app3 script----------------------------------------------------------------------------------------------------------------->
+    function formatNumber(num) {
+    return num.toLocaleString('ja-JP');
+    }
+
+    function get(id) {
+      return parseInt(document.getElementById(id).value.replace(/,/g, '')) || 0;
+    }
+
+  function updateCalculations() {
+    const cardTotalText = document.getElementById('cardTotal')?.textContent || '0';
+    const cardTotal = parseInt(cardTotalText.replace(/,/g, '')) || 0;
+
+    const cardSalesInput = document.getElementById("cardSales");
+    if (cardSalesInput) {
+    cardSalesInput.value = formatNumber(cardTotal);
+     }
+    const summaryTaxText = document.getElementById('summaryTotalTax')?.innerText || '¥0';
+    const summaryTaxValue = parseInt(summaryTaxText.replace(/[¥,]/g, ''), 10) || 0;
+    document.getElementById('femaleTax').value = summaryTaxValue;
+    // totalBackAmount を catchBack に反映
+    const totalBackAmountText = document.getElementById("totalBackAmount").textContent.replace(/,/g, "");
+    const totalBackAmount = parseInt(totalBackAmountText) || 0;
+    document.getElementById("catchBack").value = totalBackAmount.toLocaleString();
+
+    const total = get('totalSales');
+    const card = get('cardSales');
+    const cash = total - card;
+    document.getElementById('cashSales').value = formatNumber(cash);
+
+    const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
+    document.getElementById('totalLaborCosts').value = formatNumber(labor);
+
+    const tax = get('femaleTax') + get('maleTax');
+    document.getElementById('totalTax').value = formatNumber(tax);
+    const receiptTotal = get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
+    document.getElementById('receipt6').value = formatNumber(receiptTotal);
+
+    const expenses = get('alcohol') + receiptTotal;
+    document.getElementById('totalExpenses').value = formatNumber(expenses);
+
+    const gross = total - labor - tax - expenses;
+    document.getElementById('grossProfit').value = formatNumber(gross);
+
+    const remaining = gross - card;
+    document.getElementById('remainingCash').value = formatNumber(remaining);
+
+    const startCash = get('startCash');
+    const finalCash = get('finalCash');
+    const difference = (finalCash - remaining - tax) - startCash;
+    document.getElementById('cashDifference').value = formatNumber(difference);
+
+    // adviserFee を自動計算して反映
+    const adviserCountEl = document.getElementById('totalCount');
+    const adviserFeeInput = document.getElementById('adviserFee');
+    if (adviserCountEl && adviserFeeInput) {
+    const count = parseInt(adviserCountEl.textContent.replace(/,/g, ''), 10) || 0;
+    adviserFeeInput.value = (count * 1000).toLocaleString();
+    }
+
+    document.getElementById('femaleSalary').value = formatNumber(get('femaleSalary'));
+    document.getElementById('femaleTax').value = formatNumber(get('femaleTax'));
+
+
+
+    updateNegativeColor('grossProfit');
+    updateNegativeColor('remainingCash');
+    updateNegativeColor('cashDifference');
+
+    updateExtraGroupFields();
+    attachCommaFormatApp3();
+
+  saveToLocal();
+}
+
+function updateExtraGroupFields() {
+  // それぞれの値を取得（必要に応じて変数は他から渡してください）
+  let grossProfit = get('grossProfit');         // 粗利益
+  let cardSales = get('cardSales');             // カード売上
+  let remainingCash = get('remainingCash');     // 現金残
+  let totalTax = get('totalTax');               // 源泉費合計
+
+  // 合計計算：現金残 + 源泉費
+  let totalGrossPlusTax = remainingCash + totalTax;
+
+  // 各フィールドに値を表示（存在確認しながら安全に代入）
+  let el;
+
+  el = document.getElementById('grossProfit_extra');
+  if (el) el.value = formatNumber(grossProfit);
+
+  el = document.getElementById('cardSales_extra');
+  if (el) el.value = formatNumber(cardSales);
+
+  el = document.getElementById('remainingCash_extra');
+  if (el) el.value = formatNumber(remainingCash);
+
+  el = document.getElementById('totalWithholdingTax');
+  if (el) el.value = formatNumber(totalTax);
+
+  el = document.getElementById('totalGrossPlusTax');
+  if (el) el.value = formatNumber(totalGrossPlusTax);
+}
+
+
+    function updateNegativeColor(id) {
+      const element = document.getElementById(id);
+      const value = parseInt(element.value.replace(/,/g, '')) || 0;
+      if (value < 0) {
+        element.classList.add('negative');
+      } else {
+        element.classList.remove('negative');
+      }
+    }
+
+function saveToLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    // disabled 状態でも保存
+    localStorage.setItem(input.id, input.value);
+  });
+}
+
+function loadFromLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    const saved = localStorage.getItem(input.id);
+    if (saved !== null) input.value = saved;
+  });
+}
+
+
+//業務内容を保存
+window.addEventListener("DOMContentLoaded", () => {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+  if (!localStorage.getItem("workStartDate")) {
+    localStorage.setItem("workStartDate", todayStr);
+  }
+});
+
+function saveApp3Data() {
+  const fields = [
+    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
+    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
+  ];
+  const data = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  localStorage.setItem('app3_inputs', JSON.stringify(data));
+}
+
+function restoreApp3Data() {
+  const saved = localStorage.getItem('app3_inputs');
+  if (!saved) return;
+  const data = JSON.parse(saved);
+  Object.entries(data).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+  updateCalculations(); // 計算更新
+  attachCommaFormatApp1and3();
+}
+
+function attachApp3Listeners() {
+  const fields = [
+    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
+    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
+  ];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', saveApp3Data);
+    }
+  });
+}
+
+function exportAsSelfContainedHTML() {
+  // 1. ドキュメント全体をクローン
+  const doc = document.documentElement.cloneNode(true);
+
+  // 2. localStorageのデータも取得（本当は再インポート用にスクリプト化推奨）
+  const localStorageData = JSON.stringify(localStorage);
+
+  // 3. localStorageのデータ埋め込み用スクリプト作成
+  const storageScript = document.createElement('script');
+  storageScript.type = 'text/javascript';
+  storageScript.textContent = `
+    (function() {
+      try {
+        var data = ${localStorageData};
+        for (var key in data) {
+          if (data.hasOwnProperty(key)) {
+            localStorage.setItem(key, data[key]);
+          }
+        }
+      } catch (e) {}
+    })();
+  `;
+
+  // 4. <head>内に挿入
+  const head = doc.querySelector("head");
+  if (head) head.appendChild(storageScript);
+
+  // 5. HTML全体を文字列化
+  const html = "<!DOCTYPE html>\n" + doc.outerHTML;
+
+  // 6. Blob生成
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+
+  // 7. ダウンロード用リンク生成
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = getCustomFileName() + ".html";
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // 8. 保存後リセット
+  setTimeout(() => {
+    resetAllApps();
+  }, 600);
+}
+
+
+function getCustomFileName() {
+  // JSTに補正（サーバーUTCなら+9）
+  const now = new Date();
+  now.setHours(now.getHours() + 9);
+
+  let fileDate = new Date(now);
+  const hour = now.getHours();
+  if (hour < 20) {
+    fileDate.setDate(fileDate.getDate() - 1);
+  }
+  const y = fileDate.getFullYear();
+  const m = String(fileDate.getMonth() + 1).padStart(2, '0');
+  const d = String(fileDate.getDate()).padStart(2, '0');
+
+  return `IBASD_${y}-${m}-${d}`;
+}
+
+
+
+
+// =========================
+// 共通リセット関数
+// =========================
+
+// 特定アプリ(app1, app2, app3)をリセット
+function resetApp(appId, full = false) {
+  if (!confirm(full 
+    ? "本当に完全クリアしますか？（履歴・保存データも削除）" 
+    : "入力をクリアしますか？"
+  )) return;
+
+  if (appId === 'app1') {
+    resetApp1(full);
+  } else if (appId === 'app2') {          // ← これを追加
+    resetApp2(full);
+  } else if (appId === 'app3') {
+    resetApp3(full);
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+}
+
+function resetAllApps() {
+  if (!confirm("app1〜app3のデータを全て削除しますか？")) return;
+
+  const overlay = document.getElementById('resetOverlay');
+  const canvas = document.getElementById('matrixCanvas');
+  const flash = document.getElementById('resetFlash');
+  overlay.style.display = 'flex';
+  setTimeout(() => overlay.classList.add('active'), 20);
+
+  startMatrixEffect(canvas);
+
+  setTimeout(() => {
+    flash.style.opacity = 1;
+    setTimeout(() => {
+      resetApp1(true);
+      resetApp2(true);
+      resetApp3(true);
+      activateTab('app1');
+      window.scrollTo({top: 0, behavior: 'auto'});
+
+      // ★ ここで全部一気に消す
+      setTimeout(() => {
+        flash.style.opacity = 0;
+        stopMatrixEffect();
+        overlay.classList.remove('active');
+        overlay.style.display = 'none';
+      }, 520); // flashフェードアウト分
+    }, 400);  // 発光持続
+  }, 1600);   // マトリックス演出
+}
+
+
+
+
+
+// =========================
+// app1用リセット
+// =========================
+function resetApp1(full) {
+  const formRows = document.getElementById("formRows");
+  if (!formRows) return;
+
+  // 1行だけ残して削除
+  while (formRows.rows.length > 1) formRows.deleteRow(1);
+
+  // 最初の行の初期化
+  formRows.querySelectorAll("input, select").forEach(el => el.value = '');
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => cb.checked = false);
+
+  // 合計リセット
+  document.getElementById("totalCustomers").textContent = "0";
+  document.getElementById("cashTotal").textContent = "0";
+  document.getElementById("cardTotal").textContent = "0";
+  document.getElementById("totalAmount").textContent = "0";
+  document.getElementById("totalCount").textContent = "0";
+  document.getElementById("totalBackAmount").textContent = "0";
+
+  // カテゴリ別もリセット
+  const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
+  categories.forEach(cat => {
+    document.getElementById(`${cat}count`).textContent = "0";
+    document.getElementById(`${cat}total`).textContent = "0";
+  });
+
+  rowNumber = 2;
+  updateTotals();
+
+  if (full) {
+    localStorage.removeItem("formData");
+    localStorage.removeItem("checkboxStates");
+  }
+}
+
+
+// =========================
+// app2用リセット
+// =========================
+function resetApp2(full) {
+  // 入力欄クリア
+  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
+  const exp = document.getElementById('experienceAndRental');
+  if (exp) exp.checked = false;
+  const result = document.getElementById('result');
+  if (result) result.innerHTML = '';
+  const bottleForms = document.getElementById('bottleFormsContainer');
+  if (bottleForms) bottleForms.innerHTML = '';
+
+  if (full) {
+    const historyList = document.getElementById('historyList');
+    if (historyList) historyList.innerHTML = '';
+    localStorage.removeItem('inputs');
+    localStorage.removeItem('historyList');
+    localStorage.removeItem('result');
+    localStorage.removeItem('bottleForms');
+    updateSummary();
+  }
+}
+
+
+// =========================
+// app3用リセット
+// =========================
+function resetApp3(full) {
+  document.querySelectorAll('#app3 input').forEach(el => {
+    if (el.type !== 'button') el.value = '';
+  });
+  updateCalculations();
+
+  if (full) {
+    localStorage.removeItem('app3_inputs');
+    localStorage.removeItem('app3_result');
+  }
+
+
+  attachCommaFormatApp1and3();
+}
+
+function clearApp2Inputs() {
+  resetApp2(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function addComma(numStr) {
+  if (!numStr) return '';
+  // 数字とマイナス以外は除去
+  let val = numStr.replace(/[^\d\-]/g, '');
+  val = val.replace(/(?!^)-/g, '');
+  if (val === '' || val === '-') return val;
+  return parseInt(val, 10).toLocaleString('ja-JP');
+}
+
+// app1/app3内だけカンマ付与
+function attachCommaFormatApp1and3() {
+  // app1対象
+  document.querySelectorAll(
+    '#app1 input.amount, #app1 input.num, #app1 input.card, #app1 input.total, #app1 input.honshi, #app1 input.table-number'
+  ).forEach(input => {
+    if (input._commaFormatApplied) return;
+    input._commaFormatApplied = true;
+
+    input.addEventListener('input', function () {
+      let val = this.value.replace(/,/g, '');
+      if (val === '' || !/^-?\d*$/.test(val)) {
+        this.value = '';
+        return;
+      }
+      this.value = addComma(val);
+    });
+    input.addEventListener('focus', function () {
+      this.value = this.value.replace(/,/g, '');
+    });
+    input.addEventListener('blur', function () {
+      this.value = addComma(this.value);
+    });
+    // 初期値にも即時カンマ
+    if (input.value) input.value = addComma(input.value);
+  });
+
+  // app3対象（#app3直下でinput[type="text"]の全部/disabled除外）
+  document.querySelectorAll('#app3 input[type="text"]:not([disabled])')
+    .forEach(input => {
+      if (input._commaFormatApplied) return;
+      input._commaFormatApplied = true;
+
+      input.addEventListener('input', function () {
+        let val = this.value.replace(/,/g, '');
+        if (val === '' || !/^-?\d*$/.test(val)) {
+          this.value = '';
+          return;
+        }
+        this.value = addComma(val);
+      });
+      input.addEventListener('focus', function () {
+        this.value = this.value.replace(/,/g, '');
+      });
+      input.addEventListener('blur', function () {
+        this.value = addComma(this.value);
+      });
+      if (input.value) input.value = addComma(input.value);
+    });
+}
+
+function attachCommaFormatApp3() {
+  document.querySelectorAll(
+    '#app3 input[type="text"], #app3 input[type="number"]'
+  ).forEach(input => {
+    if (input._commaFormatApplied) return;
+    input._commaFormatApplied = true;
+
+    input.addEventListener('input', function () {
+      let val = this.value.replace(/,/g, '');
+      if (val === '' || !/^-?\d*$/.test(val)) {
+        this.value = '';
+        return;
+      }
+      this.value = addComma(val);
+    });
+
+    input.addEventListener('focus', function () {
+      this.value = this.value.replace(/,/g, '');
+    });
+
+    input.addEventListener('blur', function () {
+      this.value = addComma(this.value);
+    });
+  });
+}
+
+// --- マトリックス風エフェクト ---
+let matrixInterval, matrixStopFlag = false;
+
+function startMatrixEffect(canvas) {
+  const ctx = canvas.getContext('2d');
+  let W = window.innerWidth;
+  let H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  let fontSize = 18;  // 少し小さく密度を増やす
+  let columns = Math.floor(W / fontSize) + 2;
+  let drops = [];
+  for (let i = 0; i < columns; i++) drops[i] = Math.random() * H / fontSize;
+
+  // 文字セット（カタカナ・ひらがな・英数大文字・英数小文字・数字）
+  const chars = [
+    ..."アイウエオカキクケコサシスセソタチツテトナニヌネノマミムメモヤユヨラリルレロワヲン",
+    ..."あいうえおかきくけこさしすせそたちつてとなにぬねのまみむめもやゆよらりるれろわをん",
+    ..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  ];
+
+  matrixStopFlag = false;
+
+  function draw() {
+    ctx.fillStyle = 'rgba(25,30,44,0.23)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = fontSize + "px monospace";
+    ctx.fillStyle = "#47f7ff";
+    // 列ごとに複数行ドロップして密度UP
+    for (let i = 0; i < columns; i++) {
+      for (let d = 0; d < 2; d++) { // 1列あたり2個
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, (drops[i] - d) * fontSize);
+      }
+      if (Math.random() > 0.975) drops[i] = 0;
+      drops[i] += Math.random() * 1.3 + 0.7; // 速さランダム
+    }
+    if (!matrixStopFlag) matrixInterval = requestAnimationFrame(draw);
+  }
+
+  draw();
+}
+
+function stopMatrixEffect() {
+  matrixStopFlag = true;
+  if (matrixInterval) cancelAnimationFrame(matrixInterval);
+  const canvas = document.getElementById('matrixCanvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+/* === CB表を [チェック][カテゴリ][本数][金額] に変換 === */
+document.addEventListener('DOMContentLoaded', () => {
+  const table = document.querySelector('#categorySection table');
+  if (!table) return;
+
+  /* ヘッダを差し替え */
+  const thRow = table.querySelector('thead tr');
+  if (thRow) thRow.innerHTML = '<th>チェック</th><th>カテゴリ</th><th>本数</th><th>金額</th>';
+
+  /* 各行を4列化（1列目の「チェック＋カテゴリ名」を分離） */
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    // すでに4列ならスキップ
+    if (tr.children.length >= 4) return;
+
+    const firstTd = tr.children[0];
+    if (!firstTd) return;
+
+    const isTotal = /合計/.test(firstTd.textContent);
+
+    if (isTotal) {
+      // 合計行はチェック列を空、カテゴリ列に「合計」
+      const blank = document.createElement('td');          // [チェック]
+      tr.insertBefore(blank, firstTd);                     // 先頭に空列を追加
+      const catTd = document.createElement('td');          // [カテゴリ]
+      catTd.innerHTML = firstTd.innerHTML;                 // 「合計」
+      tr.replaceChild(catTd, firstTd);
+      return;
+    }
+
+    // 通常行：チェックとカテゴリ名を分離
+    const cb = firstTd.querySelector('input[type="checkbox"]');
+    const nameText = firstTd.textContent.replace(/\s+/g, ' ').trim();
+
+    // 先頭セルはチェックボックスだけに
+    firstTd.innerHTML = '';
+    if (cb) firstTd.appendChild(cb);
+
+    // チェックの次に「カテゴリ名」セルを挿入
+    const catTd = document.createElement('td');
+    catTd.textContent = nameText; // 例：UK
+    tr.insertBefore(catTd, tr.children[1]);
+  });
+});
+
+// モバイルOS判定（PCのタッチ端末を誤検出しにくい）
+function isMobileOS(){
+  const ua = navigator.userAgent || "";
+  const isiOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  return isiOS || isAndroid;
+}
+
+// 共有シート経由の印刷でも反転させる保険（ページ読込時に一度だけ）
+document.addEventListener('DOMContentLoaded', () => {
+  if (isMobileOS()) document.body.classList.add('is-mobile');
+});
+
+function printResult(){
+  // アクティブタブに応じて #result を最新化
+  const active = document.querySelector('.tab.active')?.dataset.target;
+  if (active === 'app1' && typeof calculate === 'function') calculate();
+  if (active === 'app2' && typeof calculate === 'function') calculate();
+  if (active === 'app3' && typeof dailyCalc === 'function') dailyCalc();
+
+  // スマホOSの時だけ一時的に mobile-print を付与
+  const mobile = isMobileOS();
+  if (mobile) document.body.classList.add('mobile-print');
+
+  // レイアウト反映後に印刷（2フレーム待ちで安定）
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.print();
+      // ダイアログ復帰後にクラスを戻す
+      setTimeout(() => document.body.classList.remove('mobile-print'), 0);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
