@@ -3356,6 +3356,33 @@ function printResult(){
     });
   });
 }
+
+function isIOS(){
+  const ua = navigator.userAgent || "";
+  return /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// iOS では number を text+numeric に変換
+document.addEventListener('DOMContentLoaded', () => {
+  if (!isIOS()) return;
+  document.querySelectorAll('#app2 input[type="number"]').forEach(el => {
+    el.setAttribute('inputmode', 'numeric');   // 数字キーボード
+    el.setAttribute('pattern', '[0-9]*');      // 数字のみ
+    el.type = 'text';                          // Prev/Next バーが出やすい
+  });
+});
+
+function refreshEnterKeyHints(){
+  const inputs = [...document.querySelectorAll('#app2-form input, #app2-form select, #app2-form textarea')]
+    .filter(el => !el.disabled && !el.readOnly && el.type !== 'hidden' && el.offsetParent !== null);
+  inputs.forEach((el, i) => el.setAttribute('enterkeyhint', i === inputs.length - 1 ? 'done' : 'next'));
+}
+
+// 初期化 & 動的追加後にも呼ぶ（ボトル追加／復元のあとなど）
+document.addEventListener('DOMContentLoaded', refreshEnterKeyHints);
+// 例：createBottleForm 内や復元後の末尾で呼ぶ
+// refreshEnterKeyHints();
+
 </script>
 
 </body>
