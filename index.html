@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -454,7 +453,69 @@ html{ scroll-behavior: smooth; }
   }
 }
 
+/* ===== 伝票入力フォーム（APP1）列幅の統一：デスクトップのみ適用 ===== */
+@media (min-width: 701px){
+  /* 列幅の変数（お好みで数値だけ調整） */
+  #app1{
+    --w-del   : 44px;   /* 削除ボタン */
+    --w-no    : 40px;   /* 行番号 */
+    --w-table : 76px;   /* 卓番 */
+    --w-honshi: 76px;   /* 本指 */
+    --w-cat   : 100px;  /* カテゴリ選択 */
+    --w-amount: 130px;  /* 金額 */
+    --w-num   : 80px;   /* 人数 */
+    --w-detail: 200px;  /* 詳細（可変） */
+    --w-card  : 130px;  /* カード */
+    --w-total : 140px;  /* 総合計 */
+  }
+
+  /* テーブルを固定レイアウトにして列幅を効かせる */
+  #app1 table{ table-layout: fixed; width: 100%; }
+  #app1 td{ padding: 8px 6px; vertical-align: middle; }
+
+  /* 列幅割り当て（<tr class="row"> の順序に合わせる） */
+  #app1 #formRows .row > td:nth-child(1){ width: var(--w-del);   text-align:center; }
+  #app1 #formRows .row > td:nth-child(2){ width: var(--w-no);    text-align:center; }
+  #app1 #formRows .row > td:nth-child(3){ width: var(--w-table); }
+  #app1 #formRows .row > td:nth-child(4){ width: var(--w-honshi);}
+  #app1 #formRows .row > td:nth-child(5){ width: var(--w-cat);   }
+  #app1 #formRows .row > td:nth-child(6){ width: var(--w-amount);}
+  #app1 #formRows .row > td:nth-child(7){ width: var(--w-num);   }
+  #app1 #formRows .row > td:nth-child(8){ width: var(--w-detail);}
+  #app1 #formRows .row > td:nth-child(9){ width: var(--w-card);  }
+  #app1 #formRows .row > td:nth-child(10){width: var(--w-total); }
+
+  /* 入力/UIはセルにフィットさせる（既存の固定px幅を上書き） */
+  #app1 #formRows .row input,
+  #app1 #formRows .row select{
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* 数値系は右寄せ、詳細は左寄せ（見やすさ調整） */
+  #app1 #formRows .row input[type="text"]{ text-align: right; }
+  #app1 #formRows .row input.detail{ text-align: left; }
+
+  /* 削除ボタンの見た目を安定化 */
+  #app1 .delete-btn{
+    width: 32px; height: 32px; line-height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+}
+
+
 </style>
+
+
+
+
+
+
+
+
+
 
 
 </head>
