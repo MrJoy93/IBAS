@@ -2534,13 +2534,6 @@ function calculateBack() {
   document.getElementById("detail").value = detailLines.join("\n");
 }
 
-    setTimeout(() => {
-      document.querySelectorAll('.hide-for-print').forEach(row => {
-        row.classList.remove('hide-for-print');
-      });
-      document.head.removeChild(style);
-    }, 1000);
-
 document.addEventListener('DOMContentLoaded', function () {});
 
 function restoreCheckboxes() {
