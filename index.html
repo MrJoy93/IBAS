@@ -736,6 +736,16 @@ html { scroll-behavior: smooth; }
     transform-origin: 50% 50%;               /* 中心で回転（はみ出し防止に安定） */
   }
 
+  /* PCでは必ず回転なし */
+  body:not(.mobile-print) #result {
+    transform: none !important;
+  }
+  /* モバイル印刷時だけ180°回転 */
+  body.mobile-print #result {
+    transform: rotate(180deg) translateZ(0) !important;
+    transform-origin: 50% 50% !important;
+  }
+
 }
 
 
@@ -3549,6 +3559,27 @@ function printResult() {
   if (active === 'app1' && typeof calculate === 'function') calculate();
   if (active === 'app2' && typeof calculate === 'function') calculate();   // ← ここ！
   if (active === 'app3' && typeof dailyCalc === 'function') dailyCalc();
+
+  function isMobileOS() {
+  const ua = navigator.userAgent || "";
+  const isiOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  return isiOS || isAndroid;
+}
+
+function printResult(){
+  if (typeof activateTab === 'function') activateTab('app2');
+  if (typeof calculate === 'function')   calculate();
+
+  const mobile = isMobileOS();
+  if (mobile) document.body.classList.add('mobile-print');
+
+  requestAnimationFrame(() => {
+    window.print();
+    // 印刷ダイアログを閉じたあとクラスを戻す
+    setTimeout(() => document.body.classList.remove('mobile-print'), 0);
+  });
+}
 
   window.print();
 }
