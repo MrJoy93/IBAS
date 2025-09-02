@@ -505,6 +505,33 @@ html{ scroll-behavior: smooth; }
   }
 }
 
+/* ==== Mobile scroll stability patch ==== */
+@media (max-width:700px){
+  /* 1) 重いブラーを切る（固定ヘッダー/サブナビの再描画負荷を下げる） */
+  .tabs,
+  #app1-nav,
+  #app2-nav{
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(24,24,48,.98) !important; /* 見た目はほぼ据え置き */
+    box-shadow: 0 2px 16px rgba(22,26,40,.5);  /* 影は軽めに */
+  }
+
+  /* 2) モバイルでは CSS のスムーススクロールを無効化（指操作と衝突を避ける） */
+  html{ scroll-behavior: auto !important; }
+
+  /* 3) 垂直パンを明示（ブラウザに“縦スクロールだよ”と伝える） */
+  body, #app1, #app2, #app3, .content{
+    touch-action: pan-y !important;
+  }
+
+  /* 4) iOS の過度なバウンス抑制（対応ブラウザのみ効く） */
+  body{
+    overscroll-behavior-y: contain;
+  }
+}
+
+
 
 </style>
 
