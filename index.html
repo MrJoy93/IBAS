@@ -3544,45 +3544,38 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function handlePrint() {
-    if (typeof calculate === 'function') {
-      // 最新の計算結果を #result に反映
-      calculate();
-    }
-    window.print();
-  }
-
-  
-function printResult() {
-  const active = document.querySelector('.tab.active')?.dataset.target;
-
-  if (active === 'app1' && typeof calculate === 'function') calculate();
-  if (active === 'app2' && typeof calculate === 'function') calculate();   // ← ここ！
-  if (active === 'app3' && typeof dailyCalc === 'function') dailyCalc();
-
-  function isMobileOS() {
+// --- モバイルOS判定（PCのタッチ端末を誤検出しにくい版） ---
+function isMobileOS() {
   const ua = navigator.userAgent || "";
   const isiOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /Android/.test(ua);
   return isiOS || isAndroid;
 }
 
-function printResult(){
-  if (typeof activateTab === 'function') activateTab('app2');
-  if (typeof calculate === 'function')   calculate();
+// --- 印刷メイン ---
+function printResult() {
+  // アクティブタブに応じて結果を最新化（#result を埋める）
+  const active = document.querySelector('.tab.active')?.dataset.target;
+  if (active === 'app1' && typeof calculate === 'function') calculate();
+  if (active === 'app2' && typeof calculate === 'function') calculate();
+  if (active === 'app3' && typeof dailyCalc === 'function') dailyCalc();
 
+  // スマホOSのときだけ反転用クラスを一時付与（CSSで body.mobile-print #result{ transform:rotate(180deg) } を適用）
   const mobile = isMobileOS();
   if (mobile) document.body.classList.add('mobile-print');
 
+  // レイアウト反映を待って印刷（2フレーム待つと安定）
   requestAnimationFrame(() => {
-    window.print();
-    // 印刷ダイアログを閉じたあとクラスを戻す
-    setTimeout(() => document.body.classList.remove('mobile-print'), 0);
+    requestAnimationFrame(() => {
+      window.print();
+      // ダイアログ復帰後にクラス戻す
+      setTimeout(() => document.body.classList.remove('mobile-print'), 0);
+    });
   });
 }
 
-  window.print();
-}
+// （任意）旧API互換：古い呼び出し箇所が handlePrint を使っているなら残しておく
+const handlePrint = () => printResult();
 
 </script>
 
