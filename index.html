@@ -1766,7 +1766,7 @@ body[data-active-app="app3"] #app3.active {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
   <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 6.0
+  Ver. 6.1
   </div>
 
 </div> <!-- app3を閉じる -->
@@ -4252,81 +4252,44 @@ window.preparePrint = function preparePrint() {
 <head>
 <meta charset="UTF-8">
 <title>領収書</title>
-<style id="print-css">
-  @media print {
-    @page { size: 90mm 205mm; margin: 0; }
-
-    html, body {
-      width: 90mm; margin: 0; padding: 0; background: #fff;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-
-    /* 保険：#result 以外は不可視 */
-    body * { visibility: hidden !important; }
-    #result, #result * { visibility: visible !important; }
-
-    #result {
-      position: static !important;
-      width: 90mm !important; max-height: 205mm !important;
-      margin: 0 !important; padding: 10px !important;
-      box-sizing: border-box !important; background: #fff !important;
-      text-shadow: none !important; border: none !important; transform: none !important;
-    }
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    width: 90mm;
+    height: 205mm;
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-
-  /* 印刷でも色を保持 */
-  #result, #result * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  #result {
+    width: 90mm !important;
+    max-height: 205mm !important;
+    margin: 0;
+    padding: 10px;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 22px;
+    box-sizing: border-box;
   }
-
-  /* 氏名を少し大きく */
-  #result .castName,
-  #result .name,
-  #result .customer-name{
-    display: inline-block;
-    font-size: 24px;
-    font-weight: 900;
-    letter-spacing: .02em;
-    padding: 6px 10px;
-    margin: 6px 0 12px;
-    border-radius: 10px;
-    background: rgba(0,0,0,.06);
-  }
-
-  /* 最終合計：背景なし＋緑文字（左揃え） */
-  #result .finalAmount{
-    background: none !important;
-    color: #00c853 !important;          /* 緑 */
+  /* --- デザイン強制（任意） --- */
+  #result .finalAmount {
+    color: #00c853 !important;
     font-weight: 900; font-size: 24px;
-    padding: 10px 12px; margin: 14px 0 6px;
-    display: block; text-align: left;
-    box-shadow: none !important; border: none !important;
+    text-align: left;
   }
-
-  /* 合計：背景なし＋青文字（左揃え） */
-  #result .totalAmount{
-    background: none !important;
-    color: #2196f3 !important;          /* 青 */
+  #result .totalAmount {
+    color: #2196f3 !important;
     font-weight: 900; font-size: 24px;
-    padding: 8px 12px; margin: 10px 0;
-    display: block; text-align: left;
-    box-shadow: none !important; border: none !important;
+    text-align: left;
   }
-
-  /* 小計：左揃え（そのまま） */
-  #result .subtotal{
-    color:#43eaff !important; font-weight:800;
-    padding:8px 10px;
-    margin:8px 0 10px;
-    display:block; text-align:left;
+  #result .subtotal {
+    color: #43eaff !important;
+    font-weight: 800;
+    text-align: left;
   }
-
-  #result .right-note  { color:#fff4b7 !important; }
 </style>
-
-
-
 </head>
 <body>
   <div id="result">${html}</div>
