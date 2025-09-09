@@ -4289,7 +4289,7 @@ window.preparePrint = function () {
     }
     /* ★ 反転時のみ下側の白余白を 20mm 縮める */
     .rotate180 #page {
-      margin-bottom: -10mm;
+      margin-bottom: -100mm;
     }
 
     /* 中身：スケールで拡大。見た目は 90×205mm のまま収まる */
@@ -4449,6 +4449,103 @@ function printEnvelope(category) {
   w.document.close(); w.focus(); w.print(); w.close();
 }
 
+
+
+/**
+ * 子ウィンドウで安全に印刷する（画面は非表示＆自動クローズ）
+ * @param {string} innerHTML - #result 等の中身
+ * @param {object} opts
+ *   - scale: 見た目拡大倍率
+ *   - rotateOnMobile: スマホ時だけ180°回転
+ *   - trimBottomMM: 反転時だけ下余白をマイナスするmm量（例:20）
+ */
+window.openPrintSilently = function(innerHTML, opts = {}) {
+  const {
+    scale = 1.06,
+    rotateOnMobile = true,
+    trimBottomMM = 20
+  } = opts;
+
+  const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+  const rotate = rotateOnMobile && isSmartphone;
+
+  // 同じ名前で開いて“増殖防止＆再利用”
+  const w = window.open('', 'PRINT', 'width=480,height=800,noopener,noreferrer');
+  w.document.open();
+  w.document.write(`<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+  <title>print</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { --scale:${scale}; }
+
+    @page { size: 90mm 205mm; margin: 0; }
+
+    /* 画面表示は完全に隠す（プレビューやタブ切替時に中身が見えない） */
+    @media screen {
+      html, body, #page, #result { visibility: hidden !important; opacity: 0 !important; }
+    }
+
+    /* 印刷時のみ可視化 */
+    @media print {
+      html, body, #page, #result { visibility: visible !important; opacity: 1 !important; }
+    }
+
+    html, body {
+      margin: 0; padding: 0; background: #fff;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+
+    /* 用紙ラッパ */
+    #page {
+      width: 90mm; min-height: 205mm; margin: 0 auto;
+    }
+    /* 反転時だけ“下側余白”を詰める */
+    .rotate180 #page { margin-bottom: -${trimBottomMM}mm; }
+
+    /* 中身は拡大しても仕上がりは90x205mmに収める */
+    #result {
+      width: calc(90mm / var(--scale));
+      min-height: calc(205mm / var(--scale));
+      margin: 0 auto; box-sizing: border-box; padding: 6mm;
+      transform: scale(var(--scale));
+      transform-origin: top center;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .rotate180 #result {
+      transform: rotate(180deg) scale(var(--scale));
+      transform-origin: center center;
+    }
+
+    /* 色保持（子要素まで） */
+    #result, #result * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  </style>
+</head>
+<body class="${rotate ? 'rotate180' : ''}">
+  <div id="page"><div id="result">${innerHTML}</div></div>
+  <script>
+    // 子ウィンドウ側：印刷後 or キャンセル後にできるだけ素早く閉じる
+    function tryClose(){ try{ window.close(); }catch(e){} }
+    window.onload = function(){
+      // 印刷呼び出し
+      try { window.focus(); window.print(); } catch(e){}
+      // 代表的イベント
+      window.onafterprint = tryClose;
+      // iOS対策：フォーカス復帰や可視化状態の変化でも閉じる
+      window.addEventListener('focus', tryClose, { once:true });
+      document.addEventListener('visibilitychange', function(){
+        if (!document.hidden) tryClose();
+      });
+      // 最終保険：数秒後に強制クローズ試行
+      setTimeout(tryClose, 2500);
+    };
+  <\/script>
+</body></html>`);
+  w.document.close();
+};
 
 
 
