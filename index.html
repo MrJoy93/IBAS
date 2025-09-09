@@ -1150,7 +1150,6 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   }
 
   /* ---------- app2：サイドナビ非表示 + ナビ/フォームをコンパクト ---------- */
-  #app2-sideNav{ display:none; }
 
   #app2-sideNav {
   display:block !important;
@@ -1492,9 +1491,7 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 <tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td><span id="HEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('HE')">出力</button></td></tr>
 <tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td><span id="PBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('PB')">出力</button></td></tr>
 <tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td><span id="Xtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('X')">出力</button></td></tr>
-<tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td><span id="Ztotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('Z')">出力</button></td></tr>
-
-    <tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td id="Ztotal">0</td></tr>
+<tr></tr> style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td><span id="Ztotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('Z')">出力</button></td></tr>
       <tr>
        <td><strong>合計</strong></td>
        <td id="totalCountCell">
@@ -1527,7 +1524,7 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 </nav>
 
 
-<div id="app2" class="content" style="display:none;">
+<div id="app2" class="content">
 
   <div style="text-align: center; margin-top: 30px;">
 
@@ -1808,7 +1805,7 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
   <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 6.1.1 Test1
+  Ver. 6.1.1 Test2
   </div>
 
 </div> <!-- app3を閉じる -->
@@ -2125,29 +2122,37 @@ function addRow() {
 
 
 
-document.addEventListener('keydown', function (e) {if (e.key === 'Enter') {
-    const target = e.target;
-    if (target.matches('input, select')) {
-      e.preventDefault();
+// Enter → 次フィールド（現在アクティブなAPP内で、表示要素のみ）
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
 
-      // アクティブタブの中身だけを対象に
-      const targetId = activeTab?.dataset.target;
-      const scope = targetId ? document.getElementById(targetId) : document.body;
+  const target = e.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (!target.matches('input, select, textarea')) return;
 
-      // 非表示の要素を除外
-      const formElements = Array.from(
-        scope.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled])')
-      ).filter(el => el.offsetParent !== null);
+  e.preventDefault();
 
-      const index = formElements.indexOf(target);
-      if (index > -1 && index < formElements.length - 1) {
-        const next = formElements[index + 1];
-        next.focus();
-        if (typeof next.select === 'function') next.select();
-      }
-    }
+  // いまのAPP ID（app1/app2/app3）を body 属性から取得
+  const activeAppId = document.body.getAttribute('data-active-app') || '';
+  // スコープは「その入力が属する .content」> それが無ければ activeApp > それも無ければ document
+  const scope =
+    target.closest('.content') ||
+    document.getElementById(activeAppId) ||
+    document.body;
+
+  // 非表示(=offsetParentがnull)は除外して並び順どおりに移動
+  const formElements = Array.from(
+    scope.querySelectorAll('input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled])')
+  ).filter(el => el.offsetParent !== null);
+
+  const index = formElements.indexOf(target);
+  const next = formElements[index + 1];
+  if (next) {
+    next.focus();
+    if (typeof next.select === 'function') next.select();
   }
 });
+
 
 function updateRowColor(select) {
   const row = select.closest("tr");
@@ -3363,18 +3368,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   attachCommaFormatApp1and3();
 
-  // Enterキーで次の入力欄へ
-  const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
-  inputs.forEach((input, index) => {
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const next = inputs[index + 1];
-        if (next) next.focus();
-      }
-    });
-  });
-
     const historyList = document.getElementById('historyList');
   if (historyList) {
     historyList.innerHTML = localStorage.getItem('historyList') || '';
@@ -4115,41 +4108,31 @@ document.addEventListener('DOMContentLoaded', () => {
     catTd.textContent = nameText; // 例：UK
     tr.insertBefore(catTd, tr.children[1]);
   });
+ });
+
+
+
+// 計算ボタン
+document.getElementById('side-calc')?.addEventListener('click', () => {
+  confirmAndCalculate(new Event('submit'));
 });
 
-
-
-  // 計算・出力・クリア・履歴スクロール（既存関数をそのまま利用）
-  document.getElementById('side-calc')?.addEventListener('click', () => {
-    // confirmAndCalculate は既存の submit ハンドラ:contentReference[oaicite:4]{index=4}
-    // サイドナビ「履歴」クリック時：サブナビに隠れないように補正してスクロール
+// 履歴スクロール（単独で1回だけ登録）
 document.getElementById('side-scroll-history')?.addEventListener('click', () => {
   const target = document.getElementById('app2-historySection');
-  if (target) {
-    const navHeight = 140; // タブ(80px) + サブナビ(50px) + 余白10px
-    const y = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
-    window.scrollTo({ top: y, behavior: 'smooth' });
-  }
+  if (!target) return;
+  const navHeight = 140;
+  const y = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
+  window.scrollTo({ top: y, behavior: 'smooth' });
 });
-    confirmAndCalculate(new Event('submit'));
-  });
-  document.getElementById('side-print')?.addEventListener('click', () => {
-  if (typeof window.preparePrint === 'function') return window.preparePrint();
-  alert('印刷機能が初期化されていません（preparePrint が見つかりません）');
-  });
-  document.getElementById('side-clear')?.addEventListener('click', clearApp2Inputs);
-  document.getElementById('side-scroll-history')?.addEventListener('click', () => {
-    document.getElementById('app2-historySection')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
 
-  // app3 サブナビのスクロール処理
-document.querySelectorAll('#app3-nav button[data-target]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const id = btn.getAttribute('data-target');
-    scrollWithOffset(id);
+  document.getElementById('side-print')?.addEventListener('click', () => {
+    try {
+      window.preparePrint(); // #resultを生成→サイレント印刷
+    } catch (e) {
+      alert('印刷処理でエラーが発生しました: ' + (e?.message ?? e));
+    }
   });
-});
 
 /* ========= タブ切替：堅牢版（競合に強い） ================================================================================== */
 /* ========= タブ切替 + 各APPのスクロール記憶 =============================================================================== */
@@ -4259,117 +4242,102 @@ document.querySelectorAll('#app3-nav button[data-target]').forEach(btn => {
 
 /**
  * 子ウィンドウで安全に印刷する（画面は非表示＆自動クローズ）
- * @param {string} innerHTML - #result 等の中身
- * @param {object} opts
- *   - scale: 見た目拡大倍率
- *   - rotateOnMobile: スマホ時だけ180°回転
- *   - trimBottomMM: 反転時だけ下余白をマイナスするmm量（例:20）
+ * @param {string} innerHTML  印刷したいHTML（#resultの中身など）
+ * @param {object} opts       { scale, rotateOnMobile, trimBottomMM }
  */
 window.openPrintSilently = function(innerHTML, opts = {}) {
-  const {
-    scale = 1.06,
-    rotateOnMobile = true,
-    trimBottomMM = 20
-  } = opts;
-
+  const { scale = 1.06, rotateOnMobile = true, trimBottomMM = 20 } = opts;
   const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
   const rotate = rotateOnMobile && isSmartphone;
 
-  // 同じ名前で開いて“増殖防止＆再利用”
-  const w = window.open('', 'PRINT', 'width=480,height=800,noopener,noreferrer');
-  w.document.open();
-  w.document.write(`<!doctype html>
+  const printHTML = `<!doctype html>
 <html lang="ja"><head><meta charset="utf-8">
   <title>print</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     :root { --scale:${scale}; }
-
     @page { size: 90mm 205mm; margin: 0; }
-
-    /* 画面表示は完全に隠す（プレビューやタブ切替時に中身が見えない） */
-    @media screen {
-      html, body, #page, #result { visibility: hidden !important; opacity: 0 !important; }
+    @media screen { html,body,#page,#result{ visibility:hidden!important; opacity:0!important; } }
+    @media print  { html,body,#page,#result{ visibility:visible!important; opacity:1!important; } }
+    html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #page{ width:90mm; min-height:205mm; margin:0 auto; }
+    .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
+    #result{
+      width:calc(90mm/var(--scale)); min-height:calc(205mm/var(--scale));
+      margin:0 auto; box-sizing:border-box; padding:6mm;
+      transform:scale(var(--scale)); transform-origin:top center;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
-
-    /* 印刷時のみ可視化 */
-    @media print {
-      html, body, #page, #result { visibility: visible !important; opacity: 1 !important; }
-    }
-
-    html, body {
-      margin: 0; padding: 0; background: #fff;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-
-    /* 用紙ラッパ */
-    #page {
-      width: 90mm; min-height: 205mm; margin: 0 auto;
-    }
-    /* 反転時だけ“下側余白”を詰める */
-    .rotate180 #page { margin-bottom: -${trimBottomMM}mm; }
-
-    /* 中身は拡大しても仕上がりは90x205mmに収める */
-    #result {
-      width: calc(90mm / var(--scale));
-      min-height: calc(205mm / var(--scale));
-      margin: 0 auto; box-sizing: border-box; padding: 6mm;
-      transform: scale(var(--scale));
-      transform-origin: top center;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-    .rotate180 #result {
-      transform: rotate(180deg) scale(var(--scale));
-      transform-origin: center center;
-    }
-
-    /* 色保持（子要素まで） */
-    #result, #result * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
+    .rotate180 #result{ transform:rotate(180deg) scale(var(--scale)); transform-origin:center center; }
+    #result, #result *{ -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
   </style>
 </head>
 <body class="${rotate ? 'rotate180' : ''}">
   <div id="page"><div id="result">${innerHTML}</div></div>
   <script>
-    // 子ウィンドウ側：印刷後 or キャンセル後にできるだけ素早く閉じる
     function tryClose(){ try{ window.close(); }catch(e){} }
     window.onload = function(){
-      // 印刷呼び出し
-      try { window.focus(); window.print(); } catch(e){}
-      // 代表的イベント
+      try{ window.focus(); window.print(); }catch(e){}
       window.onafterprint = tryClose;
-      // iOS対策：フォーカス復帰や可視化状態の変化でも閉じる
       window.addEventListener('focus', tryClose, { once:true });
-      document.addEventListener('visibilitychange', function(){
-        if (!document.hidden) tryClose();
-      });
-      // 最終保険：数秒後に強制クローズ試行
+      document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
       setTimeout(tryClose, 2500);
     };
   <\/script>
-</body></html>`);
-  w.document.close();
+</body></html>`;
+
+  // ① 通常パス：新規ウィンドウを開いて doc.write
+  let w = null;
+  try {
+    w = window.open('', 'PRINT', 'width=480,height=800'); // ← noopener/noreferrer を外す
+  } catch(_) {}
+
+  if (w && w.document) {
+    try {
+      w.document.open(); w.document.write(printHTML); w.document.close();
+      return;
+    } catch(_) {}
+  }
+
+  // ② フェールバック：Blob URL で開く（w が null でもOK）
+  try {
+    const blob = new Blob([printHTML], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank'); // 子HTML内の onload が print & close を実行
+    // Blob URL は子側が閉じると解放されるので特に親側での cleanup は不要
+    return;
+  } catch(_) {}
+
+  // ③ 最終保険：iframe で印刷（iOS では非推奨だが PC向けの保険）
+  try {
+    iframe.style.position = 'fixed';
+    iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+    doc.open(); doc.write(printHTML); doc.close();
+    setTimeout(() => {
+      try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(_){}
+      setTimeout(() => { try { iframe.remove(); } catch(_){} }, 1500);
+    }, 50);
+  } catch(_) {}
 };
 
-
-/* ====== 印刷：#result を別ウィンドウから出力 ====== */
+/* ====== 印刷：#result をサイレント出力 ====== */
 window.preparePrint = function () {
   if (typeof window.showApp === 'function') window.showApp('app2');
   if (typeof window.calculate === 'function') window.calculate();
 
-  const result = document.getElementById('result');
-  const html = (result?.innerHTML || '').trim();
+  const html = (document.getElementById('result')?.innerHTML || '').trim();
   if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
 
   window.openPrintSilently(html, {
-    scale: 1.06,          // 大きさ微調整
+    scale: 1.06,          // 少し大きく
     rotateOnMobile: true, // スマホ時のみ180°回転
     trimBottomMM: 20      // 反転時のみ下20mm詰め
   });
 };
 
+/* ====== 封筒印刷（サイレント印刷に統一） ====== */
 function printEnvelope(category) {
   let count, amount, title = category;
 
@@ -4377,9 +4345,7 @@ function printEnvelope(category) {
     const confirmed = confirm("伝票の記入はすべて完了していますか？");
     if (!confirmed) return;
 
-    const countVal = parseInt(
-      document.getElementById("totalCountValue")?.textContent || "0", 10
-    );
+    const countVal = parseInt(document.getElementById("totalCountValue")?.textContent || "0", 10);
     const bottles = isNaN(countVal) ? 0 : countVal;
 
     amount = bottles * 1000;
@@ -4418,15 +4384,11 @@ function printEnvelope(category) {
       </div>
     `.trim();
 
-    window.openPrintSilently(inner, {
-      scale: 1.06,
-      rotateOnMobile: true,
-      trimBottomMM: 20
-    });
+    window.openPrintSilently(inner, { scale: 1.06, rotateOnMobile: true, trimBottomMM: 20 });
     return;
   }
 
-  // --- 個別カテゴリ封筒 ---
+  // 個別カテゴリ封筒
   count  = document.getElementById(category + "count")?.textContent || "0";
   amount = document.getElementById(category + "total")?.textContent || "0";
 
@@ -4436,12 +4398,11 @@ function printEnvelope(category) {
     <div style="margin-top:20mm;text-align:center;font-size:14pt;">（人数: ${count}）</div>
   `.trim();
 
-  window.openPrintSilently(inner, {
-    scale: 1.06,
-    rotateOnMobile: true,
-    trimBottomMM: 20
-  });
+  window.openPrintSilently(inner, { scale: 1.06, rotateOnMobile: true, trimBottomMM: 20 });
 }
+
+
+
 
 
 
