@@ -4258,41 +4258,30 @@ window.preparePrint = function preparePrint() {
     padding: 0;
     width: 90mm;
     height: 205mm;
-    background: #fff !important;
-    color: #000 !important;
+    background: #fff;
+    color: #000;
+    font-size: 16px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   #result {
-    width: 90mm !important;
-    max-height: 205mm !important;
-    margin: 0;
+    display: block;
+    width: 90mm;
+    min-height: 205mm;
+    background: #fff;
+    color: #000;
     padding: 10px;
-    background: #fff !important;
-    color: #000 !important;
-    font-size: 22px;
     box-sizing: border-box;
-  }
-  /* --- デザイン強制（任意） --- */
-  #result .finalAmount {
-    color: #00c853 !important;
-    font-weight: 900; font-size: 24px;
-    text-align: left;
-  }
-  #result .totalAmount {
-    color: #2196f3 !important;
-    font-weight: 900; font-size: 24px;
-    text-align: left;
-  }
-  #result .subtotal {
-    color: #43eaff !important;
-    font-weight: 800;
-    text-align: left;
+    border: 1px solid #000;
   }
 </style>
 </head>
 <body>
-  <div id="result">${html}</div>
+  <div id="result">
+    <h1>テスト印刷</h1>
+    <p>これはiPhone Safariのテスト用テキストです。</p>
+    ${html}
+  </div>
 </body>
 </html>`;
 
