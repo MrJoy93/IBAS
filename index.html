@@ -59,6 +59,12 @@ body {
   letter-spacing: 0.02em;
 }
 
+body[data-active-app="app1"],
+body[data-active-app="app2"],
+body[data-active-app="app3"]{
+  padding-top: var(--tabs-h);
+}
+
 /* --- タブバー --- */
 .tabs {
   display: flex;
@@ -102,7 +108,7 @@ body {
   background: rgba(30, 38, 60, 0.78);
   color: #eaf6ff;
   padding: 30px 5vw 80px 5vw;
-  padding-top: 140px; /* タブ + ナビの合計高さ分を確保 */
+  padding-top: calc(var(--tabs-h) + var(--subnav-h) - 50px ) !important;
   min-height: 300px;
   width: 100%;
   max-width: none !important;
@@ -282,11 +288,8 @@ input:focus, select:focus, textarea:focus {
 
 /* --- 固定ナビ --- */
 #app1-nav {
-  position: fixed;
-  top: 80px;         /* タブのすぐ下に配置 */
   left: 0;
   right: 0;
-  height: 50px;      /* 高さを固定 */
   margin: 0 auto;
   z-index: 1900;
   background: rgba(0,34,43,0.95);
@@ -296,9 +299,6 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 2px 12px #00f5ff44;
   border-bottom: 2px solid #00f5ff33;
 }
-
-
-body[data-active-app="app3"] #app3 { padding-top: 140px; }
 
 #app1-nav button {
   background: linear-gradient(90deg, #009be6 40%, #072259 100%);
@@ -599,11 +599,8 @@ input:focus, select:focus {
 }
 
 #app2-nav {
-  position: fixed;
-  top: 80px;
   left: 0;
   right: 0;
-  height: 50px;
   margin: 0 auto;
   z-index: 1900;
   background: rgba(0,34,43,0.95);
@@ -633,11 +630,8 @@ input:focus, select:focus {
 }
 
 #app3-nav {
-  position: fixed;
-  top: 80px;
   left: 0;
   right: 0;
-  height: 50px;
   margin: 0 auto;
   z-index: 1900;
   background: rgba(0,34,43,0.95);
@@ -970,6 +964,8 @@ body[data-active-app="app3"] #app2-sideNav {
   /* 英数字=Orbitron、日本語=M PLUS 2（なければ一般的なJPフォント） */
   --ff-orbi-jp: 'Orbitron', 'M PLUS 2', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', sans-serif;
   --subnav-bg: rgba(0, 34, 43, 0.95);
+    --tabs-h: 56px;      /* .tabs の実高（JSで上書き） */
+  --subnav-h: 50px;    /* サブナビの実高（SPでは後で40pxに） */
 }
 
 /* まず body に統一 */
@@ -1024,6 +1020,45 @@ body[data-active-app="app3"] #app3.active {
   vertical-align: middle; /* 数字と高さを揃える */
 }
 
+/* サブナビ共通（PC/スマホ共通でタブ直下） */
+.subnav{
+  position: fixed;
+  left: 0; right: 0;
+  top: var(--tabs-h);          /* ← タブの直下 */
+  height: var(--subnav-h);
+  z-index: 1900;
+  display: none;               /* アクティブ時のみ表示（下で切替） */
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,34,43,0.95);
+  box-shadow: 0 2px 12px #00f5ff44;
+  border-bottom: 2px solid #00f5ff33;
+}
+
+/* ボタン共通 */
+.subnav button{
+  background: linear-gradient(90deg, #009be6 40%, #072259 100%);
+  color: #fff; border: none; border-radius: 8px;
+  padding: 9px 28px; margin: 0 16px; font-size: 19px;
+  letter-spacing: 0.07em; box-shadow: 0 2px 8px #00f5ff66;
+  transition: background .25s, box-shadow .19s;
+}
+.subnav button:hover{
+  background:#00f5ff; color:#121212; box-shadow:0 2px 22px #00f5ff88;
+}
+
+/* アクティブアプリに応じて該当サブナビだけ表示 */
+#app1-nav, #app2-nav, #app3-nav{ display:none; }
+body[data-active-app="app1"] #app1-nav{ display:flex !important; }
+body[data-active-app="app2"] #app2-nav{ display:flex !important; }
+body[data-active-app="app3"] #app3-nav{ display:flex !important; }
+
+#app1-nav, #app2-nav, #app3-nav{
+  position: fixed;
+  left: 0; right: 0;
+  height: var(--subnav-h);
+}
+
 /* =========================================================
    MOBILE (<=700px) — 統合版（app1/app2/app3）
    これ1つでOK。既存の max-width:700px ブロックは削除してOK。
@@ -1034,8 +1069,7 @@ body[data-active-app="app3"] #app3.active {
   .tabs{ font-size:15px; }
   .tab{ font-size:15px; padding:9px 0; }
   .content{
-    padding: 20px 12px 110px 12px !important; /* 側&下はコンパクト */
-    padding-top: 140px !important;            /* タブ+サブナビ分 */
+    padding: calc(var(--tabs-h) + var(--subnav-h) - 40px ) 12px 110px 12px !important;
   }
   th, td{ font-size:15px; }
   #app1 .group{ padding:12px 6px 8px 6px; margin:10px 0; border-radius:12px; }
@@ -1121,8 +1155,8 @@ body[data-active-app="app3"] #app3.active {
   #app2-sideNav {
   display:block !important;
   position:fixed;
-  top:140px;
-  right:8px;
+  top:82px !important;
+  right:4px !important;
   width:100px;   /* ←スマホ用に縮める */
   padding:8px;
   border-radius:10px;
@@ -1144,6 +1178,7 @@ body[data-active-app="app3"] #app3.active {
     height:32px; padding:0 10px; font-size:14px; line-height:1;
     min-width:0; margin:2px 4px; white-space:nowrap;
   }
+  
 
   /* app2/app3：フォーム部品の薄型化（iOSズーム回避で16px維持） */
   #app2 input[type="text"], #app2 input[type="number"], #app2 select,
@@ -1166,11 +1201,6 @@ body[data-active-app="app3"] #app3.active {
   #app3 .group{ padding:10px 10px 8px !important; margin:10px 0 !important; }
   #app3 .group h3{ font-size:18px; margin:0 0 10px; }
 
-      /* サブナビ共通デザイン */
-  #app1-nav, #app2-nav, #app3-nav {
-    height: 40px;                /* 高さを縮める */
-    padding: 4px 6px;            /* 上下の余白を小さく */
-  }
   #app1-nav button, #app2-nav button, #app3-nav button {
     height: 32px;                /* ボタンも薄型に */
     padding: 0 10px;
@@ -1266,6 +1296,11 @@ body[data-active-app="app3"] #app3.active {
     line-height: 1.2;
   }
 
+  :root{
+    --tabs-h: 40px;   /* SP想定（.tab: padding 9px / fs 15px）*/
+    --subnav-h: 40px; /* SPのサブナビ実高 */
+  }
+
 }
 
 
@@ -1299,6 +1334,12 @@ body[data-active-app="app3"] #app3.active {
   body[data-active-app="app2"] #app2 {
     margin-right: 290px !important;
   }
+
+    .subnav {
+    top: calc(var(--tabs-h) + 4px) !important;   /* 好みで 2〜6px 調整 */
+    padding-top: 4px; height: calc(var(--subnav-h) + 4px);
+  }
+
 }
 
 
@@ -1337,6 +1378,13 @@ body[data-active-app="app3"] #app3.active {
   <button data-target="app2-resultSection">計算結果表示</button>
   <button data-target="app2-historySection">履歴</button>
 </nav>
+
+  <!-- app2 用サブナビ（最初は非表示） -->
+  <nav id="app3-nav" class="subnav">
+   <button data-target="app3-inputSection">記入</button>
+   <button data-target="app3-profitSection">利益</button>
+   <button data-target="app3-envelopeSection">封筒</button>
+  </nav>
 
 <div id="app1" class="content active">
  <section id="editSection">
@@ -1671,13 +1719,7 @@ body[data-active-app="app3"] #app3.active {
 
 <div id="app3" class="content">
 
-  <nav id="app3-nav" class="subnav">
-   <button data-target="app3-inputSection">記入</button>
-   <button data-target="app3-profitSection">利益</button>
-   <button data-target="app3-envelopeSection">封筒</button>
-  </nav>
-
-  <div class="group no-bg">
+<div class="group no-bg">
     <label><span>開始時金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="updateCalculations()"></label>
   </div>
 
@@ -1766,7 +1808,7 @@ body[data-active-app="app3"] #app3.active {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
   <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 6.1.1
+  Ver. 6.1.1 Test1
   </div>
 
 </div> <!-- app3を閉じる -->
@@ -4212,91 +4254,40 @@ document.querySelectorAll('#app3-nav button[data-target]').forEach(btn => {
 })();
 
 
-/* ====== 印刷：#result を見えない iframe から1回だけ出力 ====== */
-window.preparePrint = function preparePrint() {
-    // 追加ここから：出力時は即計算（確認ダイアログなし）
-  if (typeof window.showApp === 'function') window.showApp('app2'); // 念のためapp2を前面に
-  if (typeof window.calculate === 'function') window.calculate();   // 確認なしで計算
+
+/* ====== 印刷：#result を別ウィンドウから出力 ====== */
+window.preparePrint = function () {
+  // 念のため前面＆即計算
+  if (typeof window.showApp === 'function') window.showApp('app2');
+  if (typeof window.calculate === 'function') window.calculate();
+
   const result = document.getElementById('result');
   const html = (result?.innerHTML || '').trim();
-  if (!html) {
-    alert('印刷する内容（#result）がありません。先に「計算」で結果を出してください。');
-    return;
-  }
+  if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
 
-  // 見えない iframe
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(iframe);
-
-  // 1回だけ実行するガード
-  let done = false;
-  const cleanup = () => { try { iframe.remove(); } catch(_){} };
-  const doPrintOnce = () => {
-    if (done) return;
-    done = true;
-    try { iframe.contentWindow.focus(); } catch(_) {}
-    try { iframe.contentWindow.print(); } catch(_) {}
-    setTimeout(cleanup, 300);
-  };
-
-  // iframe に流し込むHTML（※ iframe内には onload/print のスクリプトを書かない）
-  const printHTML = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>領収書</title>
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    width: 90mm;
-    height: 205mm;
-    background: #fff;
-    color: #000;
-    font-size: 16px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  #result {
-    display: block;
-    width: 90mm;
-    min-height: 205mm;
-    background: #fff;
-    color: #000;
-    padding: 10px;
-    box-sizing: border-box;
-    border: 1px solid #000;
-  }
-</style>
-</head>
-<body>
-  <div id="result">
-    <h1>テスト印刷</h1>
-    <p>これはiPhone Safariのテスト用テキストです。</p>
-    ${html}
-  </div>
-</body>
-</html>`;
-
-  // load で1回だけ印刷、失敗時に単一フォールバック
-  iframe.addEventListener('load', () => setTimeout(doPrintOnce, 30), { once: true });
-
-  if ('srcdoc' in iframe) {
-    iframe.srcdoc = printHTML;
-  } else {
-    const doc = iframe.contentWindow.document;
-    doc.open(); doc.write(printHTML); doc.close();
-  }
-
-  // 念のための単一フォールバック（load が来ない古い環境向け）
-  setTimeout(doPrintOnce, 1200);
+  const w = window.open('', 'PRINT', 'width=480,height=800');
+  w.document.open();
+  w.document.write(`<!doctype html>
+  <html lang="ja"><head><meta charset="utf-8">
+    <title>領収書</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      @page { size: 90mm 205mm; margin: 0; }
+      html,body { margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      #result { width:90mm; min-height:205mm; box-sizing:border-box; padding:10px; }
+    </style>
+  </head>
+  <body><div id="result">${html}</div>
+  <script>
+    window.onload = function(){
+      window.focus(); window.print();
+      window.onafterprint = function(){ window.close(); };
+      // iOS対策：念のためタイムアウトでも閉じる
+      setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
+    };
+  <\/script>
+  </body></html>`);
+  w.document.close();
 };
 
 function printEnvelope(category) {
