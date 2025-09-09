@@ -4257,7 +4257,7 @@ document.querySelectorAll('#app3-nav button[data-target]').forEach(btn => {
 
 /* ====== 印刷：#result を別ウィンドウから出力 ====== */
 window.preparePrint = function () {
-  // 念のため前面＆即計算
+  // 念のため計算
   if (typeof window.showApp === 'function') window.showApp('app2');
   if (typeof window.calculate === 'function') window.calculate();
 
@@ -4265,6 +4265,10 @@ window.preparePrint = function () {
   const html = (result?.innerHTML || '').trim();
   if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
 
+  // ★スマホ判定（iPhone/Android Mobile のみ）
+  const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+
+  // 新しいウィンドウを開く
   const w = window.open('', 'PRINT', 'width=480,height=800');
   w.document.open();
   w.document.write(`<!doctype html>
@@ -4273,22 +4277,53 @@ window.preparePrint = function () {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
       @page { size: 90mm 205mm; margin: 0; }
-      html,body { margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      #result { width:90mm; min-height:205mm; box-sizing:border-box; padding:10px; }
+
+      html, body {
+        margin: 0; padding: 0;
+        background: #fff;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+
+      /* 用紙ぴったりに配置 */
+      #page {
+        width: 90mm; min-height: 205mm;
+        display: grid; place-items: center;   /* 中央基準で回転させるため */
+      }
+
+      #result {
+        width: 90mm; min-height: 205mm;
+        box-sizing: border-box; padding: 10px;
+        background: #fff; color: #000;
+        font-size: 22px; font-family: Arial, sans-serif;
+      }
+
+      /* ★スマホ印刷時のみ 180°反転 */
+      .rotate180 #result {
+        transform: rotate(180deg);
+        transform-origin: center center;
+      }
+
+      /* 見出し色など（任意） */
+      #result .finalAmount { color:#00c853 !important; font-weight:900; font-size:24px; text-align:left; }
+      #result .totalAmount { color:#2196f3 !important; font-weight:900; font-size:22px; text-align:left; }
+      #result .subtotal     { color:#43eaff !important; font-weight:800; }
     </style>
   </head>
-  <body><div id="result">${html}</div>
-  <script>
-    window.onload = function(){
-      window.focus(); window.print();
-      window.onafterprint = function(){ window.close(); };
-      // iOS対策：念のためタイムアウトでも閉じる
-      setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
-    };
-  <\/script>
+  <body class="${isSmartphone ? 'rotate180' : ''}">
+    <div id="page">
+      <div id="result">${html}</div>
+    </div>
+    <script>
+      window.onload = function(){
+        window.focus(); window.print();
+        window.onafterprint = function(){ window.close(); };
+        setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
+      };
+    <\/script>
   </body></html>`);
   w.document.close();
 };
+</script>
 
 function printEnvelope(category) {
   let count, amount, title = category;
