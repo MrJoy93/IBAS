@@ -1699,9 +1699,9 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
       <button id="deleteSelectedBtn" onclick="deleteSelectedHistory()">選択した履歴を削除</button>
 
       <div class="summary" id="summary">
-        履歴の合計人数: <span id="summaryTotalPeople">0人</span> |
-        合計金額: <span id="summaryTotalAmount">¥0</span> |
-        合計源泉費: <span id="summaryTotalTax">¥0</span>
+        履歴の合計人数:<span id="summaryTotalPeople">0人</span> |
+        合計金額:<span id="summaryTotalAmount">¥0</span> |
+        合計源泉費:<span id="summaryTotalTax">¥0</span>
       </div>
 
     <div class="button-row" style="margin-top: 40px;"><button type="button" class="red-btn" onclick="resetApp('app2', true)">完全クリア</button>
@@ -2698,7 +2698,7 @@ function refreshBottleDropdownsFromHistory() {
       variants.forEach(v => {
         const opt = document.createElement('option');
         opt.value = `__HIST__${v.id}`;
-        opt.textContent = `${detail}（割:${v.split || '-'} / 数量:${v.qty || '-'} / ¥${v.amount.toLocaleString()}）`;
+        opt.textContent = `${detail}（割:${v.split || '-'}/数量:${v.qty || '-'}/¥${v.amount.toLocaleString()}）`;
         opt.dataset.from = 'history';
         opt.dataset.base = detail;
         opt.dataset.split = v.split;
@@ -2828,10 +2828,10 @@ function calculate() {
 const kouseiStoreCovered = (actualKousei === 0) ? 1000 : 0;
 const kouseiCastCovered = 0;
 
-let welfareText = `厚生費: ¥${actualKousei.toLocaleString()} (店舗負担：¥${kouseiStoreCovered.toLocaleString()})`;
+let welfareText = `厚生費: ¥${actualKousei.toLocaleString()} (店舗負担:¥${kouseiStoreCovered.toLocaleString()})`;
 
   // 送迎金額の取得
-  let sendoffAmount = parseInt(document.getElementById('sendoffAmount').value) || 0;
+  let sendoffAmount = parseInt(document.getElementById('sendoffAmount').value)||0;
 
 // 合計 = 小計 - 源泉費 - 厚生費
 let totalAmount = afterGensen - actualKousei;
@@ -2855,9 +2855,9 @@ let finalAmount = totalAmount - adjustedSendoff;
 const castCoveredAmount = adjustedSendoff;
 const storeCoveredAmount = sendoffAmount - adjustedSendoff;
 
-let sendoffText = `送迎：¥${sendoffAmount.toLocaleString()} (本人負担：¥${castCoveredAmount.toLocaleString()}`;
+let sendoffText = `送迎:¥${sendoffAmount.toLocaleString()}(本人負担:¥${castCoveredAmount.toLocaleString()}`;
 if (storeCoveredAmount > 0) {
-  sendoffText += ` 店舗負担：¥${storeCoveredAmount.toLocaleString()})`;
+  sendoffText += `店舗負担:¥${storeCoveredAmount.toLocaleString()})`;
 } else {
   sendoffText += `)`; // ←これを追加すると安心
 }
@@ -2904,9 +2904,9 @@ bottleForms.forEach(form => {
   const bottleAmount = parseInt(amountStr, 10) || 0;
 
   if (bottleAmount > 0 || bottleDetail || split || quantity) {
-    detailsHTML += `<div>ボトル: ¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
-    if (split) detailsHTML += ` / 割: ${split}`;
-    if (quantity) detailsHTML += ` / 数量: ${quantity}`;
+    detailsHTML += `<div>ボトル:¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
+    if (split) detailsHTML += `/割:${split}`;
+    if (quantity) detailsHTML += `/数量:${quantity}`;
     detailsHTML += `）</div>`;
   }
 });
@@ -2930,7 +2930,7 @@ const resultText = `
     <span class="print-only" style="float:right; font-size:14px; margin-left:10px;">←領収書記入</span>
   </div>
   <div class="sendoff"><strong>${sendoffText}</strong></div>
-  <div class="finalAmount print-highlight"><strong>最終合計:</strong> ¥${finalAmount.toLocaleString()}</div>
+  <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
   ${detailsHTML}
 `;
 
@@ -3046,15 +3046,15 @@ document.querySelectorAll('.bottle-form').forEach(form => {
   const amt = amtNum.toLocaleString();
 
   if (det || spl || qty || amtNum) {
-    bottles.push(`¥${amt}（${det}${spl ? " / 割: "+spl : ""}${qty ? " / 数量: "+qty : ""}）`);
+    bottles.push(`¥${amt}（${det}${spl ? "/割:"+spl : ""}${qty ? "/数量:"+qty : ""}）`);
   }
 });
 
   // 確認メッセージ
   let msg = `内容を確認してください。\n\n`
-    + `キャスト名: ${castName}\n`
-    + `体験及び貸出: ${experience}\n`
-    + `送迎金額: ¥${sendoff}\n`
+    + `キャスト名:${castName}\n`
+    + `体験及び貸出:${experience}\n`
+    + `送迎金額:¥${sendoff}\n`
     + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
     + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
 
@@ -3135,7 +3135,7 @@ function restoreFromHistory(button) {
   });
 
   // 送迎金額を復元
-  const sendoffMatch = historyItem.textContent.match(/送迎：¥([\d,]+)/);
+  const sendoffMatch = historyItem.textContent.match(/送迎:¥([\d,]+)/);
   if (sendoffMatch) {
     document.getElementById('sendoffAmount').value = parseInt(sendoffMatch[1].replace(/,/g, ''), 10);
   } else {
@@ -3149,7 +3149,7 @@ function restoreFromHistory(button) {
   document.getElementById('experienceAndRental').checked = experienceChecked;
 
   // ボトル明細を復元
-  const bottleRegex = /ボトル: ¥([\d,]+)（([^/（）]*)(?: ?\/ 割: ?([^\s/（）]+))?(?: ?\/ 数量: ?([^\s/（）]+))?）/g;
+  const bottleRegex = /ボトル:¥([\d,]+)（([^/（）]*)(?: ?\/ 割:?([^\s/（）]+))?(?: ?\/ 数量:?([^\s/（）]+))?）/g;
 
   // 復元用のループ
   const bottles = [];
@@ -3928,6 +3928,8 @@ function clearApp2Inputs() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+document.getElementById('side-clear')?.addEventListener('click', clearApp2Inputs);
+
 function addComma(numStr) {
   if (!numStr) return '';
   // 数字とマイナス以外は除去
@@ -4295,7 +4297,7 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
 #result .totalAmount,
 #result #totalAmount{
   color:#0066cc !important;
-  font-weight:700;
+  font-weight:800;
 }
 
 /* ✅ 最終合計は緑（class と id の両対応） */
@@ -4311,6 +4313,17 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
   color:#000 !important; /* or #444 */
 }
 
+// 例: 4% 小さく
+window.openPrintSilently(html, {
+  scale: 0.90,         // ← ここを 0.90～1.00 で微調整
+  rotateOnMobile: true,
+  trimBottomMM: 20
+});
+
+  #result td .count::after {
+    content: "/";
+    margin: 0 1px; /* 印刷時はさらに詰める */
+
   </style>
 </head>
 <body class="${rotate ? 'rotate180' : ''}">
@@ -4324,6 +4337,7 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
       document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
       setTimeout(tryClose, 2500);
     };
+  
   <\/script>
 </body></html>`;
 
