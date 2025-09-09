@@ -4257,7 +4257,6 @@ document.querySelectorAll('#app3-nav button[data-target]').forEach(btn => {
 
 /* ====== 印刷：#result を別ウィンドウから出力 ====== */
 window.preparePrint = function () {
-  // 念のため計算
   if (typeof window.showApp === 'function') window.showApp('app2');
   if (typeof window.calculate === 'function') window.calculate();
 
@@ -4265,65 +4264,78 @@ window.preparePrint = function () {
   const html = (result?.innerHTML || '').trim();
   if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
 
-  // ★スマホ判定（iPhone/Android Mobile のみ）
+  // スマホ判定（iPhone/Android Mobile）
   const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
 
-  // 新しいウィンドウを開く
   const w = window.open('', 'PRINT', 'width=480,height=800');
   w.document.open();
   w.document.write(`<!doctype html>
-  <html lang="ja"><head><meta charset="utf-8">
-    <title>領収書</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>
-      @page { size: 90mm 205mm; margin: 0; }
+<html lang="ja"><head><meta charset="utf-8">
+  <title>領収書</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { --scale: 1.06; } /* ← ここで“気持ち大きく”倍率を調整（1.03〜1.10で好みに） */
 
-      html, body {
-        margin: 0; padding: 0;
-        background: #fff;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
+    @page { size: 90mm 205mm; margin: 0; }
 
-      /* 用紙ぴったりに配置 */
-      #page {
-        width: 90mm; min-height: 205mm;
-        display: grid; place-items: center;   /* 中央基準で回転させるため */
-      }
+    html, body {
+      margin: 0; padding: 0; background: #fff;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
 
-      #result {
-        width: 90mm; min-height: 205mm;
-        box-sizing: border-box; padding: 10px;
-        background: #fff; color: #000;
-        font-size: 22px; font-family: Arial, sans-serif;
-      }
+    /* 用紙領域のラッパ。反転時だけ上に 20mm つめる */
+    #page {
+      width: 90mm; min-height: 205mm;
+      margin: 0 auto;             /* 中央寄せ */
+    }
+    .rotate180 #page {
+      margin-top: -20mm;          /* ← 反転時だけ上部余白を 20mm 削る */
+    }
 
-      /* ★スマホ印刷時のみ 180°反転 */
-      .rotate180 #result {
-        transform: rotate(180deg);
-        transform-origin: center center;
-      }
+    /* 中身。幅/高さは “スケールで割った値” にして、拡大後の見た目が90×205mmにピッタリ */
+    #result {
+      width: calc(90mm / var(--scale));
+      min-height: calc(205mm / var(--scale));
+      box-sizing: border-box;
+      padding: 6mm;               /* 余白は少しだけ（好みで調整可） */
+      margin: 0 auto;
 
-      /* 見出し色など（任意） */
-      #result .finalAmount { color:#00c853 !important; font-weight:900; font-size:24px; text-align:left; }
-      #result .totalAmount { color:#2196f3 !important; font-weight:900; font-size:22px; text-align:left; }
-      #result .subtotal     { color:#43eaff !important; font-weight:800; }
-    </style>
-  </head>
-  <body class="${isSmartphone ? 'rotate180' : ''}">
-    <div id="page">
-      <div id="result">${html}</div>
-    </div>
-    <script>
-      window.onload = function(){
-        window.focus(); window.print();
-        window.onafterprint = function(){ window.close(); };
-        setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
-      };
-    <\/script>
-  </body></html>`);
+      transform: scale(var(--scale));
+      transform-origin: top center;   /* 上端基準で拡大 */
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    /* スマホ印刷時のみ 180°回転（拡大と合成） */
+    .rotate180 #result {
+      transform: rotate(180deg) scale(var(--scale));
+      transform-origin: center center;
+    }
+
+    /* 色保持（子要素まで） */
+    #result, #result * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* お好みの強調色（必要なら） */
+    #result .finalAmount { color:#00c853 !important; font-weight:900; font-size:24px; text-align:left; }
+    #result .totalAmount { color:#2196f3 !important; font-weight:900; font-size:22px; text-align:left; }
+    #result .subtotal    { color:#43eaff !important; font-weight:800; }
+  </style>
+</head>
+<body class="${isSmartphone ? 'rotate180' : ''}">
+  <div id="page">
+    <div id="result">${html}</div>
+  </div>
+  <script>
+    window.onload = function(){
+      window.focus(); window.print();
+      window.onafterprint = function(){ window.close(); };
+      setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
+    };
+  <\/script>
+</body></html>`);
   w.document.close();
 };
-</script>
 
 function printEnvelope(category) {
   let count, amount, title = category;
