@@ -4255,200 +4255,6 @@ document.querySelectorAll('#app3-nav button[data-target]').forEach(btn => {
 
 
 
-/* ====== 印刷：#result を別ウィンドウから出力 ====== */
-window.preparePrint = function () {
-  if (typeof window.showApp === 'function') window.showApp('app2');
-  if (typeof window.calculate === 'function') window.calculate();
-
-  const result = document.getElementById('result');
-  const html = (result?.innerHTML || '').trim();
-  if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
-
-  const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
-
-  const w = window.open('', 'PRINT', 'width=480,height=800');
-  w.document.open();
-  w.document.write(`<!doctype html>
-<html lang="ja"><head><meta charset="utf-8">
-  <title>領収書</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root { --scale: 1.06; } /* 少し大きく（必要なら 1.03〜1.10 で調整） */
-
-    @page { size: 90mm 205mm; margin: 0; }
-
-    html, body {
-      margin: 0; padding: 0; background: #fff;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-
-    /* 用紙領域（回転時だけ“下側”余白を20mm削る） */
-    #page {
-      width: 90mm; min-height: 205mm;
-      margin: 0 auto;
-    }
-    /* ★ 反転時のみ下側の白余白を 20mm 縮める */
-    .rotate180 #page {
-      margin-bottom: -100mm;
-    }
-
-    /* 中身：スケールで拡大。見た目は 90×205mm のまま収まる */
-    #result {
-      width: calc(90mm / var(--scale));
-      min-height: calc(205mm / var(--scale));
-      box-sizing: border-box;
-      padding: 6mm;
-      margin: 0 auto;
-
-      transform: scale(var(--scale));
-      transform-origin: top center;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    }
-    /* スマホ印刷時のみ反転（拡大と合成） */
-    .rotate180 #result {
-      transform: rotate(180deg) scale(var(--scale));
-      transform-origin: center center;
-    }
-
-    /* 色保持（子要素まで） */
-    #result, #result * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    /* 任意の強調色例 */
-    #result .finalAmount { color:#00c853 !important; font-weight:900; font-size:24px; text-align:left; }
-    #result .totalAmount { color:#2196f3 !important; font-weight:900; font-size:22px; text-align:left; }
-    #result .subtotal    { color:#43eaff !important; font-weight:800; }
-  </style>
-</head>
-<body class="${isSmartphone ? 'rotate180' : ''}">
-  <div id="page">
-    <div id="result">${html}</div>
-  </div>
-  <script>
-    window.onload = function(){
-      window.focus(); window.print();
-      window.onafterprint = function(){ window.close(); };
-      setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
-    };
-  <\/script>
-</body></html>`);
-  w.document.close();
-};
-
-function printEnvelope(category) {
-  let count, amount, title = category;
-
-  if (category === 'ALL') {
-    // 確認ダイアログ
-    const confirmed = confirm("伝票の記入はすべて完了していますか？");
-    if (!confirmed) return;
-
-    // 合計（=本数）
-    const countVal = parseInt(
-      document.getElementById("totalCountValue")?.textContent || "0", 10
-    );
-    const bottles = isNaN(countVal) ? 0 : countVal;
-
-    // 本数×1000
-    amount = bottles * 1000;
-    title  = "顧問料";
-
-    // 左上の日付
-    const d = new Date();
-    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-
-    // ◆カテゴリ別 本数を収集
-    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X','Z'];
-    const catCounts = CATEGORIES.map(key => {
-      const n = parseInt(document.getElementById(key + "count")?.textContent || "0", 10) || 0;
-      return { key, n };
-    }).filter(({ n }) => n > 0);
-
-    // 一列縦並び（見出しなし）
-    const catList = catCounts.length
-      ? `
-        <div style="margin-top:18mm; margin-left:auto; margin-right:auto; width:72mm;
-                    padding:6mm 6mm; border:2px solid #000; border-radius:3mm;">
-          <div style="font-size:13pt; font-weight:bold; line-height:1.6;">
-            ${catCounts.map(({key,n}) =>
-              `<div style="display:flex; justify-content:space-between; margin-bottom:3mm;">
-                 <span>${key}</span><span>${n}</span>
-               </div>`
-            ).join('')}
-          </div>
-        </div>`
-      : `<div style="margin-top:12mm; text-align:center; font-size:13pt; font-weight:bold; color:#333;">カテゴリ別: なし</div>`;
-
-    // 印刷内容（顧問料専用）
-    const printContents = `
-      <div style="position:relative;width:90mm;height:205mm;padding:15mm;
-                  font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-        <!-- 左上の日付 -->
-        <div style="position:absolute; top:8mm; left:8mm; font-size:12pt;">${dateStr}</div>
-
-        <!-- タイトル -->
-        <div style="text-align:center; margin-top:25mm; font-size:32pt;">
-          ${title}
-        </div>
-
-        <!-- 本数×1000 -->
-        <div style="margin-top:20mm; text-align:center; font-size:26pt;">
-          ${amount}
-        </div>
-
-        <!-- 人数 -->
-        <div style="margin-top:10mm; text-align:center; font-size:16pt;">
-          （人数: ${bottles}）
-        </div>
-
-        <!-- カテゴリ別 本数 -->
-        ${catList}
-      </div>
-    `;
-
-    const w = window.open("", "PRINT", "height=600,width=400");
-    w.document.write(`
-      <html><head>
-        <style>
-          @page { size: 90mm 205mm; margin: 0; }
-          body { margin:0; padding:0; }
-        </style>
-      </head><body>${printContents}</body></html>
-    `);
-    w.document.close(); w.focus(); w.print(); w.close();
-    return;
-  }
-
-  // --- 既存カテゴリ出力 ---
-  count  = document.getElementById(category + "count")?.textContent || "0";
-  amount = document.getElementById(category + "total")?.textContent || "0";
-
-  const printContents = `
-    <div style="text-align:center;margin-top:60mm;font-size:24pt;">
-      ${category}
-    </div>
-    <div style="margin-top:30mm;text-align:center;font-size:22pt;font-weight:bold;">
-      ￥${amount}
-    </div>
-    <div style="margin-top:20mm;text-align:center;font-size:14pt;">
-      （人数: ${count}）
-    </div>
-  `;
-
-  const w = window.open("", "PRINT", "height=600,width=400");
-  w.document.write(`
-    <html><head>
-      <style>
-        @page { size: 90mm 205mm; margin: 0; }
-        body { margin:0; padding:0; }
-      </style>
-    </head><body>${printContents}</body></html>
-  `);
-  w.document.close(); w.focus(); w.print(); w.close();
-}
-
 
 
 /**
@@ -4546,6 +4352,100 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
 </body></html>`);
   w.document.close();
 };
+
+
+/* ====== 印刷：#result を別ウィンドウから出力 ====== */
+window.preparePrint = function () {
+  if (typeof window.showApp === 'function') window.showApp('app2');
+  if (typeof window.calculate === 'function') window.calculate();
+
+  const result = document.getElementById('result');
+  const html = (result?.innerHTML || '').trim();
+  if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
+
+  window.openPrintSilently(html, {
+    scale: 1.06,          // 大きさ微調整
+    rotateOnMobile: true, // スマホ時のみ180°回転
+    trimBottomMM: 20      // 反転時のみ下20mm詰め
+  });
+};
+
+function printEnvelope(category) {
+  let count, amount, title = category;
+
+  if (category === 'ALL') {
+    const confirmed = confirm("伝票の記入はすべて完了していますか？");
+    if (!confirmed) return;
+
+    const countVal = parseInt(
+      document.getElementById("totalCountValue")?.textContent || "0", 10
+    );
+    const bottles = isNaN(countVal) ? 0 : countVal;
+
+    amount = bottles * 1000;
+    title  = "顧問料";
+
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+
+    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X','Z'];
+    const catCounts = CATEGORIES.map(key => {
+      const n = parseInt(document.getElementById(key + "count")?.textContent || "0", 10) || 0;
+      return { key, n };
+    }).filter(({ n }) => n > 0);
+
+    const catList = catCounts.length
+      ? `
+        <div style="margin-top:18mm; margin-left:auto; margin-right:auto; width:72mm;
+                    padding:6mm 6mm; border:2px solid #000; border-radius:3mm;">
+          <div style="font-size:13pt; font-weight:bold; line-height:1.6;">
+            ${catCounts.map(({key,n}) =>
+              `<div style="display:flex; justify-content:space-between; margin-bottom:3mm;">
+                 <span>${key}</span><span>${n}</span>
+               </div>`
+            ).join('')}
+          </div>
+        </div>`
+      : `<div style="margin-top:12mm; text-align:center; font-size:13pt; font-weight:bold; color:#333;">カテゴリ別: なし</div>`;
+
+    const inner = `
+      <div style="position:relative;width:90mm;height:205mm;padding:15mm;font-family:'ＭＳ 明朝',serif; font-weight:bold;">
+        <div style="position:absolute; top:8mm; left:8mm; font-size:12pt;">${dateStr}</div>
+        <div style="text-align:center; margin-top:25mm; font-size:32pt;">${title}</div>
+        <div style="margin-top:20mm; text-align:center; font-size:26pt;">${amount}</div>
+        <div style="margin-top:10mm; text-align:center; font-size:16pt;">（人数: ${bottles}）</div>
+        ${catList}
+      </div>
+    `.trim();
+
+    window.openPrintSilently(inner, {
+      scale: 1.06,
+      rotateOnMobile: true,
+      trimBottomMM: 20
+    });
+    return;
+  }
+
+  // --- 個別カテゴリ封筒 ---
+  count  = document.getElementById(category + "count")?.textContent || "0";
+  amount = document.getElementById(category + "total")?.textContent || "0";
+
+  const inner = `
+    <div style="text-align:center;margin-top:60mm;font-size:24pt;">${category}</div>
+    <div style="margin-top:30mm;text-align:center;font-size:22pt;font-weight:bold;">￥${amount}</div>
+    <div style="margin-top:20mm;text-align:center;font-size:14pt;">（人数: ${count}）</div>
+  `.trim();
+
+  window.openPrintSilently(inner, {
+    scale: 1.06,
+    rotateOnMobile: true,
+    trimBottomMM: 20
+  });
+}
+
+
+
+
 
 
 
