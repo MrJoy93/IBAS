@@ -4264,7 +4264,6 @@ window.preparePrint = function () {
   const html = (result?.innerHTML || '').trim();
   if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
 
-  // スマホ判定（iPhone/Android Mobile）
   const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
 
   const w = window.open('', 'PRINT', 'width=480,height=800');
@@ -4274,7 +4273,7 @@ window.preparePrint = function () {
   <title>領収書</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    :root { --scale: 1.06; } /* ← ここで“気持ち大きく”倍率を調整（1.03〜1.10で好みに） */
+    :root { --scale: 1.06; } /* 少し大きく（必要なら 1.03〜1.10 で調整） */
 
     @page { size: 90mm 205mm; margin: 0; }
 
@@ -4283,28 +4282,29 @@ window.preparePrint = function () {
       -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
 
-    /* 用紙領域のラッパ。反転時だけ上に 20mm つめる */
+    /* 用紙領域（回転時だけ“下側”余白を20mm削る） */
     #page {
       width: 90mm; min-height: 205mm;
-      margin: 0 auto;             /* 中央寄せ */
+      margin: 0 auto;
     }
+    /* ★ 反転時のみ下側の白余白を 20mm 縮める */
     .rotate180 #page {
-      margin-top: -20mm;          /* ← 反転時だけ上部余白を 20mm 削る */
+      margin-bottom: -20mm;
     }
 
-    /* 中身。幅/高さは “スケールで割った値” にして、拡大後の見た目が90×205mmにピッタリ */
+    /* 中身：スケールで拡大。見た目は 90×205mm のまま収まる */
     #result {
       width: calc(90mm / var(--scale));
       min-height: calc(205mm / var(--scale));
       box-sizing: border-box;
-      padding: 6mm;               /* 余白は少しだけ（好みで調整可） */
+      padding: 6mm;
       margin: 0 auto;
 
       transform: scale(var(--scale));
-      transform-origin: top center;   /* 上端基準で拡大 */
+      transform-origin: top center;
       -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
-    /* スマホ印刷時のみ 180°回転（拡大と合成） */
+    /* スマホ印刷時のみ反転（拡大と合成） */
     .rotate180 #result {
       transform: rotate(180deg) scale(var(--scale));
       transform-origin: center center;
@@ -4316,7 +4316,7 @@ window.preparePrint = function () {
       print-color-adjust: exact !important;
     }
 
-    /* お好みの強調色（必要なら） */
+    /* 任意の強調色例 */
     #result .finalAmount { color:#00c853 !important; font-weight:900; font-size:24px; text-align:left; }
     #result .totalAmount { color:#2196f3 !important; font-weight:900; font-size:22px; text-align:left; }
     #result .subtotal    { color:#43eaff !important; font-weight:800; }
