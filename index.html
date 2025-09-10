@@ -4563,30 +4563,31 @@ function printEnvelope(category) {
     amount = bottles * 1000;
     title  = "顧問料";
 
-    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X','Z'];
+    // Zを除いたカテゴリリスト
+    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
     const catCounts = CATEGORIES.map(key => {
       const n = parseInt(document.getElementById(key + "count")?.textContent || "0", 10) || 0;
       return { key, n };
-    }).filter(({ n }) => n > 0);
+    });
 
-    const catList = catCounts.length
-      ? `<div style="margin-top:18mm; margin-left:auto; margin-right:auto; width:72mm;
-                    padding:6mm 6mm; border:2px solid #000; border-radius:3mm;">
-          <div style="font-size:13pt; font-weight:bold; line-height:1.6;">
-            ${catCounts.map(({key,n}) =>
-              `<div style="display:flex; justify-content:space-between; margin-bottom:3mm;">
-                 <span>${key}</span><span>${n}</span>
-               </div>`).join('')}
-          </div>
-        </div>`
-      : `<div style="margin-top:12mm; text-align:center; font-size:13pt; font-weight:bold; color:#333;">カテゴリ別: なし</div>`;
+    // 0本も含めて全て表示（Z除外済み）
+    const catList = `
+      <div style="margin-top:8mm; margin-left:auto; margin-right:auto; width:72mm;
+                  padding:5mm 5mm; border:2px solid #000; border-radius:3mm;">
+        <div style="font-size:13pt; font-weight:bold; line-height:1.2;">
+          ${catCounts.map(({key,n}) =>
+            `<div style="display:flex; justify-content:flex-start; align-items:center; gap:8mm; margin-bottom:1mm;">
+               <span>${key}</span><span>${n}</span>
+             </div>`).join('')}
+        </div>
+      </div>`;
 
     const inner = `
       <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-        <div class="print-date">${dateStr}</div>
-        <div class="print-title">${title}</div>
-        <div style="text-align:center; font-size:26pt; margin-bottom:10mm;">${amount}</div>
-        <div style="text-align:center; font-size:16pt; margin-bottom:15mm;">（人数: ${bottles}）</div>
+        <div class="print-date" style="margin-top:5mm;">${dateStr}</div>
+        <div class="print-title" style="margin-top:2mm;">${title}</div>
+        <div style="text-align:center; font-size:26pt; margin:6mm 0 8mm;">${amount}</div>
+        <div style="text-align:center; font-size:16pt; margin-bottom:10mm;">（人数: ${bottles}）</div>
         ${catList}
       </div>`.trim();
 
@@ -4600,9 +4601,9 @@ function printEnvelope(category) {
 
   const inner = `
     <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-      <div class="print-date">${dateStr}</div>
-      <div class="print-title">${category}</div>
-      <div style="text-align:center; font-size:22pt; margin-bottom:10mm;">￥${amount}</div>
+      <div class="print-date" style="margin-top:5mm;">${dateStr}</div>
+      <div class="print-title" style="margin-top:2mm;">${category}</div>
+      <div style="text-align:center; font-size:22pt; margin:6mm 0 8mm;">￥${amount}</div>
       <div style="text-align:center; font-size:14pt;">（人数: ${count}）</div>
     </div>`.trim();
 
