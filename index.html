@@ -3587,7 +3587,7 @@ window.preparePrint = function () {
   if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
 
   window.openPrintSilently(html, {
-    scale: 1.06,          // 少し大きく
+    scale: 0.80,          // 少し大きく
     rotateOnMobile: true, // スマホ時のみ180°回転
     trimBottomMM: 20      // 反転時のみ下20mm詰め
   });
