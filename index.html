@@ -4434,6 +4434,7 @@ function getApp3StyleDate() {
  * @param {string} innerHTML  印刷したいHTML（#resultの中身など）
  * @param {object} opts       { scale, rotateOnMobile, trimBottomMM }
  */
+/* ====== 印刷サイレント出力 ====== */
 window.openPrintSilently = function(innerHTML, opts = {}) {
   const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
   const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
@@ -4450,23 +4451,21 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
     @media print  { html,body,#page,#result{ visibility:visible!important; opacity:1!important; } }
     html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
-    #page{
-      width:90mm; height:205mm;
-      margin:0 auto; overflow:hidden;
-    }
+    #page{ width:90mm; height:205mm; margin:0 auto; overflow:hidden; }
     .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
 
-  #result{
+    #result{
       width:calc(90mm/var(--scale));
       height:calc((205mm - 0.2mm)/var(--scale));
-      margin:0 auto; box-sizing:border-box;
-      padding:0; /* ← 余白をゼロにする */
+      margin:0 auto;
+      padding:0;
+      box-sizing:border-box;
       transform:scale(var(--scale));
       transform-origin:top center;
       -webkit-print-color-adjust:exact;
       print-color-adjust:exact;
       overflow:hidden;
-  }
+    }
     .rotate180 #result{
       transform:rotate(180deg) scale(var(--scale));
       transform-origin:center center;
@@ -4476,7 +4475,7 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
       print-color-adjust:exact!important;
     }
 
-    /* テーマ調整 */
+    /* ===== 封筒テーマ ===== */
     #result{
       background:#fff; border:none; border-radius:0;
       color:#000; font:20px/1.3 'ＭＳ 明朝', serif;
@@ -4486,19 +4485,24 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
       color:#000 !important; font-weight:700;
     }
     #result .totalAmount,
-    #result #totalAmount{
-      color:#0066cc !important; font-weight:800;
-    }
+    #result #totalAmount{ color:#0066cc !important; font-weight:800; }
     #result .finalAmount,
-    #result #finalAmount{
-      color:#009944 !important; font-weight:800;
-    }
+    #result #finalAmount{ color:#009944 !important; font-weight:800; }
     #result .subtotal,
-    #result #subtotal{
-      color:#000 !important;
+    #result #subtotal{ color:#000 !important; }
+    #result td .count::after { content: "/"; margin: 0 1px; }
+
+    /* === 日付を中央寄せ === */
+    .print-date {
+      text-align:center;
+      font-size:12pt;
+      margin-top:8mm;      /* ← 上からの余白 */
+      margin-bottom:8mm;   /* ← 表題との間に余白 */
     }
-    #result td .count::after {
-      content: "/"; margin: 0 1px;
+    .print-title {
+      text-align:center;
+      font-size:32pt;
+      margin-bottom:15mm;
     }
   </style>
 </head>
@@ -4518,14 +4522,12 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
   <\/script>
 </body></html>`;
 
-  // 通常パス
   let w = null;
   try { w = window.open('', 'PRINT', 'width=480,height=800'); } catch(_) {}
   if (w && w.document) {
     try { w.document.open(); w.document.write(printHTML); w.document.close(); return; } catch(_) {}
   }
 
-  // Blob パス
   try {
     const blob = new Blob([printHTML], { type: 'text/html' });
     const url  = URL.createObjectURL(blob);
@@ -4533,7 +4535,6 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
     return;
   } catch(_) {}
 
-  // iframe パス
   try {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -4549,9 +4550,10 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
 };
 
 
-/* ====== 印刷：#result をサイレント出力 ====== */
+/* ====== 印刷：封筒 ====== */
 function printEnvelope(category) {
   let count, amount, title = category;
+  const dateStr = getApp3StyleDate();
 
   if (category === 'ALL') {
     if (!confirm("伝票の記入はすべて完了していますか？")) return;
@@ -4560,9 +4562,6 @@ function printEnvelope(category) {
     const bottles = isNaN(countVal) ? 0 : countVal;
     amount = bottles * 1000;
     title  = "顧問料";
-
-    // APP3と同じ日付ルール
-    const dateStr = getApp3StyleDate();
 
     const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X','Z'];
     const catCounts = CATEGORIES.map(key => {
@@ -4583,11 +4582,11 @@ function printEnvelope(category) {
       : `<div style="margin-top:12mm; text-align:center; font-size:13pt; font-weight:bold; color:#333;">カテゴリ別: なし</div>`;
 
     const inner = `
-      <div style="position:relative; width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-        <div style="position:absolute; top:2mm; left:2mm; font-size:12pt;">${dateStr}</div>
-        <div style="text-align:center; margin-top:25mm; font-size:32pt;">${title}</div>
-        <div style="margin-top:20mm; text-align:center; font-size:26pt;">${amount}</div>
-        <div style="margin-top:10mm; text-align:center; font-size:16pt;">（人数: ${bottles}）</div>
+      <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
+        <div class="print-date">${dateStr}</div>
+        <div class="print-title">${title}</div>
+        <div style="text-align:center; font-size:26pt; margin-bottom:10mm;">${amount}</div>
+        <div style="text-align:center; font-size:16pt; margin-bottom:15mm;">（人数: ${bottles}）</div>
         ${catList}
       </div>`.trim();
 
@@ -4599,18 +4598,17 @@ function printEnvelope(category) {
   count  = document.getElementById(category + "count")?.textContent || "0";
   amount = document.getElementById(category + "total")?.textContent || "0";
 
-  const dateStr = getApp3StyleDate(); // ←ここも適用
-
   const inner = `
-    <div style="position:relative; width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-      <div style="position:absolute; top:2mm; left:2mm; font-size:12pt;">${dateStr}</div>
-      <div style="text-align:center;margin-top:60mm;font-size:24pt;">${category}</div>
-      <div style="margin-top:30mm;text-align:center;font-size:22pt;font-weight:bold;">￥${amount}</div>
-      <div style="margin-top:20mm;text-align:center;font-size:14pt;">（人数: ${count}）</div>
+    <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
+      <div class="print-date">${dateStr}</div>
+      <div class="print-title">${category}</div>
+      <div style="text-align:center; font-size:22pt; margin-bottom:10mm;">￥${amount}</div>
+      <div style="text-align:center; font-size:14pt;">（人数: ${count}）</div>
     </div>`.trim();
 
   window.openPrintSilently(inner, { scale: 1.06, rotateOnMobile: true, trimBottomMM: 0 });
 }
+
 
 
 
