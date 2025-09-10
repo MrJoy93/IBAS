@@ -3584,14 +3584,75 @@ window.preparePrint = function () {
   if (typeof window.calculate === 'function') window.calculate();
 
   const html = (document.getElementById('result')?.innerHTML || '').trim();
-  if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
+  if (!html) {
+    alert('印刷する内容がありません。先に「計算」で結果を出してください。');
+    return;
+  }
 
-  window.openPrintSilently(html, {
-    scale: 0.80,          // 少し大きく
-    rotateOnMobile: true, // スマホ時のみ180°回転
-    trimBottomMM: 20      // 反転時のみ下20mm詰め
+  // 印刷用スタイルをここで定義
+  const printCSS = `
+    <style>
+      @media print {
+        @page { size: 90mm 205mm; margin: 0; }
+
+        html, body {
+          width: 90mm; height: 205mm;
+          margin: 0; padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        #result {
+          width: 90mm !important;
+          height: 205mm !important;
+          margin: 0 auto !important;
+          padding: 8mm 6mm 8mm 6mm !important;
+          box-sizing: border-box;
+          font-size: 10.5pt;
+        }
+
+        /* 領収書記入を数字寄せ */
+        .receipt-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+        }
+        .receipt-row .label {
+          margin-right: 5mm;
+          white-space: nowrap;
+        }
+        .receipt-row .value {
+          font-weight: bold;
+          font-size: 12pt;
+          text-align: right;
+        }
+
+        /* 合計と最終合計と氏名を強調 */
+        .totalAmount {
+          font-size: 16pt !important;  /* 合計 */
+          font-weight: 700;
+        }
+        .finalAmount {
+          font-size: 16pt !important;  /* 最終合計 */
+          font-weight: 800;
+        }
+        .customerName {
+          font-size: 16pt !important;  /* 氏名 */
+          font-weight: 700;
+        }
+      }
+    </style>
+  `;
+
+  // openPrintSilently に HTML + CSS を流し込む
+  window.openPrintSilently(printCSS + html, {
+    scale: 1.05,
+    rotateOnMobile: true,
+    trimBottomMM: 20
   });
 };
+
+
 
 
 
