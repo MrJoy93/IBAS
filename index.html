@@ -3578,6 +3578,20 @@ function restoreInputs() {
   });
 })();
 
+/* ====== 印刷：#result をサイレント出力 ====== */
+window.preparePrint = function () {
+  if (typeof window.showApp === 'function') window.showApp('app2');
+  if (typeof window.calculate === 'function') window.calculate();
+
+  const html = (document.getElementById('result')?.innerHTML || '').trim();
+  if (!html) { alert('印刷する内容がありません。先に「計算」で結果を出してください。'); return; }
+
+  window.openPrintSilently(html, {
+    scale: 1.06,          // 少し大きく
+    rotateOnMobile: true, // スマホ時のみ180°回転
+    trimBottomMM: 20      // 反転時のみ下20mm詰め
+  });
+};
 
 
 
@@ -4381,17 +4395,17 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
     }
     .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
 
-    #result{
+  #result{
       width:calc(90mm/var(--scale));
       height:calc((205mm - 0.2mm)/var(--scale));
       margin:0 auto; box-sizing:border-box;
-      padding:6mm;
+      padding:0; /* ← 余白をゼロにする */
       transform:scale(var(--scale));
       transform-origin:top center;
       -webkit-print-color-adjust:exact;
       print-color-adjust:exact;
       overflow:hidden;
-    }
+  }
     .rotate180 #result{
       transform:rotate(180deg) scale(var(--scale));
       transform-origin:center center;
@@ -4509,7 +4523,7 @@ function printEnvelope(category) {
 
     const inner = `
       <div style="position:relative; width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-        <div style="position:absolute; top:8mm; left:8mm; font-size:12pt;">${dateStr}</div>
+        <div style="position:absolute; top:2mm; left:2mm; font-size:12pt;">${dateStr}</div>
         <div style="text-align:center; margin-top:25mm; font-size:32pt;">${title}</div>
         <div style="margin-top:20mm; text-align:center; font-size:26pt;">${amount}</div>
         <div style="margin-top:10mm; text-align:center; font-size:16pt;">（人数: ${bottles}）</div>
@@ -4528,7 +4542,7 @@ function printEnvelope(category) {
 
   const inner = `
     <div style="position:relative; width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-      <div style="position:absolute; top:8mm; left:8mm; font-size:12pt;">${dateStr}</div>
+      <div style="position:absolute; top:2mm; left:2mm; font-size:12pt;">${dateStr}</div>
       <div style="text-align:center;margin-top:60mm;font-size:24pt;">${category}</div>
       <div style="margin-top:30mm;text-align:center;font-size:22pt;font-weight:bold;">￥${amount}</div>
       <div style="margin-top:20mm;text-align:center;font-size:14pt;">（人数: ${count}）</div>
