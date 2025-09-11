@@ -1078,7 +1078,6 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 }
 
 
-
 /* =========================================================
    MOBILE (<=700px) — 統合版（app1/app2/app3）
    これ1つでOK。既存の max-width:700px ブロックは削除してOK。
@@ -2236,37 +2235,61 @@ function updateRowColor(select) {
   }
 }
 
+// グローバルにキャッチバック内訳を保持するオブジェクト
+let catchbackDetails = {};
+
 function updateTotals() {
-  let totalCustomers = 0, cardTotal = 0, totalAmount = 0;
+  let totalCustomers = 0;
+  let cardTotal = 0;
+  let totalAmount = 0;
+
   const catchbackTotals = {};
   const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
-  categories.forEach(cat => catchbackTotals[cat] = { amount: 0, count: 0 });
 
+  // 初期化
+  categories.forEach(cat => {
+    catchbackTotals[cat] = { amount: 0, count: 0 };
+    catchbackDetails[cat] = [];   // ← 単価ごとの行データを配列で保持
+  });
+
+  // 各行を走査して集計
   document.querySelectorAll(".row").forEach(row => {
-    const num = parseInt(row.querySelector(".num")?.value.replace(/,/g, '')) || 0;
+    const num    = parseInt(row.querySelector(".num")?.value.replace(/,/g, '')) || 0;
     const honshi = parseInt(row.querySelector(".honshi")?.value.replace(/,/g, '')) || 0;
     const amount = parseInt(row.querySelector(".amount")?.value.replace(/,/g, '')) || 0;
-    const card = parseInt(row.querySelector(".card")?.value.replace(/,/g, '')) || 0;
-    const total = parseInt(row.querySelector(".total")?.value.replace(/,/g, '')) || 0;
+    const card   = parseInt(row.querySelector(".card")?.value.replace(/,/g, '')) || 0;
+    const total  = parseInt(row.querySelector(".total")?.value.replace(/,/g, '')) || 0;
     const category = row.querySelector(".c")?.value;
 
+    // 全体集計
     totalCustomers += num + honshi;
-    cardTotal += card;
-    totalAmount += total;
+    cardTotal      += card;
+    totalAmount    += total;
 
+    // キャッチバック集計
     if (category && catchbackTotals[category]) {
+      // 20% or 30% のバック計算
       const backAmount = (amount <= 5999) ? amount * num * 0.2 : amount * num * 0.3;
-      if (category === "X") {
+
+      if (category !== "Z") {  // Zは集計対象外
         catchbackTotals[category].amount += backAmount;
-        catchbackTotals[category].count += num;
-      } else if (category !== "Z") {
-        catchbackTotals[category].amount += backAmount;
-        catchbackTotals[category].count += num;
+        catchbackTotals[category].count  += num;
+
+        if (num > 0) {
+          // ← 行ごとのデータをそのまま記録
+          catchbackDetails[category].push({
+            unit: amount,
+            count: num
+          });
+        }
       }
     }
   });
 
-  let totalCount = 0, totalBackAmount = 0;
+  // 合計の再計算 & DOM反映
+  let totalCount = 0;
+  let totalBackAmount = 0;
+
   categories.forEach(cat => {
     if (cat !== "X") {
       totalCount += catchbackTotals[cat].count;
@@ -2275,29 +2298,32 @@ function updateTotals() {
       totalBackAmount += catchbackTotals[cat].amount;
     }
 
-    document.getElementById(`${cat}count`).textContent = catchbackTotals[cat].count.toLocaleString();
-    document.getElementById(`${cat}total`).textContent = Math.floor(catchbackTotals[cat].amount).toLocaleString();
+    document.getElementById(`${cat}count`).textContent =
+      catchbackTotals[cat].count.toLocaleString();
+
+    document.getElementById(`${cat}total`).textContent =
+      Math.floor(catchbackTotals[cat].amount).toLocaleString();
   });
 
+  // 全体合計の表示
   document.getElementById("totalCustomers").textContent = totalCustomers.toLocaleString();
-  document.getElementById("cardTotal").textContent = cardTotal.toLocaleString();
-  document.getElementById("cashTotal").textContent = (totalAmount - cardTotal).toLocaleString();
-  document.getElementById("totalAmount").textContent = totalAmount.toLocaleString();
-  document.getElementById("totalCountValue").textContent = totalCount.toLocaleString();
-  document.getElementById("totalBackAmount").textContent = Math.floor(totalBackAmount).toLocaleString();
+  document.getElementById("cardTotal").textContent      = cardTotal.toLocaleString();
+  document.getElementById("cashTotal").textContent      = (totalAmount - cardTotal).toLocaleString();
+  document.getElementById("totalAmount").textContent    = totalAmount.toLocaleString();
+  document.getElementById("totalCountValue").textContent= totalCount.toLocaleString();
+  document.getElementById("totalBackAmount").textContent= Math.floor(totalBackAmount).toLocaleString();
 
-  // ↓ここまとめて定義
+  // 入力欄にも反映
   const cardSalesInput = document.getElementById("cardSales");
-  if (cardSalesInput) {
-    cardSalesInput.value = formatNumber(cardTotal);
-  }
+  if (cardSalesInput) cardSalesInput.value = formatNumber(cardTotal);
+
   const totalSalesInput = document.getElementById("totalSales");
-  if (totalSalesInput) {
-    totalSalesInput.value = formatNumber(totalAmount);
-  }
+  if (totalSalesInput) totalSalesInput.value = formatNumber(totalAmount);
 
   saveForm();
 }
+
+
 
 function saveForm() {
   const formData = [];
@@ -3640,6 +3666,57 @@ window.preparePrint = function () {
           font-size: 16pt !important;  /* 氏名 */
           font-weight: 700;
         }
+
+        /* 枠は中央固定（既存の .envelope はそのまま） */
+.envelope{ width:86mm; margin:0 auto; text-align:center; }
+
+/* ALL：枠の中を “2段グリッド” で詰める */
+.print-detail-container{
+  width:78mm;              /* 少し細くして左右に余白 */
+  margin:6mm auto 0;
+  padding:3mm 3.2mm;
+  border:2px solid #000; border-radius:2mm; box-sizing:border-box;
+}
+
+/* ← NEW：2カラムに分割（幅が足りなければ自動折返し） */
+.print-detail-matrix{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  column-gap:3mm;
+  row-gap:1.2mm;
+  align-items:start;
+  justify-items:center;
+}
+
+/* 行：カテゴリ | 詳細 | 合計 を中央揃え＆固定幅 */
+.print-detail-inline{
+  width:100%;
+  display:grid;
+  grid-template-columns: 12mm 1fr 13mm;  /* 左=カテゴリ, 中=内訳, 右=合計 */
+  justify-items:center;
+  align-items:center;
+  text-align:center;
+  font-variant-numeric: tabular-nums;    /* 桁幅を揃える */
+  font-size:10pt;                        /* 少し小さくして行数を稼ぐ */
+  line-height:1.25;
+  letter-spacing:0;
+}
+
+/* 内訳の詰め方と折返し（中央維持） */
+.print-detail-inline .details{
+  white-space:normal;            /* 必要なら折返す */
+  letter-spacing:-0.2pt;         /* わずかに詰める */
+}
+.print-detail-inline .details span{
+  display:inline-block;
+  margin:0 .9mm;                 /* “×” ブロック間を均等に */
+}
+
+.print-detail-inline strong,
+.print-detail-inline .total{
+  text-align:center;
+}
+
       }
     </style>
   `;
@@ -4442,72 +4519,79 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
 
   const printHTML = `<!doctype html>
 <html lang="ja"><head><meta charset="utf-8">
-  <title>print</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root { --scale:${scale}; }
-    @page { size: 90mm 205mm; margin: 0; }
-    @media screen { html,body,#page,#result{ visibility:hidden!important; opacity:0!important; } }
-    @media print  { html,body,#page,#result{ visibility:visible!important; opacity:1!important; } }
-    html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+<title>print</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { --scale:${scale}; }
+  @page { size: 90mm 205mm; margin: 0; }
 
-    #page{ width:90mm; height:205mm; margin:0 auto; overflow:hidden; }
-    .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
+  html,body{ margin:0; padding:0; background:#fff;
+             -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
-    #result{
-      width:calc(90mm/var(--scale));
-      height:calc((205mm - 0.2mm)/var(--scale));
-      margin:0 auto;
-      padding:0;
-      box-sizing:border-box;
-      transform:scale(var(--scale));
-      transform-origin:top center;
-      -webkit-print-color-adjust:exact;
-      print-color-adjust:exact;
-      overflow:hidden;
-    }
-    .rotate180 #result{
-      transform:rotate(180deg) scale(var(--scale));
-      transform-origin:center center;
-    }
-    #result, #result *{
-      -webkit-print-color-adjust:exact!important;
-      print-color-adjust:exact!important;
-    }
+  #page{ width:90mm; height:205mm; margin:0 auto; overflow:hidden; }
+  .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
 
-    /* ===== 封筒テーマ ===== */
-    #result{
-      background:#fff; border:none; border-radius:0;
-      color:#000; font:20px/1.3 'ＭＳ 明朝', serif;
-      box-shadow:none; letter-spacing:.02em;
-    }
-    #result .print-highlight:not(.finalAmount):not(.totalAmount){
-      color:#000 !important; font-weight:700;
-    }
-    #result .totalAmount,
-    #result #totalAmount{ color:#0066cc !important; font-weight:800; }
-    #result .finalAmount,
-    #result #finalAmount{ color:#009944 !important; font-weight:800; }
-    #result .subtotal,
-    #result #subtotal{ color:#000 !important; }
-    #result td .count::after { content: "/"; margin: 0 1px; }
+  /* キャンバス中央固定 */
+  #result{
+    width:calc(90mm/var(--scale));
+    height:calc((205mm - 0.2mm)/var(--scale));
+    margin:0 auto; padding:0; box-sizing:border-box;
+    transform:scale(var(--scale)); transform-origin:top center;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    overflow:hidden;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .rotate180 #result{ transform:rotate(180deg) scale(var(--scale)); transform-origin:center center; }
 
-    /* === 日付を中央寄せ === */
-    .print-date {
-      text-align:center;
-      font-size:12pt;
-      margin-top:8mm;      /* ← 上からの余白 */
-      margin-bottom:8mm;   /* ← 表題との間に余白 */
-    }
-    .print-title {
-      text-align:center;
-      font-size:32pt;
-      margin-bottom:15mm;
-    }
-  </style>
+  /* 封筒本体(中央) */
+  .envelope{
+    width:86mm; min-height:205mm; margin:0 auto; text-align:center;
+    font-family:'ＭＳ 明朝',serif; font-weight:bold;
+    font-variant-numeric: tabular-nums; letter-spacing:.02em;
+  }
+
+  .print-date{ font-size:12pt; margin-top:5mm; margin-bottom:6mm; }
+  .print-title{ font-size:32pt; margin-bottom:10mm; }
+
+  /* 個別：縦並び（単価|×|人数）を完全中央 */
+  .print-detail-row{
+    display:grid; grid-template-columns:1fr auto 1fr;
+    gap:2mm; font-size:12pt; margin:1mm 0;
+    align-items:center; justify-items:center; text-align:center;
+    font-variant-numeric: tabular-nums;
+  }
+  .print-detail-row span{ min-width:16mm; text-align:center; }
+
+  /* ALL：枠 + 2カラムのマトリクスで省スペース */
+  .print-detail-container{
+    width:78mm; margin:6mm auto 0; padding:3mm 3.2mm;
+    border:2px solid #000; border-radius:2mm; box-sizing:border-box;
+  }
+  .print-detail-matrix{
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+    column-gap:3mm; row-gap:1.2mm; align-items:start; justify-items:center;
+  }
+
+  /* 行：カテゴリ | 詳細(可変) | 合計 — 3列を中央配置 */
+  .print-detail-inline{
+    width:100%;
+    display:grid; grid-template-columns:12mm 1fr 13mm;
+    justify-items:center; align-items:center; text-align:center;
+    font-size:10.5pt; line-height:1.25; font-variant-numeric: tabular-nums;
+    margin:1mm 0;
+  }
+  .print-detail-inline .details{
+    white-space:normal; letter-spacing:-0.2pt;
+  }
+  .print-detail-inline .details span{
+    display:inline-block; margin:0 .9mm;
+  }
+</style>
 </head>
 <body class="${rotate ? 'rotate180' : ''}">
-  <div id="page"><div id="result">${innerHTML}</div></div>
+  <div id="page"><div id="result">
+    <div class="envelope">${innerHTML}</div>  <!-- ★ ここが中央フレーム -->
+  </div></div>
   <script>
     function tryClose(){ try{ window.close(); }catch(e){} }
     window.onload = function(){
@@ -4527,18 +4611,14 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
   if (w && w.document) {
     try { w.document.open(); w.document.write(printHTML); w.document.close(); return; } catch(_) {}
   }
-
   try {
     const blob = new Blob([printHTML], { type: 'text/html' });
     const url  = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    return;
+    window.open(url, '_blank'); return;
   } catch(_) {}
-
   try {
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
+    iframe.style.position = 'fixed'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
     document.body.appendChild(iframe);
     const doc = iframe.contentWindow.document;
     doc.open(); doc.write(printHTML); doc.close();
@@ -4552,63 +4632,100 @@ window.openPrintSilently = function(innerHTML, opts = {}) {
 
 /* ====== 印刷：封筒 ====== */
 function printEnvelope(category) {
-  let count, amount, title = category;
   const dateStr = getApp3StyleDate();
 
-  if (category === 'ALL') {
-    if (!confirm("伝票の記入はすべて完了していますか？")) return;
-
-    const countVal = parseInt(document.getElementById("totalCountValue")?.textContent || "0", 10);
-    const bottles = isNaN(countVal) ? 0 : countVal;
-    amount = bottles * 1000;
-    title  = "顧問料";
-
-    // Zを除いたカテゴリリスト
-    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
-    const catCounts = CATEGORIES.map(key => {
-      const n = parseInt(document.getElementById(key + "count")?.textContent || "0", 10) || 0;
-      return { key, n };
+  // 単価ごとにまとめる
+  function summarizeDetails(arr) {
+    const summary = {};
+    arr.forEach(d => {
+      summary[d.unit] = (summary[d.unit] || 0) + d.count;
     });
-
-    // 0本も含めて全て表示（Z除外済み）
-    const catList = `
-      <div style="margin-top:8mm; margin-left:auto; margin-right:auto; width:72mm;
-                  padding:5mm 5mm; border:2px solid #000; border-radius:3mm;">
-        <div style="font-size:13pt; font-weight:bold; line-height:1.2;">
-          ${catCounts.map(({key,n}) =>
-            `<div style="display:flex; justify-content:flex-start; align-items:center; gap:8mm; margin-bottom:1mm;">
-               <span>${key}</span><span>${n}</span>
-             </div>`).join('')}
-        </div>
-      </div>`;
-
-    const inner = `
-      <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-        <div class="print-date" style="margin-top:5mm;">${dateStr}</div>
-        <div class="print-title" style="margin-top:2mm;">${title}</div>
-        <div style="text-align:center; font-size:26pt; margin:6mm 0 8mm;">${amount}</div>
-        <div style="text-align:center; font-size:16pt; margin-bottom:10mm;">（人数: ${bottles}）</div>
-        ${catList}
-      </div>`.trim();
-
-    window.openPrintSilently(inner, { scale: 1.0, rotateOnMobile: true, trimBottomMM: 20 });
-    return;
+    return summary;
   }
 
-  // 個別カテゴリ封筒
-  count  = document.getElementById(category + "count")?.textContent || "0";
-  amount = document.getElementById(category + "total")?.textContent || "0";
+if (category === 'ALL') {
+  if (!confirm("伝票の記入はすべて完了していますか？")) return;
+
+  const countVal = parseInt(document.getElementById("totalCountValue")?.textContent || "0", 10);
+  const bottles  = isNaN(countVal) ? 0 : countVal;
+  const amount   = bottles * 1000;
+
+  const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
+
+  // 単価ごとに合算する関数（既存の summarizeDetails を使用）
+  function summarizeDetails(arr){
+    const summary = {};
+    arr.forEach(d => summary[d.unit] = (summary[d.unit] || 0) + d.count);
+    return summary;
+  }
+
+const rowsHtml = CATEGORIES.map(key => {
+  const arr = catchbackDetails[key] || [];
+  const summary = summarizeDetails(arr);
+  const details = Object.entries(summary)
+    .sort((a,b)=> Number(b[0]) - Number(a[0]))
+    .map(([unit,n]) => `<span>${unit}×${n}</span>`)
+    .join(' ');   // ← 区切りを必ず入れる
+  const total = Object.values(summary).reduce((s,v)=> s+v, 0);
+
+  return `
+    <div class="print-detail-inline">
+      <strong>${key}</strong>
+      <div class="details">${details || '0'}</div>
+      <div class="total">(計${total})</div>
+    </div>`;
+}).join('');
+
+const catList = `
+  <div class="print-detail-container">
+    <div class="print-detail-matrix">
+      ${rowsHtml}
+    </div>
+  </div>`;
+
+
+  const inner = `
+    <div style="min-height:205mm;">
+      <div class="print-date"  style="margin-top:4mm;">${getApp3StyleDate()}</div>
+      <div class="print-title" style="margin-bottom:8mm;">顧問料</div>
+      <div style="font-size:26pt; margin:2mm 0 3mm;">${amount}</div>
+      <div style="font-size:14pt; margin-bottom:4mm;">（人数: ${bottles}）</div>
+      ${catList}
+    </div>`.trim();
+
+  // 余白を少し確保しつつ拡大しすぎない
+  window.openPrintSilently(inner, { scale: 0.98, rotateOnMobile: true, trimBottomMM: 20 });
+  return;
+}
+
+  // 個別カテゴリ封筒（縦並び）
+  const arr = catchbackDetails[category] || [];
+  const rows = arr.map(d => `
+    <div class="print-detail-row">
+      <span>${d.unit}</span><span>×</span><span>${d.count}</span>
+    </div>`).join('');
+  const total   = arr.reduce((s,d)=>s+d.count,0);
+  const amount  = document.getElementById(category + "total")?.textContent || "0";
 
   const inner = `
     <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-      <div class="print-date" style="margin-top:5mm;">${dateStr}</div>
+      <div class="print-date" style="margin-top:4mm;">${dateStr}</div>
       <div class="print-title" style="margin-top:2mm;">${category}</div>
-      <div style="text-align:center; font-size:22pt; margin:6mm 0 8mm;">￥${amount}</div>
-      <div style="text-align:center; font-size:14pt;">（人数: ${count}）</div>
+      <div style="text-align:center; font-size:22pt; margin:5mm 0 6mm;">￥${amount}</div>
+      ${rows || '<div style="text-align:center;">0</div>'}
+      <div style="text-align:center; font-size:12pt; margin-top:4mm;">Total ${total}</div>
     </div>`.trim();
 
-  window.openPrintSilently(inner, { scale: 1.06, rotateOnMobile: true, trimBottomMM: 0 });
+  window.openPrintSilently(inner, { scale: 1.0, rotateOnMobile: true, trimBottomMM: 0 });
 }
+
+
+
+
+
+
+
+
 
 
 
