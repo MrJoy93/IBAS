@@ -1179,9 +1179,9 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   padding:8px;
   border-radius:10px;
   z-index:1200;
-}
+  }
 
-#app2 {
+  #app2 {
   width: calc(100% - 110px) !important; /* ナビ幅160 + 余白10 */
   margin-right:170px !important;
   max-width:none !important;
@@ -1320,6 +1320,34 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
     margin: 0 auto 6px;     /* 中央に配置 */
     display: block;
   }
+
+  /* ===== SP: カテゴリ別CBの「人数」と「金額」の間隔を広げる ===== */
+:root{ --cb-gap: 14px; }  /* ← 好みで 10～18px くらいに調整 */
+
+#categorySection thead th:nth-child(2),
+#categorySection tbody td:nth-child(2){
+  padding-right: var(--cb-gap);         /* 右側に余白 */
+  position: relative;                   /* 仕切り線用 */
+}
+
+/* 金額列は左側に余白 */
+#categorySection thead th:nth-child(3),
+#categorySection tbody td:nth-child(3){
+  padding-left:  var(--cb-gap);
+}
+
+/* 視覚的に分かるよう細い仕切り線（任意） */
+#categorySection thead th:nth-child(2)::after,
+#categorySection tbody td:nth-child(2)::after{
+  content:"";
+  position:absolute;
+  right: calc(var(--cb-gap)/2);
+  top: 26%;
+  bottom: 26%;
+  width: 1px;
+  background: rgba(255,255,255,.18);
+  pointer-events: none;
+}
 
 }
 
