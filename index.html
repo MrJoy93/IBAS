@@ -4691,17 +4691,13 @@ function openPrintApp2(innerHTML, opts = {}) {
       }
 
   .rainbow-print {
-    background: linear-gradient(135deg, red, orange, yellow, green, blue, indigo, violet);
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 900;
-
-    /* 白い縁取り */
-    -webkit-text-stroke: 0.8px white;
-    text-stroke: 0.8px white; /* 一部ブラウザ用 */
   }
     }
-
+    
   </style>
   </head><body class="${rotate ? 'rotate180' : ''}">
     <div id="page"><div id="result">${innerHTML}</div></div>
