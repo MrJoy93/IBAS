@@ -1179,9 +1179,9 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   padding:8px;
   border-radius:10px;
   z-index:1200;
-  }
+}
 
-  #app2 {
+#app2 {
   width: calc(100% - 110px) !important; /* ナビ幅160 + 余白10 */
   margin-right:170px !important;
   max-width:none !important;
@@ -1320,34 +1320,6 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
     margin: 0 auto 6px;     /* 中央に配置 */
     display: block;
   }
-
-  /* ===== SP: カテゴリ別CBの「人数」と「金額」の間隔を広げる ===== */
-:root{ --cb-gap: 14px; }  /* ← 好みで 10～18px くらいに調整 */
-
-#categorySection thead th:nth-child(2),
-#categorySection tbody td:nth-child(2){
-  padding-right: var(--cb-gap);         /* 右側に余白 */
-  position: relative;                   /* 仕切り線用 */
-}
-
-/* 金額列は左側に余白 */
-#categorySection thead th:nth-child(3),
-#categorySection tbody td:nth-child(3){
-  padding-left:  var(--cb-gap);
-}
-
-/* 視覚的に分かるよう細い仕切り線（任意） */
-#categorySection thead th:nth-child(2)::after,
-#categorySection tbody td:nth-child(2)::after{
-  content:"";
-  position:absolute;
-  right: calc(var(--cb-gap)/2);
-  top: 26%;
-  bottom: 26%;
-  width: 1px;
-  background: rgba(255,255,255,.18);
-  pointer-events: none;
-}
 
 }
 
@@ -1526,25 +1498,25 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
     </tr>
   </thead>
   <tbody>
-<tr><td><input type="checkbox"> UK</td><td id="UKcount">0</td><td><span id="UKtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('UK')">出力</button></td></tr>
-<tr><td><input type="checkbox"> K</td><td id="Kcount">0</td><td><span id="Ktotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('K')">出力</button></td></tr>
-<tr><td><input type="checkbox"> AB</td><td id="ABcount">0</td><td><span id="ABtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('AB')">出力</button></td></tr>
-<tr><td><input type="checkbox"> LA</td><td id="LAcount">0</td><td><span id="LAtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('LA')">出力</button></td></tr>
-<tr><td><input type="checkbox"> PA</td><td id="PAcount">0</td><td><span id="PAtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('PA')">出力</button></td></tr>
-<tr><td><input type="checkbox"> BB</td><td id="BBcount">0</td><td><span id="BBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('BB')">出力</button></td></tr>
-<tr><td><input type="checkbox"> MS</td><td id="MScount">0</td><td><span id="MStotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('MS')">出力</button></td></tr>
-<tr><td><input type="checkbox"> GM</td><td id="GMcount">0</td><td><span id="GMtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('GM')">出力</button></td></tr>
-<tr><td><input type="checkbox"> B</td><td id="Bcount">0</td><td><span id="Btotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('B')">出力</button></td></tr>
-<tr><td><input type="checkbox"> JOE</td><td id="JOEcount">0</td><td><span id="JOEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('JOE')">出力</button></td></tr>
-<tr><td><input type="checkbox"> KOSE</td><td id="KOSEcount">0</td><td><span id="KOSEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('KOSE')">出力</button></td></tr>
-<tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td><span id="HEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('HE')">出力</button></td></tr>
-<tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td><span id="PBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('PB')">出力</button></td></tr>
-<tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td><span id="Xtotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('X')">出力</button></td></tr>
-<tr></tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td><span id="Ztotal">0</span><button type="button" class="print-mini" onclick="printEnvelope('Z')">出力</button></td></tr>
+<tr><td><input type="checkbox"> UK</td><td id="UKcount">0</td><td><span id="UKtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('UK')">出力</button></td></tr>
+<tr><td><input type="checkbox"> K</td><td id="Kcount">0</td><td><span id="Ktotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('K')">出力</button></td></tr>
+<tr><td><input type="checkbox"> AB</td><td id="ABcount">0</td><td><span id="ABtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('AB')">出力</button></td></tr>
+<tr><td><input type="checkbox"> LA</td><td id="LAcount">0</td><td><span id="LAtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('LA')">出力</button></td></tr>
+<tr><td><input type="checkbox"> PA</td><td id="PAcount">0</td><td><span id="PAtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('PA')">出力</button></td></tr>
+<tr><td><input type="checkbox"> BB</td><td id="BBcount">0</td><td><span id="BBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('BB')">出力</button></td></tr>
+<tr><td><input type="checkbox"> MS</td><td id="MScount">0</td><td><span id="MStotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('MS')">出力</button></td></tr>
+<tr><td><input type="checkbox"> GM</td><td id="GMcount">0</td><td><span id="GMtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('GM')">出力</button></td></tr>
+<tr><td><input type="checkbox"> B</td><td id="Bcount">0</td><td><span id="Btotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('B')">出力</button></td></tr>
+<tr><td><input type="checkbox"> JOE</td><td id="JOEcount">0</td><td><span id="JOEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('JOE')">出力</button></td></tr>
+<tr><td><input type="checkbox"> KOSE</td><td id="KOSEcount">0</td><td><span id="KOSEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('KOSE')">出力</button></td></tr>
+<tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td><span id="HEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('HE')">出力</button></td></tr>
+<tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td><span id="PBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('PB')">出力</button></td></tr>
+<tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td><span id="Xtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('X')">出力</button></td></tr>
+<tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td><span id="Ztotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('Z')">出力</button></td></tr>
       <tr>
        <td><strong>合計</strong></td>
        <td id="totalCountCell">
-       <button type="button" class="print-mini" onclick="printEnvelope('ALL')">出力</button>
+       <button type="button" class="print-mini" onclick="printEnvelopeApp1('ALL')">出力</button>
        <span id="totalCountValue" class="count-value">1</span>
        </td>
     <td id="totalBackAmount">0</td>
@@ -1565,7 +1537,7 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
     <li><button type="button" data-target="set40">SET</button></li>
     <li><button type="button" data-target="a">Drink</button></li>
     <li><button id="side-calc">計算</button></li>
-    <li><button id="side-print">出力</button></li>
+    <li><button id="side-print" onclick="preparePrintApp2()">出力</button></li>
     <li><button type="button" data-target="app2-resultSection">結果</button></li>
     <li><button id="side-clear" class="red-btn">クリア</button></li>
     <li><button id="side-scroll-history">履歴</button></li>
@@ -1727,7 +1699,7 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 
     <div class="result" id="result"></div>
       <div class="button-row" style="margin-top: 20px;">
-      <button type="button" class="print-button" onclick="preparePrint()">出力</button>
+      <button type="button" class="print-button" onclick="preparePrintApp2()">出力</button>
     </div>
 
       <div class="button-row" style="margin-top: 20px;">
@@ -2347,6 +2319,27 @@ function updateTotals() {
 
   const totalSalesInput = document.getElementById("totalSales");
   if (totalSalesInput) totalSalesInput.value = formatNumber(totalAmount);
+
+  if (!window.catchbackDetails) window.catchbackDetails = {};
+window.catchbackDetails = {}; // 初期化
+
+document.querySelectorAll('#formRows tr').forEach(row => {
+  const c = row.querySelector('.c')?.value || '';
+  if (!c) return;
+
+  const num  = parseInt((row.querySelector('.num')?.value || '0').replace(/,/g,''), 10);    // 本数
+  const unit = parseInt((row.querySelector('.amount')?.value || '0').replace(/,/g,''), 10); // 単価（金額）
+  const detail = row.querySelector('.detail')?.value || '';
+
+  const amount = unit * num; // 合計金額
+
+  (window.catchbackDetails[c] ||= []).push({
+    unit,        // 単価
+    count: num,  // 本数
+    amount,      // 金額（unit × count）
+    detail
+  });
+});
 
   saveForm();
 }
@@ -3082,9 +3075,9 @@ const resultText = `
   <div class="welfare" style="font-size: 16px; font-weight: bold;">
     <strong>${welfareText}</strong>
   </div>
-  <div class="totalAmount" style="font-size: 25px; font-weight: bold;">
-    <strong>合計:</strong> ¥${totalAmount.toLocaleString()}
-    <span class="print-only" style="float:right; font-size:14px; margin-left:10px;">←領収書記入</span>
+  <div class="totalAmount" style="font-size:25px; font-weight:bold; display:inline-flex; align-items:baseline;">
+    <strong>合計:</strong>&nbsp;¥${totalAmount.toLocaleString()}
+    <span class="print-only" style="font-size:14px; margin-left:6px;">←領収書記入</span>
   </div>
   <div class="sendoff"><strong>${sendoffText}</strong></div>
   <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
@@ -3632,130 +3625,7 @@ function restoreInputs() {
   });
 })();
 
-/* ====== 印刷：#result をサイレント出力 ====== */
-window.preparePrint = function () {
-  if (typeof window.showApp === 'function') window.showApp('app2');
-  if (typeof window.calculate === 'function') window.calculate();
 
-  const html = (document.getElementById('result')?.innerHTML || '').trim();
-  if (!html) {
-    alert('印刷する内容がありません。先に「計算」で結果を出してください。');
-    return;
-  }
-
-  // 印刷用スタイルをここで定義
-  const printCSS = `
-    <style>
-      @media print {
-        @page { size: 90mm 205mm; margin: 0; }
-
-        html, body {
-          width: 90mm; height: 205mm;
-          margin: 1; padding: 0.5;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-
-        #result {
-          width: 90mm !important;
-          height: 205mm !important;
-          margin: 0 auto !important;
-          padding: 8mm 6mm 8mm 6mm !important;
-          box-sizing: border-box;
-          font-size: 10.5pt;
-        }
-
-        /* 領収書記入を数字寄せ */
-        .receipt-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-        }
-        .receipt-row .label {
-          margin-right: 5mm;
-          white-space: nowrap;
-        }
-        .receipt-row .value {
-          font-weight: bold;
-          font-size: 12pt;
-          text-align: right;
-        }
-
-        /* 合計と最終合計と氏名を強調 */
-        .totalAmount {
-          font-size: 16pt !important;  /* 合計 */
-          font-weight: 700;
-        }
-        .finalAmount {
-          font-size: 16pt !important;  /* 最終合計 */
-          font-weight: 800;
-        }
-        .castName {
-          font-size: 16pt !important;  /* 氏名 */
-          font-weight: 700;
-        }
-
-        /* 枠は中央固定（既存の .envelope はそのまま） */
-.envelope{ width:86mm; margin:0 auto; text-align:center; }
-
-/* ALL：枠の中を “2段グリッド” で詰める */
-.print-detail-container{
-  width:78mm;              /* 少し細くして左右に余白 */
-  margin:6mm auto 0;
-  padding:3mm 3.2mm;
-  border:2px solid #000; border-radius:2mm; box-sizing:border-box;
-}
-
-/* ← NEW：2カラムに分割（幅が足りなければ自動折返し） */
-.print-detail-matrix{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  column-gap:3mm;
-  row-gap:1.2mm;
-  align-items:start;
-  justify-items:center;
-}
-
-/* 行：カテゴリ | 詳細 | 合計 を中央揃え＆固定幅 */
-.print-detail-inline{
-  width:100%;
-  display:grid;
-  grid-template-columns: 12mm 1fr 13mm;  /* 左=カテゴリ, 中=内訳, 右=合計 */
-  justify-items:center;
-  align-items:center;
-  text-align:center;
-  font-variant-numeric: tabular-nums;    /* 桁幅を揃える */
-  font-size:10pt;                        /* 少し小さくして行数を稼ぐ */
-  line-height:1.25;
-  letter-spacing:0;
-}
-
-/* 内訳の詰め方と折返し（中央維持） */
-.print-detail-inline .details{
-  white-space:normal;            /* 必要なら折返す */
-  letter-spacing:-0.2pt;         /* わずかに詰める */
-}
-.print-detail-inline .details span{
-  display:inline-block;
-  margin:0 .9mm;                 /* “×” ブロック間を均等に */
-}
-
-.print-detail-inline strong,
-.print-detail-inline .total{
-  text-align:center;
-}
-
-      }
-    </style>
-  `;
-
-  // openPrintSilently に HTML + CSS を流し込む
-  window.openPrintSilently(printCSS + html, {
-    scale: 1.05,
-    rotateOnMobile: true,
-    trimBottomMM: 20
-  });
-};
 
 
 
@@ -4138,14 +4008,14 @@ function resetApp1(full) {
   document.querySelectorAll("table input[type='checkbox']").forEach(cb => cb.checked = false);
 
   // 合計リセット
-  document.getElementById("totalCustomers").textContent = "0";
-  document.getElementById("cashTotal").textContent = "0";
-  document.getElementById("cardTotal").textContent = "0";
-  document.getElementById("totalAmount").textContent = "0";
-  document.getElementById("totalCountCell").innerHTML =
-  '<button type="button" class="print-mini" onclick="printEnvelope(\'ALL\')">出力</button>' +
+document.getElementById("totalCustomers").textContent = "0";
+document.getElementById("cashTotal").textContent = "0";
+document.getElementById("cardTotal").textContent = "0";
+document.getElementById("totalAmount").textContent = "0";
+document.getElementById("totalCountCell").innerHTML =
+  '<button type="button" class="print-mini" onclick="printEnvelopeApp1(\'ALL\')">出力</button>' +
   '<span id="totalCountValue" class="count-value">0</span>';
-  document.getElementById("totalBackAmount").textContent = "0";
+document.getElementById("totalBackAmount").textContent = "0";
 
   // カテゴリ別もリセット
   const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
@@ -4405,14 +4275,6 @@ document.getElementById('side-calc')?.addEventListener('click', () => {
   confirmAndCalculate(new Event('submit'));
 });
 
-  document.getElementById('side-print')?.addEventListener('click', () => {
-    try {
-      window.preparePrint(); // #resultを生成→サイレント印刷
-    } catch (e) {
-      alert('印刷処理でエラーが発生しました: ' + (e?.message ?? e));
-    }
-  });
-
 /* ========= タブ切替：堅牢版（競合に強い） ================================================================================== */
 /* ========= タブ切替 + 各APPのスクロール記憶 =============================================================================== */
 (function () {
@@ -4534,218 +4396,343 @@ function getApp3StyleDate() {
   return `${y}/${m}/${day}`;
 }
 
-/**
- * 子ウィンドウで安全に印刷する（画面は非表示＆自動クローズ）
- * @param {string} innerHTML  印刷したいHTML（#resultの中身など）
- * @param {object} opts       { scale, rotateOnMobile, trimBottomMM }
- */
-/* ====== 印刷サイレント出力 ====== */
-window.openPrintSilently = function(innerHTML, opts = {}) {
-  const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
-  const isSmartphone = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
-  const rotate = rotateOnMobile && isSmartphone;
 
-  const printHTML = `<!doctype html>
-<html lang="ja"><head><meta charset="utf-8">
-<title>print</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  :root { --scale:${scale}; }
-  @page { size: 90mm 205mm; margin: 0; }
+/* =========================================================
+   APP1 だけで使うもの（顧問料：ALL／個別の封筒印刷）
+   使い方：
+     - 顧問料まとめ封筒 … printEnvelopeApp1('ALL')
+     - カテゴリ封筒     … printEnvelopeApp1('UK') など
+     - #resultをそのまま印刷 … preparePrintApp1()
+   ========================================================= */
 
-  html,body{ margin:0; padding:0; background:#fff;
-             -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+window.preparePrintApp1 = function () {
+  const html = (document.getElementById('result')?.innerHTML || '').trim();
+  if (!html) { alert('印刷する内容がありません。'); return; }
+  const printCSS = `
+    <style>
+      @media print {
+        @page { size: 90mm 205mm; margin: 0; }
+        html, body { margin: 0; padding: 0; background: #fff;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        #result {
+          width: 90mm !important; max-height: 205mm !important;
+          margin: 0 auto !important; padding: 8mm 6mm !important;
+          box-sizing: border-box; font-size: 10.5pt; line-height: 1.25;
+        }
 
-  #page{ width:90mm; height:205mm; margin:0 auto; overflow:hidden; }
-  .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
+        #result, .envelope {
+         page-break-before: avoid;
+         page-break-after: avoid;
+         page-break-inside: avoid;
+        }
 
-  /* キャンバス中央固定 */
-  #result{
-    width:calc(90mm/var(--scale));
-    height:calc((205mm - 0.2mm)/var(--scale));
-    margin:0 auto; padding:0; box-sizing:border-box;
-    transform:scale(var(--scale)); transform-origin:top center;
-    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
-    overflow:hidden;
-    -webkit-print-color-adjust:exact; print-color-adjust:exact;
-  }
-  .rotate180 #result{ transform:rotate(180deg) scale(var(--scale)); transform-origin:center center; }
-
-  /* 封筒本体(中央) */
-  .envelope{
-    width:86mm; min-height:205mm; margin:0 auto; text-align:center;
-    font-family:'ＭＳ 明朝',serif; font-weight:bold;
-    font-variant-numeric: tabular-nums; letter-spacing:.02em;
-  }
-
-  .print-date{ font-size:12pt; margin-top:5mm; margin-bottom:6mm; }
-  .print-title{ font-size:32pt; margin-bottom:10mm; }
-
-  /* 個別：縦並び（単価|×|人数）を完全中央 */
-  .print-detail-row{
-    display:grid; grid-template-columns:1fr auto 1fr;
-    gap:2mm; font-size:12pt; margin:1mm 0;
-    align-items:center; justify-items:center; text-align:center;
-    font-variant-numeric: tabular-nums;
-  }
-  .print-detail-row span{ min-width:16mm; text-align:center; }
-
-  /* ALL：枠 + 2カラムのマトリクスで省スペース */
-  .print-detail-container{
-    width:78mm; margin:6mm auto 0; padding:3mm 3.2mm;
-    border:2px solid #000; border-radius:2mm; box-sizing:border-box;
-  }
-  .print-detail-matrix{
-    display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
-    column-gap:3mm; row-gap:1.2mm; align-items:start; justify-items:center;
-  }
-
-  /* 行：カテゴリ | 詳細(可変) | 合計 — 3列を中央配置 */
-  .print-detail-inline{
-    width:100%;
-    display:grid; grid-template-columns:12mm 1fr 13mm;
-    justify-items:center; align-items:center; text-align:center;
-    font-size:10.5pt; line-height:1.25; font-variant-numeric: tabular-nums;
-    margin:1mm 0;
-  }
-  .print-detail-inline .details{
-    white-space:normal; letter-spacing:-0.2pt;
-  }
-  .print-detail-inline .details span{
-    display:inline-block; margin:0 .9mm;
-  }
-</style>
-</head>
-<body class="${rotate ? 'rotate180' : ''}">
-  <div id="page"><div id="result">
-    <div class="envelope">${innerHTML}</div>  <!-- ★ ここが中央フレーム -->
-  </div></div>
-  <script>
-    function tryClose(){ try{ window.close(); }catch(e){} }
-    window.onload = function(){
-      try{ window.focus(); window.print(); }catch(e){}
-      window.onafterprint = tryClose;
-      window.addEventListener('focus', tryClose, { once:true });
-      document.addEventListener('visibilitychange', function(){
-        if(!document.hidden) tryClose();
-      });
-      setTimeout(tryClose, 2500);
-    };
-  <\/script>
-</body></html>`;
-
-  let w = null;
-  try { w = window.open('', 'PRINT', 'width=480,height=800'); } catch(_) {}
-  if (w && w.document) {
-    try { w.document.open(); w.document.write(printHTML); w.document.close(); return; } catch(_) {}
-  }
-  try {
-    const blob = new Blob([printHTML], { type: 'text/html' });
-    const url  = URL.createObjectURL(blob);
-    window.open(url, '_blank'); return;
-  } catch(_) {}
-  try {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
-    document.body.appendChild(iframe);
-    const doc = iframe.contentWindow.document;
-    doc.open(); doc.write(printHTML); doc.close();
-    setTimeout(() => {
-      try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(_){}
-      setTimeout(() => { try { iframe.remove(); } catch(_){} }, 1500);
-    }, 50);
-  } catch(_) {}
+        
+      }
+    </style>`;
+  openPrintApp1(printCSS + html, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
 };
 
+window.printEnvelopeApp1 = function (category) {
+  const dateStr = (typeof getApp3StyleDate === 'function')
+    ? getApp3StyleDate()
+    : (()=>{const d=new Date();return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`})();
 
-/* ====== 印刷：封筒 ====== */
-function printEnvelope(category) {
-  const dateStr = getApp3StyleDate();
-
-  // 単価ごとにまとめる
-  function summarizeDetails(arr) {
-    const summary = {};
-    arr.forEach(d => {
-      summary[d.unit] = (summary[d.unit] || 0) + d.count;
-    });
-    return summary;
-  }
-
-if (category === 'ALL') {
-  if (!confirm("伝票の記入はすべて完了していますか？")) return;
-
-  const countVal = parseInt(document.getElementById("totalCountValue")?.textContent || "0", 10);
-  const bottles  = isNaN(countVal) ? 0 : countVal;
-  const amount   = bottles * 1000;
-
-  const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
-
-  // 単価ごとに合算する関数（既存の summarizeDetails を使用）
-  function summarizeDetails(arr){
-    const summary = {};
-    arr.forEach(d => summary[d.unit] = (summary[d.unit] || 0) + d.count);
-    return summary;
-  }
-
-const rowsHtml = CATEGORIES.map(key => {
-  const arr = catchbackDetails[key] || [];
-  const summary = summarizeDetails(arr);
-  const details = Object.entries(summary)
-    .sort((a,b)=> Number(b[0]) - Number(a[0]))
-    .map(([unit,n]) => `<span>${unit}×${n}</span>`)
-    .join(' ');   // ← 区切りを必ず入れる
-  const total = Object.values(summary).reduce((s,v)=> s+v, 0);
-
-  return `
-    <div class="print-detail-inline">
-      <strong>${key}</strong>
-      <div class="details">${details || '0'}</div>
-      <div class="total">(計${total})</div>
-    </div>`;
-}).join('');
-
-const catList = `
-  <div class="print-detail-container">
-    <div class="print-detail-matrix">
-      ${rowsHtml}
-    </div>
-  </div>`;
-
-
-  const inner = `
-    <div style="min-height:205mm;">
-      <div class="print-date"  style="margin-top:4mm;">${getApp3StyleDate()}</div>
-      <div class="print-title" style="margin-bottom:8mm;">顧問料</div>
-      <div style="font-size:26pt; margin:2mm 0 3mm;">${amount}</div>
-      <div style="font-size:14pt; margin-bottom:4mm;">（人数: ${bottles}）</div>
-      ${catList}
-    </div>`.trim();
-
-  // 余白を少し確保しつつ拡大しすぎない
-  window.openPrintSilently(inner, { scale: 0.98, rotateOnMobile: true, trimBottomMM: 20 });
-  return;
+function summarizeDetails(arr) {
+  const summary = {};
+  (arr || []).forEach(d => {
+    const u = Number(String(d.unit).replace(/,/g,'')) || 0;   // 単価
+    const n = Number(String(d.count).replace(/,/g,'')) || 0;  // 本数
+    if (!u) return;  // 単価が無い行はスキップ
+    if (!summary[u]) summary[u] = { count: 0, total: 0 };
+    summary[u].count += n;
+    summary[u].total += u * n;
+  });
+  return summary;
 }
+  const yen = v => Number(v||0).toLocaleString('ja-JP');
 
-  // 個別カテゴリ封筒（縦並び）
-  const arr = catchbackDetails[category] || [];
-  const rows = arr.map(d => `
-    <div class="print-detail-row">
-      <span>${d.unit}</span><span>×</span><span>${d.count}</span>
-    </div>`).join('');
-  const total   = arr.reduce((s,d)=>s+d.count,0);
-  const amount  = document.getElementById(category + "total")?.textContent || "0";
+  if (category === 'ALL') {
+    if (!confirm('伝票の記入はすべて完了していますか？')) return;
+    const countVal = parseInt((document.getElementById('totalCountValue')?.textContent || '0').replace(/,/g,''),10);
+    const bottles  = isNaN(countVal) ? 0 : countVal;
+    const amount   = bottles * 1000;
+    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
+    const rowsHtml = CATEGORIES.map(key=>{
+      const arr = (window.catchbackDetails && window.catchbackDetails[key]) || [];
+      const sm  = summarizeDetails(arr);
+const details = Object.entries(sm).sort((a,b)=>Number(b[0])-Number(a[0]))
+  .map(([u,data]) => `<span>${u} × ${data.count}</span>`)
+  .join('<br>');
+      const total = Object.values(sm).reduce((s, v) => s + (v?.count || 0), 0);
+      return `<div class="print-detail-inline">
+                <strong>${key}</strong>
+                <div class="details">${details || '0'}</div>
+                <div class="total">(計${total})</div>
+              </div>`;
+    }).join('');
+    const inner = `
+      <div class="envelope">
+        <div class="print-date">${dateStr}</div>
+        <div class="print-title">顧問料</div>
+        <div style="text-align:center; font-size:26pt; margin:2mm 0 3mm;">￥${yen(amount)}</div>
+        <div style="text-align:center; font-size:14pt; margin-bottom:4mm;">（人数: ${bottles}）</div>
+        <div class="print-detail-container"><div class="print-detail-matrix">${rowsHtml}</div></div>
+      </div>`;
+    openPrintApp1(inner, { scale: 0.98, rotateOnMobile: true, trimBottomMM: 20 });
+    return;
+  }
 
+  // 個別カテゴリ
+  const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
+const rows = arr.map(d =>
+  `<div class="print-detail-row">
+     <span>${d.unit}</span><span>×</span><span>${d.count}</span>
+   </div>`
+).join('');
+  const total = arr.reduce((s,d)=>s+Number(d.count||0),0);
+  const amountText = (document.getElementById(category + 'total')?.textContent || '0').trim();
   const inner = `
-    <div style="width:100%; min-height:205mm; font-family:'ＭＳ 明朝',serif; font-weight:bold;">
-      <div class="print-date" style="margin-top:4mm;">${dateStr}</div>
-      <div class="print-title" style="margin-top:2mm;">${category}</div>
-      <div style="text-align:center; font-size:22pt; margin:5mm 0 6mm;">￥${amount}</div>
+    <div class="envelope">
+      <div class="print-date">${dateStr}</div>
+      <div class="print-title">${category}</div>
+      <div style="text-align:center; font-size:22pt; margin:5mm 0 6mm;">￥${amountText}</div>
       ${rows || '<div style="text-align:center;">0</div>'}
       <div style="text-align:center; font-size:12pt; margin-top:4mm;">Total ${total}</div>
-    </div>`.trim();
+    </div>`;
+  openPrintApp1(inner, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
+};
 
-  window.openPrintSilently(inner, { scale: 1.0, rotateOnMobile: true, trimBottomMM: 0 });
+function openPrintApp1(innerHTML, opts = {}) {
+  const { scale=1.00, rotateOnMobile=true, trimBottomMM=0 } = opts;
+  const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+  const rotate = rotateOnMobile && isSP;
+  const printHTML = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
+  <title>print</title><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { --scale:${scale}; }
+    @page { size: 90mm 205mm; margin: 0; }
+    html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #page{ width:90mm; max-height: 205mm !important; margin:0 auto; overflow:hidden; }
+    .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
+    #result{
+      width:calc(90mm/var(--scale)); min-height:calc(205mm/var(--scale));
+      margin:0 auto; padding:0; box-sizing:border-box;
+      transform:scale(var(--scale)); transform-origin:top center;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .rotate180 #result{ transform:rotate(180deg) scale(var(--scale)); transform-origin:center center; }
+    /* 封筒UI（APP1用） */
+    .envelope{ width:86mm;  max-height: 205mm; margin:0 auto; text-align:center;
+      font-family:'ＭＳ 明朝',serif; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+    .print-date{ text-align:left;  font-size:11pt; margin: 4mm 0 0; }
+    .print-title{ text-align:center; font-size:14pt; margin: 2mm 0 8mm; font-weight:700; }
+    .print-detail-row{ display:flex; justify-content:center; align-items:baseline; gap:2mm; font-size:12pt; margin:1mm 0; }
+    .print-detail-container{ width:78mm; margin:6mm auto 0; padding:3mm 3.2mm; border:2px solid #000; border-radius:2mm; box-sizing:border-box; }
+    .print-detail-matrix {
+     display: grid;
+     grid-template-columns: 1fr;   /* ← 1列だけ */
+     row-gap: 1.5mm;               /* 縦の間隔を少し広めに */
+     justify-items: start;         /* 左寄せにする場合 */
+     }
+    .print-detail-inline{ width:100%; display:grid; grid-template-columns:12mm 1fr 13mm; justify-items:center; align-items:center; text-align:center;
+      font-size:10.5pt; line-height:1.25; font-variant-numeric:tabular-nums; margin:1mm 0; }
+    .print-detail-inline .details{ white-space:normal; letter-spacing:-0.2pt; }
+    .print-detail-inline .details span{ display:inline-block; margin:0 .9mm; }
+  </style>
+  </head><body class="${rotate ? 'rotate180' : ''}">
+    <div id="page"><div id="result">${innerHTML}</div></div>
+    <script>
+      function tryClose(){ try{ window.close(); }catch(e){} }
+      window.onload = function(){
+        try{ window.focus(); window.print(); }catch(e){}
+        window.onafterprint = tryClose;
+        window.addEventListener('focus', tryClose, { once:true });
+        document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
+        setTimeout(tryClose, 2500);
+      };
+
+      
+    <\/script>
+  </body></html>`;
+  try {
+    let w = window.open('', 'PRINT_APP1', 'width=480,height=800');
+    if (w && w.document) { w.document.open(); w.document.write(printHTML); w.document.close(); return; }
+  } catch(_) {}
+  try { const blob=new Blob([printHTML],{type:'text/html'}); const url=URL.createObjectURL(blob); window.open(url,'_blank'); return; } catch(_) {}
 }
+
+/* =========================================================
+   APP2 だけで使うもの（#result を封筒サイズで出力）
+   使い方：
+     - #resultを封筒レイアウトで … preparePrintApp2('envelope')  ←既定
+     - #resultそのまま            … preparePrintApp2('plain')
+   ========================================================= */
+
+window.preparePrintApp2 = function (mode = 'envelope') {
+  if (typeof window.showApp === 'function') window.showApp('app2');
+  if (typeof window.calculate === 'function') window.calculate();
+
+  const html = (document.getElementById('result')?.innerHTML || '').trim();
+  if (!html) {
+    alert('印刷する内容がありません。先に「計算」で結果を出してください。');
+    return;
+  }
+
+  // 封筒モードなら .envelope で包む
+  const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
+  const inner = (mode === 'envelope' && !hasEnvelope)
+    ? `<div class="envelope">${html}</div>`
+    : html;
+
+  openPrintApp2(inner, { scale: 1.05, rotateOnMobile: true, trimBottomMM: 20 });
+};
+
+function openPrintApp2(innerHTML, opts = {}) {
+  const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
+  const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+  const rotate = rotateOnMobile && isSP;
+
+  const printHTML = `<!doctype html><html lang="ja"><head>
+  <meta charset="utf-8"><title>print</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { --scale:${scale}; }
+    @page { size: 90mm 205mm; margin: 0; }
+    html,body {
+      margin:0; padding:0; background:#fff;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+
+    #page {
+      width:90mm; max-height:205mm;
+      margin:0 auto; overflow:hidden;
+    }
+    .rotate180 #page { margin-bottom:-${trimBottomMM}mm; }
+
+    #result {
+      width:calc(90mm/var(--scale));
+      min-height:calc(205mm/var(--scale));
+      margin:0 auto; padding:0;
+      box-sizing:border-box;
+      transform:scale(var(--scale));
+      transform-origin:top center;
+    }
+    .rotate180 #result {
+      transform:rotate(180deg) scale(var(--scale));
+      transform-origin:center center;
+    }
+
+    /* APP2封筒専用ユーティリティ */
+    .envelope {
+      width:86mm; max-height:205mm;
+      margin:0 auto; text-align:left;
+      font-family:'ＭＳ 明朝',serif;
+      font-weight:700;
+      font-variant-numeric:tabular-nums;
+      letter-spacing:.02em;
+      padding-left: 5mm;   /* ★ 左余白を確保 */
+    }
+    .print-date  { text-align:left;  font-size:11pt; margin:4mm 0 0; }
+    .print-title { text-align:center;font-size:14pt;margin:2mm 0 8mm;font-weight:700; }
+    .receipt-row { display:flex; justify-content:space-between; align-items:baseline; }
+    .receipt-row .label{ margin-right:5mm; white-space:nowrap; }
+    .receipt-row .value{ font-weight:700; font-size:12pt; text-align:right; }
+    .totalAmount{ font-size:16pt !important; font-weight:700; color:#0066cc; }
+    .finalAmount{ font-size:16pt !important; font-weight:800; color:#009944; }
+    .castName   { font-size:16pt !important; font-weight:700; }
+    
+    /* ページ分割抑止 */
+    #result, .envelope {
+      page-break-before: avoid;
+      page-break-after: avoid;
+      page-break-inside: avoid;
+    }
+
+/* 氏名（キャスト名） */
+.castName {
+  font-size: 18pt !important;
+  font-weight: 800 !important;   /* 太字 */
+  margin: 3mm 0;
+}
+
+/* 小計 */
+.subtotal {
+  font-size: 14pt !important;
+  font-weight: 700 !important;
+  color: #333 !important;    /* ベースは黒 */
+  margin-top: 2mm;           /* 上余白 */
+  margin-bottom: 2mm;        /* 下余白 */
+}
+
+/* 合計 */
+.totalAmount {
+  font-size: 18pt !important;
+  font-weight: 800 !important;
+  color: #0066cc !important;   /* 青 */
+  margin-top: 3mm;             /* 上余白 */
+  margin-bottom: 2mm;          /* 下余白 */
+}
+
+/* 最終合計 */
+.finalAmount {
+  font-size: 18pt !important;
+  font-weight: 900 !important;
+  color: #009944 !important;   /* 緑 */
+  margin-top: 4mm;             /* 上余白 */
+  margin-bottom: 3mm;          /* 下余白 */
+}
+
+/* 領収書記入の行：数字にもっと寄せる */
+.receipt-row {
+  display: flex;
+  justify-content: flex-start;    /* ← space-between をやめて左寄せ */
+  align-items: baseline;
+  gap: 0;                         /* ← 間隔ゼロ */
+}
+
+.receipt-row .label {
+  margin-right: 1mm;              /* ← 必要最小限の余白だけ */
+  white-space: nowrap;
+}
+
+.receipt-row .value {
+  font-weight: 700;
+  font-size: 12pt;
+  text-align: left;               /* ← 数字も左寄せにする場合 */
+  margin-left: auto;              /* ← 数字を右端に寄せたい場合はこちら */
+}
+
+  </style>
+  </head><body class="${rotate ? 'rotate180' : ''}">
+    <div id="page"><div id="result">${innerHTML}</div></div>
+    <script>
+      function tryClose(){ try{ window.close(); }catch(e){} }
+      window.onload = function(){
+        try{ window.focus(); window.print(); }catch(e){}
+        window.onafterprint = tryClose;
+        window.addEventListener('focus', tryClose, { once:true });
+        document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
+        setTimeout(tryClose, 2500);
+      };
+    <\/script>
+  </body></html>`;
+
+  try {
+    let w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+    if (w && w.document) {
+      w.document.open(); w.document.write(printHTML); w.document.close();
+      return;
+    }
+  } catch(_) {}
+  try {
+    const blob = new Blob([printHTML], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    window.open(url,'_blank');
+    return;
+  } catch(_) {}
+}
+
+
 
 
 
