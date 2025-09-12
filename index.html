@@ -4508,37 +4508,67 @@ function openPrintApp1(innerHTML, opts = {}) {
   const rotate = rotateOnMobile && isSP;
   const printHTML = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
   <title>print</title><meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root { --scale:${scale}; }
-    @page { size: 90mm 205mm; margin: 0; }
-    html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    #page{ width:90mm; max-height: 205mm !important; margin:0 auto; overflow:hidden; }
-    .rotate180 #page{ margin-bottom:-${trimBottomMM}mm; }
-    #result{
-      width:calc(90mm/var(--scale)); min-height:calc(205mm/var(--scale));
-      margin:0 auto; padding:0; box-sizing:border-box;
-      transform:scale(var(--scale)); transform-origin:top center;
-      -webkit-print-color-adjust:exact; print-color-adjust:exact;
-    }
-    .rotate180 #result{ transform:rotate(180deg) scale(var(--scale)); transform-origin:center center; }
-    /* 封筒UI（APP1用） */
-    .envelope{ width:86mm;  max-height: 205mm; margin:0 auto; text-align:center;
-      font-family:'ＭＳ 明朝',serif; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
-    .print-date{ text-align:left;  font-size:11pt; margin: 4mm 0 0; }
-    .print-title{ text-align:center; font-size:14pt; margin: 2mm 0 8mm; font-weight:700; }
-    .print-detail-row{ display:flex; justify-content:center; align-items:baseline; gap:2mm; font-size:12pt; margin:1mm 0; }
-    .print-detail-container{ width:78mm; margin:6mm auto 0; padding:3mm 3.2mm; border:2px solid #000; border-radius:2mm; box-sizing:border-box; }
-    .print-detail-matrix {
-     display: grid;
-     grid-template-columns: 1fr;   /* ← 1列だけ */
-     row-gap: 1.5mm;               /* 縦の間隔を少し広めに */
-     justify-items: start;         /* 左寄せにする場合 */
-     }
-    .print-detail-inline{ width:100%; display:grid; grid-template-columns:12mm 1fr 13mm; justify-items:center; align-items:center; text-align:center;
-      font-size:10.5pt; line-height:1.25; font-variant-numeric:tabular-nums; margin:1mm 0; }
-    .print-detail-inline .details{ white-space:normal; letter-spacing:-0.2pt; }
-    .print-detail-inline .details span{ display:inline-block; margin:0 .9mm; }
-  </style>
+<style>
+  :root { --scale:${scale}; }
+  @page { size: 90mm 205mm; margin: 0; }
+  html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  /* 枠 */
+  #page{
+    width:90mm;
+    max-height:205mm !important;
+    margin:0 auto;
+    overflow:hidden;           /* 通常は隠す */
+  }
+  /* 回転時：クリップ回避＋高さ固定＋任意の下端トリム */
+  .rotate180 #page{
+    overflow:visible !important;
+    height:205mm !important;   /* max-height ではなく height で固定 */
+    margin-bottom:-${trimBottomMM}mm;
+  }
+
+  /* 中身 */
+  #result{
+    width:calc(90mm/var(--scale));
+    min-height:calc(205mm/var(--scale));
+    margin:0 auto; padding:0; box-sizing:border-box;
+    transform:scale(var(--scale));
+    transform-origin:top center;  /* 上基準 */
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  /* 回転時：上基準のまま180°回転（氏名の上切れ防止） */
+  .rotate180 #result{
+    transform:rotate(180deg) scale(var(--scale));
+    transform-origin:top center !important;
+  }
+
+  /* 封筒UI（APP1用） */
+  .envelope{
+    width:86mm; max-height:205mm; margin:0 auto; text-align:center;
+    font-family:'ＭＳ 明朝',serif; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:.02em;
+  }
+  .print-date{ text-align:left;  font-size:11pt; margin: 4mm 0 0; }
+  .print-title{ text-align:center; font-size:14pt; margin: 2mm 0 8mm; font-weight:700; }
+  .print-detail-row{ display:flex; justify-content:center; align-items:baseline; gap:2mm; font-size:12pt; margin:1mm 0; }
+
+  .print-detail-container{
+    width:78mm; margin:6mm auto 0; padding:3mm 3.2mm;
+    border:2px solid #000; border-radius:2mm; box-sizing:border-box;
+  }
+  .print-detail-matrix{
+    display:grid;
+    grid-template-columns:1fr;     /* 1列 */
+    row-gap:1.5mm;                 /* 行間 */
+    justify-items:start;           /* 左寄せ */
+  }
+  .print-detail-inline{
+    width:100%; display:grid; grid-template-columns:12mm 1fr 13mm;
+    justify-items:center; align-items:center; text-align:center;
+    font-size:10.5pt; line-height:1.25; font-variant-numeric:tabular-nums; margin:1mm 0;
+  }
+  .print-detail-inline .details{ white-space:normal; letter-spacing:-0.2pt; }
+  .print-detail-inline .details span{ display:inline-block; margin:0 .9mm; }
+</style>
   </head><body class="${rotate ? 'rotate180' : ''}">
     <div id="page"><div id="result">${innerHTML}</div></div>
     <script>
@@ -4592,6 +4622,18 @@ function openPrintApp2(innerHTML, opts = {}) {
   const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
   const rotate = rotateOnMobile && isSP;
 
+  // ★ 最終合計をチェックして、条件を満たせば special クラスを付与
+  const temp = document.createElement('div');
+  temp.innerHTML = innerHTML;
+  const finalEl = temp.querySelector('.finalAmount');
+  if (finalEl) {
+    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10);
+    if (num > 100000) {
+      finalEl.classList.add('rainbow-print');
+    }
+  }
+  innerHTML = temp.innerHTML;
+
   const printHTML = `<!doctype html><html lang="ja"><head>
   <meta charset="utf-8"><title>print</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -4603,10 +4645,7 @@ function openPrintApp2(innerHTML, opts = {}) {
       -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
 
-    #page {
-      width:90mm; max-height:205mm;
-      margin:0 auto; overflow:hidden;
-    }
+    #page { width:90mm; max-height:205mm; margin:0 auto; overflow:hidden; }
     .rotate180 #page { margin-bottom:-${trimBottomMM}mm; }
 
     #result {
@@ -4622,7 +4661,6 @@ function openPrintApp2(innerHTML, opts = {}) {
       transform-origin:center center;
     }
 
-    /* APP2封筒専用ユーティリティ */
     .envelope {
       width:86mm; max-height:205mm;
       margin:0 auto; text-align:left;
@@ -4630,80 +4668,31 @@ function openPrintApp2(innerHTML, opts = {}) {
       font-weight:700;
       font-variant-numeric:tabular-nums;
       letter-spacing:.02em;
-      padding-top: 5mm
-      padding-left: 5mm;   /* ★ 左余白を確保 */
-      padding-bottom: 5mm
+      padding:5mm;
     }
     .print-date  { text-align:left;  font-size:11pt; margin:4mm 0 0; }
     .print-title { text-align:center;font-size:14pt;margin:2mm 0 8mm;font-weight:700; }
     .receipt-row { display:flex; justify-content:space-between; align-items:baseline; }
     .receipt-row .label{ margin-right:5mm; white-space:nowrap; }
     .receipt-row .value{ font-weight:700; font-size:12pt; text-align:right; }
-    .totalAmount{ font-size:16pt !important; font-weight:700; color:#0066cc; }
-    .finalAmount{ font-size:16pt !important; font-weight:800; color:#009944; }
+    .totalAmount{ font-size:18pt !important; font-weight:800; color:#0066cc; margin:3mm 0 2mm; }
+    .finalAmount{ font-size:18pt !important; font-weight:900; color:#009944; margin:4mm 0 3mm; }
     .castName   { font-size:16pt !important; font-weight:700; }
-    
-    /* ページ分割抑止 */
-    #result, .envelope {
-      page-break-before: avoid;
-      page-break-after: avoid;
-      page-break-inside: avoid;
+
+    /* 印刷だけ虹色 */
+    @media print {
+      @keyframes rainbowText {
+        0%   { color: red; }
+        20%  { color: orange; }
+        40%  { color: yellow; }
+        60%  { color: green; }
+        80%  { color: blue; }
+        100% { color: purple; }
+      }
+      .rainbow-print {
+        animation: rainbowText 3s linear infinite;
+      }
     }
-
-/* 氏名（キャスト名） */
-.castName {
-  font-size: 18pt !important;
-  font-weight: 800 !important;   /* 太字 */
-  margin: 3mm 0;
-}
-
-/* 小計 */
-.subtotal {
-  font-size: 14pt !important;
-  font-weight: 700 !important;
-  color: #333 !important;    /* ベースは黒 */
-  margin-top: 2mm;           /* 上余白 */
-  margin-bottom: 2mm;        /* 下余白 */
-}
-
-/* 合計 */
-.totalAmount {
-  font-size: 18pt !important;
-  font-weight: 800 !important;
-  color: #0066cc !important;   /* 青 */
-  margin-top: 3mm;             /* 上余白 */
-  margin-bottom: 2mm;          /* 下余白 */
-}
-
-/* 最終合計 */
-.finalAmount {
-  font-size: 18pt !important;
-  font-weight: 900 !important;
-  color: #009944 !important;   /* 緑 */
-  margin-top: 4mm;             /* 上余白 */
-  margin-bottom: 3mm;          /* 下余白 */
-}
-
-/* 領収書記入の行：数字にもっと寄せる */
-.receipt-row {
-  display: flex;
-  justify-content: flex-start;    /* ← space-between をやめて左寄せ */
-  align-items: baseline;
-  gap: 0;                         /* ← 間隔ゼロ */
-}
-
-.receipt-row .label {
-  margin-right: 1mm;              /* ← 必要最小限の余白だけ */
-  white-space: nowrap;
-}
-
-.receipt-row .value {
-  font-weight: 700;
-  font-size: 12pt;
-  text-align: left;               /* ← 数字も左寄せにする場合 */
-  margin-left: auto;              /* ← 数字を右端に寄せたい場合はこちら */
-}
-
   </style>
   </head><body class="${rotate ? 'rotate180' : ''}">
     <div id="page"><div id="result">${innerHTML}</div></div>
@@ -4733,6 +4722,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     return;
   } catch(_) {}
 }
+
 
 
 
