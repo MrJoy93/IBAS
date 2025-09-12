@@ -4689,9 +4689,12 @@ function openPrintApp2(innerHTML, opts = {}) {
         80%  { color: blue; }
         100% { color: purple; }
       }
-      .rainbow-print {
-        animation: rainbowText 3s linear infinite;
-      }
+  .rainbow-print {
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+  }
     }
   </style>
   </head><body class="${rotate ? 'rotate180' : ''}">
