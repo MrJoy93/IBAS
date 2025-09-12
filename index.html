@@ -4679,6 +4679,36 @@ function openPrintApp2(innerHTML, opts = {}) {
     .finalAmount{ font-size:18pt !important; font-weight:900; color:#009944; margin:4mm 0 3mm; }
     .castName   { font-size:16pt !important; font-weight:700; }
 
+      .castName {
+    font-size: 18pt !important;
+    font-weight: 800 !important;
+    margin: 3mm 0 !important;   /* 名前上下の余白復活 */
+  }
+
+  .subtotal {
+    font-size: 14pt !important;
+    font-weight: 700 !important;
+    color: #333 !important;
+    margin-top: 2mm !important;
+    margin-bottom: 2mm !important;
+  }
+
+  .totalAmount {
+    font-size: 16pt !important;
+    font-weight: 800 !important;
+    color: #0066cc !important;
+    margin-top: 3mm !important;
+    margin-bottom: 2mm !important;
+  }
+
+  .finalAmount {
+    font-size: 18pt !important;
+    font-weight: 900 !important;
+    color: #009944 !important;
+    margin-top: 4mm !important;
+    margin-bottom: 3mm !important;
+  }
+
     /* 印刷だけ虹色 */
     @media print {
       @keyframes rainbowText {
