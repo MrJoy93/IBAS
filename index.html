@@ -834,11 +834,11 @@ html, body { overflow-x: hidden; }
 
 /* サイドナビのぶん app2 コンテンツを縮小 */
 #app2 {
-  width: 95% !important;        /* 横幅いっぱいに広げる */
-  max-width: none !important;    /* 1400px 制限を解除 */
-  margin-left: 0 !important;     /* 左余白リセット */
-  margin-right: 230px !important;/* サイドナビ幅(210) + 余白(20) */
-  box-sizing: border-box;        /* はみ出し防止 */
+  width: calc(100% - 140px) !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box;
 }
 
 /* 既定は非表示にする */
@@ -1182,10 +1182,10 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 }
 
 #app2 {
-  width: calc(100% - 110px) !important; /* ナビ幅160 + 余白10 */
-  margin-right:170px !important;
-  max-width:none !important;
-  box-sizing:border-box;
+  width: calc(100% - 110px) !important; /* ナビ100 + 右余白(約10) */
+  margin-right: 0 !important;           /* ダブりで溢れていたので 0 に */
+  max-width: none !important;
+  box-sizing: border-box;
 }
 
 
@@ -1353,9 +1353,9 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
     right: 10px !important;
   }
 
-  body[data-active-app="app2"] #app2 {
-    margin-right: 290px !important;
-  }
+body[data-active-app="app2"] #app2 {
+  margin-right: 0 !important;
+}
 
     .subnav {
     top: calc(var(--tabs-h) + 4px) !important;   /* 好みで 2〜6px 調整 */
@@ -3065,6 +3065,19 @@ detailsHTML += '</div>';
 
   const castName = document.getElementById('castName').value || '（名前なし）';
 
+  // 10万を超える場合だけ表示（封筒印字専用）
+const congratsHTML =
+  (finalAmount > 100000)
+    ? `
+      <div class="congrats-box print-only">
+        <div class="congrats">～CONGRATULATIONS～</div>
+        <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
+      </div>
+    `
+    : `
+      <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
+    `;
+
 const resultText = `
   <div class="castName"><strong></strong> ${castName}</div>
   <div class="experienceAndRental">${experienceText}</div>
@@ -3080,7 +3093,9 @@ const resultText = `
     <span class="print-only" style="font-size:14px; margin-left:6px;">←領収書記入</span>
   </div>
   <div class="sendoff"><strong>${sendoffText}</strong></div>
-  <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
+
+  ${congratsHTML}
+
   ${detailsHTML}
 `;
 
@@ -4628,7 +4643,7 @@ function openPrintApp2(innerHTML, opts = {}) {
   const finalEl = temp.querySelector('.finalAmount');
   if (finalEl) {
     const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10);
-    if (num > 100000) {
+    if (num >= 100000) {
       finalEl.classList.add('rainbow-print');
     }
   }
@@ -4661,15 +4676,18 @@ function openPrintApp2(innerHTML, opts = {}) {
       transform-origin:center center;
     }
 
-    .envelope {
-      width:86mm; max-height:205mm;
-      margin:0 auto; text-align:left;
-      font-family:'ＭＳ 明朝',serif;
-      font-weight:700;
-      font-variant-numeric:tabular-nums;
-      letter-spacing:.02em;
-      padding:5mm;
-    }
+.envelope {
+  box-sizing: border-box;
+  width: calc(84mm / var(--scale)); /* ← 86→84 にして左右3mmずつの余白を確保 */
+  max-height: 205mm;
+  margin: 0 auto;
+  text-align: left;
+  font-family: 'ＭＳ 明朝', serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+  padding: calc(5mm / var(--scale)); /* padding もスケールで割って実効幅を維持 */
+}
     .print-date  { text-align:left;  font-size:11pt; margin:4mm 0 0; }
     .print-title { text-align:center;font-size:14pt;margin:2mm 0 8mm;font-weight:700; }
     .receipt-row { display:flex; justify-content:space-between; align-items:baseline; }
@@ -4694,7 +4712,7 @@ function openPrintApp2(innerHTML, opts = {}) {
   }
 
   .totalAmount {
-    font-size: 16pt !important;
+    font-size: 15pt !important;
     font-weight: 800 !important;
     color: #0066cc !important;
     margin-top: 3mm !important;
@@ -4726,6 +4744,45 @@ function openPrintApp2(innerHTML, opts = {}) {
     -webkit-text-fill-color: transparent;
     font-weight: 900;
   }
+
+#result .congrats.print-only {
+  display: none;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14pt;
+
+  /* ↓ ここを追加または調整 */
+  margin-bottom: 2px;   /* 最終合計との間隔を小さくする */
+}
+@media print {
+  #result .congrats.print-only {
+    display: block;
+  }
+
+#result .congrats-box {
+  border: 2px solid #000;
+  padding: 6px 10px;
+  margin: 6px 0;
+
+  /* ここから追加/変更 */
+  max-width: calc(100% - 4mm); /* ← 右端クリップ回避の安全幅 */
+  margin-left: 2mm;
+  margin-right: 2mm;
+  /* ここまで */
+
+  text-align: center;
+  border-radius: 6px;
+  display: block;
+  box-sizing: border-box;
+}
+
+#result .congrats.print-only {
+  font-weight: bold;
+  font-size: 14pt;
+  margin-bottom: 2px;       /* 最終合計との間隔を調整 */
+}
+}
+       
     }
     
   </style>
