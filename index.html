@@ -1435,10 +1435,10 @@ body[data-active-app="app2"] #app2 {
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber">1</td>
-      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" onchange="updateTotals()" /></td>
-      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" onchange="updateTotals()" /></td>
+      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
+      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
       <td>
-        <select class="c" onchange="updateRowColor(this); updateTotals()">
+        <select class="c" oninput="updateRowColor(this); updateTotals()">
           <option value="">-</option>
           <option value="UK">UK</option>
           <option value="K">K</option>
@@ -1460,11 +1460,11 @@ body[data-active-app="app2"] #app2 {
         
 
       </td>
-      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" onchange="updateTotals()" /></td>
-      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" onchange="updateTotals()" /></td>
+      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
+      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
       <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" onchange="updateTotals()" /></td>
-      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" onchange="updateTotals()" /></td>
+      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
+      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
     </tr>
   </tbody>
 </table>
@@ -2140,10 +2140,10 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber">${number}</td>
-    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" onchange="updateTotals()" /></td>
-    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" onchange="updateTotals()" /></td>
+    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
+    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
     <td>
-      <select class="c" onchange="updateRowColor(this); updateTotals()">
+      <select class="c" oninput="updateRowColor(this); updateTotals()">
         <option value="">-</option>
         <option value="UK">UK</option>
         <option value="K">K</option>
@@ -2162,11 +2162,11 @@ function createEmptyRow(number) {
         <option value="Z">Z</option>
       </select>
     </td>
-    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" onchange="updateTotals()" /></td>
-    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" onchange="updateTotals()" /></td>
+    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
+    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
     <td><input class="detail" type="text" placeholder="詳細" /></td>
-    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" onchange="updateTotals()" /></td>
-    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" onchange="updateTotals()" /></td>
+    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
+    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
   `;
   return tr;
 }
@@ -2237,6 +2237,12 @@ function updateRowColor(select) {
 
 // グローバルにキャッチバック内訳を保持するオブジェクト
 let catchbackDetails = {};
+
+let _raf = 0;
+function scheduleTotals(){
+  if (_raf) return;
+  _raf = requestAnimationFrame(()=>{ _raf = 0; updateTotals(); });
+}
 
 function updateTotals() {
   let totalCustomers = 0;
@@ -3198,9 +3204,9 @@ function confirmAndCalculate() {
     if (parseInt(val)) mainItems.push(`${labels[key]} ×${val}`);
   });
 
-// ボトル明細の集計
-const bottles = [];
-document.querySelectorAll('.bottle-form').forEach(form => {
+  // ボトル明細の集計
+  const bottles = [];
+  document.querySelectorAll('.bottle-form').forEach(form => {
   const sel = form.querySelector('.bottleDetails');
   const opt = sel?.selectedOptions?.[0];
   const det = (opt?.dataset?.base) || (sel?.value) || '';
@@ -3228,6 +3234,13 @@ document.querySelectorAll('.bottle-form').forEach(form => {
   }
 
   return false;    // ← フォーム送信を確実に中止（ページ上部スクロール防止）
+
+  // 計算が終わったら #resultSection にスクロール
+  const resultSection = document.getElementById("app2-resultSection");
+  if (resultSection) {
+   resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
 }
 
 
@@ -3992,6 +4005,7 @@ function resetAllApps() {
       showApp('app1');
       window.scrollTo({top: 0, behavior: 'auto'});
       try { localStorage.removeItem('appScrollMap'); } catch(e) {}
+      if (window.clearTabScrollMemory) window.clearTabScrollMemory();
 
       // ★ ここで全部一気に消す
       setTimeout(() => {
@@ -4002,6 +4016,25 @@ function resetAllApps() {
       }, 520); // flashフェードアウト分
     }, 400);  // 発光持続
   }, 1600);   // マトリックス演出
+
+// ページ全体を最上段へ
+window.scrollTo({ top: 0, behavior: 'auto' });
+
+// contentWrapper のスクロールもリセット
+const wrapper = document.getElementById("contentWrapper");
+if (wrapper) wrapper.scrollTop = 0;
+
+// APP1をアクティブに切替
+document.body.setAttribute("data-active-app", "app1");
+
+// コンテンツ切替
+document.querySelectorAll(".content").forEach(el => el.classList.remove("active"));
+document.getElementById("app1").classList.add("active");
+
+// タブ切替
+document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+document.querySelector('.tab[data-target="app1"]').classList.add("active");
+
 }
 
 
@@ -4359,6 +4392,12 @@ document.getElementById('side-calc')?.addEventListener('click', () => {
 
   // 外からも呼べるように
   window.showApp = apply;
+
+  // スクロール記憶を完全クリア（ローカル/メモリ両方）
+window.clearTabScrollMemory = () => {
+  scrollMap = {};
+  saveMap(scrollMap);
+};
 
   // クリック＆Enter/Spaceでタブ切替
   tabsRoot.addEventListener('click', (e) => {
