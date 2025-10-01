@@ -1808,7 +1808,7 @@ body[data-active-app="app2"] #app2 {
 
         <div style="height: 1em;"></div>
 
-        <label><span>合計（現金残 + 源泉費）:</span> <input type="text" id="totalGrossPlusTax" disabled></label>
+        <label><span>合計 (現金残 + 源泉費):</span><input type="text" id="totalGrossPlusTax" disabled></label>
       </div>
       </section>
 
@@ -1826,7 +1826,7 @@ body[data-active-app="app2"] #app2 {
   <div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
   <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  Ver. 6.2.0
+  Ver. 6.3.0
   </div>
 
 </div> <!-- app3を閉じる -->
@@ -1967,8 +1967,9 @@ function _currentSubnavH(){
   return nav ? nav.offsetHeight : _pxVar('--subnav-h', 50);
 }
 function _scrollOffset(){
-  return Math.round(_pxVar('--tabs-h', 56) + _currentSubnavH() + 8);
+  return Math.round(_pxVar('--tabs-h', 56) + _currentSubnavH() + 70);
 }
+
 function _behavior(want='smooth'){
   return matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : want;
 }
@@ -2719,39 +2720,43 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   if (quantity!== undefined) qtyInput.value    = quantity;
   if (amount  !== undefined) amountInput.value = amount;
 
-  // 品目変更時
-  sel.addEventListener('change', () => {
-    if (window.BOTTLE_REFRESHING) return;
-    const opt = sel.selectedOptions[0];
-    if (!opt) return;
+// 品目変更時
+sel.addEventListener('change', () => {
+  if (window.BOTTLE_REFRESHING) return;
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
 
-    if (opt.dataset.from === 'history') {
-      splitInput.value  = opt.dataset.split  || '';
-      qtyInput.value    = opt.dataset.qty    || '';
-      amountInput.value = opt.dataset.amount ?? 0;
-    } else {
-      splitInput.value  = '';
-      qtyInput.value    = '';
-      amountInput.value = '';
-    }
+  if (opt.dataset.from === 'history') {
+    // 履歴選択：従来どおり履歴の値を復元
+    splitInput.value  = opt.dataset.split  || '';
+    qtyInput.value    = opt.dataset.qty    || '';
+    amountInput.value = opt.dataset.amount ?? 0;
+  } else {
+    // 静的な品目選択：登録金額で初期化（割=1 / 数量=1）
+    splitInput.value = '1';
+    qtyInput.value   = '1';
+    updateBottleAmountForForm(form);  // ← 登録金額から算出
+  }
+  saveBottleForms?.();
+});
+
+// 入力イベント → 復元中は無視
+['input','change','blur'].forEach(evt => {
+  splitInput.addEventListener(evt, () => {
+    if (window.BOTTLE_REFRESHING) return;
+    updateBottleAmountForForm(form);   // ← 追加
     saveBottleForms?.();
   });
-
-  // 入力イベント → 復元中は無視
-  ['input','change','blur'].forEach(evt => {
-    splitInput.addEventListener(evt, () => {
-      if (window.BOTTLE_REFRESHING) return;
-      saveBottleForms?.();
-    });
-    qtyInput.addEventListener(evt, () => {
-      if (window.BOTTLE_REFRESHING) return;
-      saveBottleForms?.();
-    });
-    amountInput.addEventListener(evt, () => {
-      if (window.BOTTLE_REFRESHING) return;
-      saveBottleForms?.();
-    });
+  qtyInput.addEventListener(evt, () => {
+    if (window.BOTTLE_REFRESHING) return;
+    updateBottleAmountForForm(form);   // ← 追加
+    saveBottleForms?.();
   });
+  amountInput.addEventListener(evt, () => {
+    if (window.BOTTLE_REFRESHING) return;
+    saveBottleForms?.();
+  });
+});
 
   // 削除ボタン
   delBtn.addEventListener('click', () => {
@@ -2776,8 +2781,82 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
 
 let BOTTLE_REFRESHING = false;
 
+// === APP2: ボトルの登録バック金額（ユーザー指定版） ===
+const BOTTLE_BASE = Object.freeze({
+  'リステル': 6000,
+  'パリ': 7500,
+  'マバム': 17500,
+  'モエ白': 15000,
+  'モエロゼ': 17500,
+  'モエネク': 20000,
+  'モエピカ': 22500,
+  'ヴーヴ': 16000,
+  'ヴーヴホワイト': 17500,
+  'ヴーヴローズ': 19000,
+  'ベルエ': 70000,
+  'ベルエロゼ': 140000,
+  'ソウメイ': 60000,
+  'ドンペリ': 50000,
+  'ドンペリルミナス': 60000,
+  'ドンペリロゼ': 70000,
+  'ドンペリルミナスロゼ': 85000,
+  'ドンペリP2': 150000,
+  'ドンペリゴールド': 250000,
+  'アルマンド': 85000,
+  'アルマンドロゼ': 140000,
+  'アルマンドグリーン': 200000,
+  'オリシャンR': 12500,
+  'オリシャンB': 30000,
+  '柚子小町': 5000,
+  '黒霧島': 7500,
+  '吉四六': 7500,
+  '富乃宝山': 8500,
+  '赤霧島': 10000,
+  '知多': 20000,
+  '山崎': 35000,
+  'ベリンジャー': 10000,
+  'テキカン': 35000,
+  '枝': 200,
+
+  // 空白（自動金額なしにしたい項目は 0 にしておく）
+  'その他': 0,
+  '保障補正': 0
+});
+
+// 入力→数値(,除去)の安全変換
+function intSafe(v, d = 0){ const n = parseInt(String(v ?? '').toString().replace(/,/g,''),10); return Number.isFinite(n)? n : d; }
+// 100円未満切り捨て（例: 3750 → 3700）
+function floor100(yen){ return Math.floor(intSafe(yen)/100)*100; }
+
+// sel(=select)から“品名”を取り出す（履歴選択時は base 名）
+function getSelectedDetail(sel){
+  const opt = sel?.selectedOptions?.[0];
+  return (opt?.dataset?.base) || sel?.value || '';
+}
+
+// 登録金額・割・数量から金額を計算
+// ルール: (登録金額/割) の “10円未満切り捨て” を単価とし、単価×数量
+function computeBottleAmount(detail, split, qty){
+  const base = BOTTLE_BASE[detail] ?? 0;
+  const s = Math.max(1, intSafe(split, 1)); // 0割回避
+  const q = Math.max(0, intSafe(qty, 0));
+  const unit = floor100(base / s);
+  return unit * q;
+}
+
+// フォーム1行の金額を再計算して反映
+function updateBottleAmountForForm(form){
+  const sel   = form.querySelector('.bottleDetails');
+  const split = form.querySelector('.splitCount')?.value;
+  const qty   = form.querySelector('.bottleQuantity')?.value;
+  const amt   = computeBottleAmount(getSelectedDetail(sel), split, qty);
+  const out   = form.querySelector('.bottleAmount');
+  out.value = amt ? String(amt) : ''; // 未登録(0)は空に
+}
+
 // 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
 let BOTTLE_HISTORY = {};
+
 
 function buildBottleHistoryMap() {
   BOTTLE_HISTORY = {};
@@ -3011,9 +3090,9 @@ let finalAmount = totalAmount - adjustedSendoff;
 const castCoveredAmount = adjustedSendoff;
 const storeCoveredAmount = sendoffAmount - adjustedSendoff;
 
-let sendoffText = `送迎:¥${sendoffAmount.toLocaleString()}(本人負担:¥${castCoveredAmount.toLocaleString()}`;
+let sendoffText = `送迎: ¥${sendoffAmount.toLocaleString()}(本人負担: ¥${castCoveredAmount.toLocaleString()}`;
 if (storeCoveredAmount > 0) {
-  sendoffText += `店舗負担:¥${storeCoveredAmount.toLocaleString()})`;
+  sendoffText += `店舗負担: ¥${storeCoveredAmount.toLocaleString()})`;
 } else {
   sendoffText += `)`; // ←これを追加すると安心
 }
@@ -3077,11 +3156,11 @@ const congratsHTML =
     ? `
       <div class="congrats-box print-only">
         <div class="congrats">～CONGRATULATIONS～</div>
-        <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
+        <div class="finalAmount print-highlight"><strong>最終合計: </strong>¥${finalAmount.toLocaleString()}</div>
       </div>
     `
     : `
-      <div class="finalAmount print-highlight"><strong>最終合計:</strong>¥${finalAmount.toLocaleString()}</div>
+      <div class="finalAmount print-highlight"><strong>最終合計: </strong>¥${finalAmount.toLocaleString()}</div>
     `;
 
 const resultText = `
