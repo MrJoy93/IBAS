@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBAS   Ver. 6.4.0</title>
+<title>IBASD  Ver. 6.4.1</title>
 <style>
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -1368,9 +1368,10 @@ body[data-active-app="app2"] #app2 {
 
 
 
+
+
+
 </head>
-
-
 <body>
 
 <div id="resetOverlay" style="display:none;">
@@ -1828,6 +1829,7 @@ body[data-active-app="app2"] #app2 {
   </div>
 
 </div> <!-- app3を閉じる -->
+
 
 
 
@@ -4058,9 +4060,6 @@ function resetApp(appId, full = false) {
     resetApp3(full);
   }
 
-   // 「完全クリア」のときは当日のクラウド分も削除
-   if (full) { clearRemote(appId); }
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
 }
@@ -4094,9 +4093,6 @@ function resetAllApps() {
         overlay.classList.remove('active');
         overlay.style.display = 'none';
       }, 520); // flashフェードアウト分
-      
-      // クラウドもまとめて削除（今日のセッション分）
-      clearAllRemote();
     }, 400);  // 発光持続
   }, 1600);   // マトリックス演出
 
@@ -4965,298 +4961,288 @@ function openPrintApp2(innerHTML, opts = {}) {
 </script>
 
 <script type="module">
-  // --- Firebase SDK 読み込み（CDN版） ---
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { 
-    getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, deleteDoc 
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+/***  Firebase v10 ESM（CDN） ***/
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getFirestore, enableIndexedDbPersistence,
+  doc, getDoc, setDoc, updateDoc, onSnapshot,
+  serverTimestamp, deleteField
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // --- あなたのプロジェクト設定（コンソールのスニペットを貼る） ---
-  const firebaseConfig = {
-   apiKey: "AIzaSyAvTWoZRREk4ywOsXjNLJs3Bb06U1_K8EE",
-   authDomain: "ibasdbeta.firebaseapp.com",
-   projectId: "ibasdbeta",
-   storageBucket: "ibasdbeta.firebasestorage.app", // ← コンソールに出た値をそのまま
-   messagingSenderId: "317393843615",
-   appId: "1:317393843615:web:a8b8926baf5b1f283c39aa",
-   measurementId: "G-TBDKMDWQQ0"
-  };
+/*** ←ここをコンソールの値で置き換え ***/
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "ibasdbeta",
+  storageBucket: "ibasdbeta.firebasestorage.app",
+  messagingSenderId: "317393843615",
+  appId: "1:317393843615:web:xxxxxxxxxxxxxxxx",
+  measurementId: "G-XXXXXXXXXX"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+enableIndexedDbPersistence(db).catch(()=>{ /* 複数タブ時などは無視でOK */ });
 
-  // ===== ここから保存ユーティリティ =====
+/*** Firestore パス設計 ***/
+const COLLECTION = "IBAS";
+const CLIENT_ID = (() => {
+  const k="ibas-client-id";
+  return localStorage.getItem(k) || (localStorage.setItem(k,crypto.randomUUID()), localStorage.getItem(k));
+})();
 
-  // 「今日の勤務日」をlocalStorageから取得（あなたのコードが初期保存してくれている）
-  function getSessionDate() {
-    let d = localStorage.getItem("workStartDate");
-    if (!d) {
-      // 念のための保険：未設定なら今日を入れる
-      const todayStr = new Date().toISOString().slice(0,10);
-      localStorage.setItem("workStartDate", todayStr);
-      d = todayStr;
-    }
-    return d;
-  }
+const monthKey = (d=new Date()) => d.toISOString().slice(0,7);
+const docRefFor = (key = monthKey()) => doc(db, COLLECTION, key);
 
-  // ドキュメントの参照を作る（セッション日×アプリIDで1ドキュメント）
-  function docRef(appId) {
-    const session = getSessionDate();
-    return doc(db, "sessions", `${session}-${appId}`);
-  }
-
-  // 書き込み→即座に戻ってくるスナップショットを弾くための簡易ガード
-  const _justWrote = new Map(); // appId -> timestamp(ms)
-  function markJustWrote(appId) { _justWrote.set(appId, Date.now()); }
-  function shouldSkipByJustWrote(appId, ms=800) {
-    const t = _justWrote.get(appId);
-    return t && (Date.now() - t < ms);
-  }
-
-  async function saveRemote(appId, stateObj) {
-    await setDoc(
-      docRef(appId), 
-      { state: stateObj, updatedAt: serverTimestamp() }, 
-      { merge: true }
-    );
-    markJustWrote(appId);
-  }
-
-  async function loadRemote(appId) {
-    const snap = await getDoc(docRef(appId));
-    return snap.exists() ? (snap.data().state || null) : null;
-  }
-
-  function subscribeRemote(appId, applyFn) {
-    return onSnapshot(docRef(appId), (snap) => {
-      if (!snap.exists()) return;
-      if (shouldSkipByJustWrote(appId)) return; // 自分の直近の書き込みは無視
-      const state = snap.data()?.state;
-      if (state) applyFn(state);
-    });
-  }
-
-  async function clearRemote(appId) {
-  try {
-    await deleteDoc(docRef(appId));
-  } catch (e) {
-    console.error("clearRemote error", e);
-  }
+/*** 画面右上のオートセーブ表示 ***/
+function ensureIndicator(){
+  if(document.getElementById("syncIndicator")) return;
+  const el = document.createElement("div");
+  el.id = "syncIndicator";
+  el.style.cssText = `
+    position:fixed; top:8px; right:10px; z-index:3000;
+    background:rgba(0,34,43,.95); color:#00f5ff; border:1px solid #00f5ff55;
+    padding:6px 10px; border-radius:8px; font:14px/1.2 system-ui, sans-serif;
+    box-shadow:0 2px 10px rgba(0,245,255,.2); display:none;`;
+  el.textContent = "保存中…";
+  document.body.appendChild(el);
 }
-async function clearAllRemote() {
-  await Promise.all(['app1','app2','app3'].map(clearRemote));
+function _showSaving(){ ensureIndicator(); const el=document.getElementById("syncIndicator"); el.style.display="block"; el.textContent="保存中…"; }
+function _saved(){ const el=document.getElementById("syncIndicator"); if(!el) return; el.textContent="保存済み"; setTimeout(()=>{el.style.display="none"}, 900); }
+
+/*** ==== 収集＆復元（あなたのUIに合わせ済み） ==== ***/
+/* app1（伝票）：#formRows の動的行を保存/復元 */
+function collectApp1State(){
+  const rows = [...document.querySelectorAll('#formRows tr.row')].map(tr => ({
+    table:  tr.querySelector('.table-number')?.value ?? "",
+    honshi: tr.querySelector('.honshi')?.value ?? "",
+    c:      tr.querySelector('.c')?.value ?? "",
+    amount: tr.querySelector('.amount')?.value ?? "",
+    num:    tr.querySelector('.num')?.value ?? "",
+    detail: tr.querySelector('.detail')?.value ?? "",
+    card:   tr.querySelector('.card')?.value ?? "",
+    total:  tr.querySelector('.total')?.value ?? ""
+  }));
+  return { rows };
 }
+function applyApp1State(state){
+  if(!state || !state.rows) return;
+  const tbody = document.getElementById('formRows');
+  if(!tbody) return;
 
-  // ===== Appごとのシリアライズ／適用 =====
-  // ▼ app1（伝票テーブル）
-  function serializeApp1() {
-    const rows = [];
-    document.querySelectorAll("#formRows .row").forEach(row => {
-      rows.push({
-        table:  row.querySelector(".table-number")?.value ?? "",
-        honshi: row.querySelector(".honshi")?.value ?? "",
-        c:      row.querySelector(".c")?.value ?? "",
-        amount: row.querySelector(".amount")?.value ?? "",
-        num:    row.querySelector(".num")?.value ?? "",
-        detail: row.querySelector(".detail")?.value ?? "",
-        card:   row.querySelector(".card")?.value ?? "",
-        total:  row.querySelector(".total")?.value ?? "",
-      });
-    });
-    return { rows };
-  }
+  // 既存行を空に
+  tbody.innerHTML = "";
 
-  // 行数を合わせつつ値を流し込む
-  function applyApp1(state) {
-    const wanted = state?.rows?.length ?? 0;
-    const tbody = document.querySelector("#formRows");
-    if (!tbody) return;
-
-    // 足りない分は addRow() で増やす、余ってたら後ろから消す
-    const cur = tbody.querySelectorAll(".row").length;
-    if (typeof addRow === "function" && cur < wanted) {
-      for (let i = cur; i < wanted; i++) addRow();
-    } else if (cur > wanted) {
-      const rows = Array.from(tbody.querySelectorAll(".row"));
-      for (let i = cur - 1; i >= wanted; i--) {
-        rows[i].querySelector(".delete-btn")?.click();
-      }
+  // 行を追加して値を流し込む
+  state.rows.forEach((r, idx)=>{
+    if(typeof window.addRow === "function"){
+      window.addRow();
+    }else{
+      // フォールバックで行を追加
+      const tr = document.createElement('tr');
+      tr.className = 'row';
+      tr.innerHTML = `
+        <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+        <td class="rowNumber">${idx+1}</td>
+        <td><input class="table-number" type="text"/></td>
+        <td><input class="honshi" type="text"/></td>
+        <td>
+          <select class="c">
+            <option value=""></option>
+            <option>UK</option><option>K</option><option>AB</option><option>LA</option>
+            <option>PA</option><option>BB</option><option>MS</option><option>GM</option>
+            <option>B</option><option>JOE</option><option>KOSE</option><option>HE</option>
+            <option>PB</option><option>X</option><option>Z</option>
+          </select>
+        </td>
+        <td><input class="amount" type="text"/></td>
+        <td><input class="num" type="text"/></td>
+        <td><input class="detail" type="text"/></td>
+        <td><input class="card" type="text"/></td>
+        <td><input class="total" type="text"/></td>`;
+      tbody.appendChild(tr);
     }
 
-    // すべての値を反映
-    const rowsEls = tbody.querySelectorAll(".row");
-    (state.rows || []).forEach((r, idx) => {
-      const row = rowsEls[idx];
-      if (!row) return;
-      row.querySelector(".table-number")?.value = r.table ?? "";
-      row.querySelector(".honshi")?.value       = r.honshi ?? "";
-      row.querySelector(".c")?.value            = r.c ?? "";
-      row.querySelector(".amount")?.value       = r.amount ?? "";
-      row.querySelector(".num")?.value          = r.num ?? "";
-      row.querySelector(".detail")?.value       = r.detail ?? "";
-      row.querySelector(".card")?.value         = r.card ?? "";
-      row.querySelector(".total")?.value        = r.total ?? "";
-    });
+    // 追加した行を取得
+    const tr = tbody.querySelector('tr.row:last-child');
+    if(!tr) return;
 
-    // あなたの集計ロジックを再実行
-    if (typeof updateTotals === "function") updateTotals();
-  }
-
-  // ▼ app2（個別IDの入力＋ボトルフォーム群）
-  function serializeApp2() {
-    const obj = {};
-    // app2入力エリア内の input/select/textarea を一括収集
-    document.querySelectorAll("#app2-inputSection input, #app2-inputSection select, #app2-inputSection textarea")
-      .forEach(el => {
-        const key = el.id || el.name || el.className;
-        if (!key) return;
-        if (el.type === "checkbox") obj[key] = !!el.checked;
-        else obj[key] = el.value ?? "";
-      });
-
-    // ボトルフォームは配列化
-    obj.bottleForms = [];
-    document.querySelectorAll("#app2 .bottle-form").forEach(form => {
-      const sel = form.querySelector(".bottleDetails");
-      const opt = sel?.selectedOptions?.[0];
-      obj.bottleForms.push({
-        bottleDetails: opt?.dataset?.base || sel?.value || "",
-        splitCount: form.querySelector(".splitCount")?.value || "",
-        bottleQuantity: form.querySelector(".bottleQuantity")?.value || "",
-        bottleAmount: form.querySelector(".bottleAmount")?.value || "",
-      });
-    });
-    return obj;
-  }
-
-  function applyApp2(state) {
-    // まず単純入力
-    Object.entries(state || {}).forEach(([k,v]) => {
-      if (k === "bottleForms") return; // 後で
-      const elById = document.getElementById(k);
-      if (elById) {
-        if (elById.type === "checkbox") elById.checked = !!v;
-        else elById.value = v ?? "";
-      } else {
-        // idがない場合は class などで探す（必要なら拡張）
-        const el = document.querySelector(`#app2 [name="${k}"], #app2 .${k}`);
-        if (el) el.value = v ?? "";
-      }
-    });
-
-    // ボトルフォーム（必要数に合わせて追加/削除）
-    const container = document.getElementById("bottleFormsContainer");
-    if (container && Array.isArray(state?.bottleForms)) {
-      const cur = container.querySelectorAll(".bottle-form").length;
-      const wanted = state.bottleForms.length;
-      if (typeof createBottleForm === "function") {
-        if (cur < wanted) {
-          for (let i = cur; i < wanted; i++) {
-            container.appendChild(createBottleForm());
-          }
-        } else if (cur > wanted) {
-          const forms = Array.from(container.querySelectorAll(".bottle-form"));
-          for (let i = cur - 1; i >= wanted; i--) {
-            forms[i].querySelector(".delete-btn")?.click();
-          }
-        }
-      }
-      // 値を流し込む
-      const forms = container.querySelectorAll(".bottle-form");
-      state.bottleForms.forEach((b, i) => {
-        const f = forms[i]; if (!f) return;
-        const sel = f.querySelector(".bottleDetails");
-        if (sel) sel.value = b.bottleDetails || "";
-        f.querySelector(".splitCount")?.value = b.splitCount || "";
-        f.querySelector(".bottleQuantity")?.value = b.bottleQuantity || "";
-        f.querySelector(".bottleAmount")?.value = b.bottleAmount || "";
-      });
-    }
-  }
-
-  // ▼ app3（あなたの既存の保存対象一覧をそのまま流用）
-  const APP3_FIELDS = [
-    'startCash','maleSalary','scoutBack','driverFee','maleTax',
-    'alcohol','receipt1','receipt2','receipt3','receipt4','receipt5','finalCash'
-  ]; // 元コードの配列を流用（saveApp3Data/restoreApp3Dataと一致）:contentReference[oaicite:4]{index=4}
-
-  function serializeApp3() {
-    const data = {};
-    APP3_FIELDS.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) data[id] = el.value || "";
-    });
-    return data;
-  }
-  function applyApp3(state) {
-    Object.entries(state || {}).forEach(([id,val]) => {
-      const el = document.getElementById(id);
-      if (el) el.value = val ?? "";
-    });
-    // 既存の再計算・カンマ整形を呼ぶ
-    if (typeof updateCalculations === "function") updateCalculations();
-    if (typeof attachCommaFormatApp1and3 === "function") attachCommaFormatApp1and3();
-  }
-
-  // ===== 入力確定（commit）を拾って保存する仕組み =====
-
-  // 日本語IME中は input がバンバン飛ぶので、確定まで待つ
-  function setupCommitSave(root, appId, serializeFn) {
-    let composing = false;
-    let t = null;
-
-    // 「確定」扱いにするイベント
-    const commit = () => {
-      clearTimeout(t);
-      // 少し待って値が確定してから保存（複数inputをまとめる）
-      t = setTimeout(() => saveRemote(appId, serializeFn()), 250);
+    // 値を安全に代入するヘルパ
+    const setVal = (sel, val) => {
+      const el = tr.querySelector(sel);
+      if (el) el.value = (val ?? "");
     };
 
-    // IME開始/終了
-    root.addEventListener("compositionstart", () => { composing = true; });
-    root.addEventListener("compositionend", () => { composing = false; commit(); });
-
-    // 1) blur や change（フォーカス外れ・enter確定）→ 即保存
-    root.addEventListener("change", commit, true);
-    root.addEventListener("blur", (e) => { if (root.contains(e.target)) commit(); }, true);
-
-    // 2) input は IME中は無視、IME外なら軽くデバウンス保存
-    root.addEventListener("input", () => { if (!composing) commit(); }, true);
-
-    // 3) Enter確定（type=textなど）でも保存
-    root.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && root.contains(e.target)) commit();
-    }, true);
-  }
-
-  // ===== 実際に紐づける =====
-  document.addEventListener("DOMContentLoaded", async () => {
-    // app1: 伝票テーブルのtbodyがルート
-    const app1Root = document.getElementById("formRows"); // ←このtbodyの子の入力に oninput="updateTotals()" が付いている:contentReference[oaicite:5]{index=5}
-    if (app1Root) {
-      setupCommitSave(app1Root, "app1", serializeApp1);
-      // 初回ロード＆購読
-      const s1 = await loadRemote("app1"); if (s1) applyApp1(s1);
-      subscribeRemote("app1", applyApp1);
-    }
-
-    // app2: 入力セクション全体をルート（フォームは confirmAndCalculate を使い続けてOK）:contentReference[oaicite:6]{index=6}
-    const app2Root = document.getElementById("app2-inputSection");
-    if (app2Root) {
-      setupCommitSave(app2Root, "app2", serializeApp2);
-      const s2 = await loadRemote("app2"); if (s2) applyApp2(s2);
-      subscribeRemote("app2", applyApp2);
-    }
-
-    // app3: 既存の入力群（あなたの saveApp3Data が 'input' でローカル保存している）:contentReference[oaicite:7]{index=7}
-    const app3Root = document.getElementById("app3");
-    if (app3Root) {
-      setupCommitSave(app3Root, "app3", serializeApp3);
-      const s3 = await loadRemote("app3"); if (s3) applyApp3(s3);
-      subscribeRemote("app3", applyApp3);
-    }
+    setVal('.table-number', r.table);
+    setVal('.honshi',       r.honshi);
+    setVal('.c',            r.c);
+    setVal('.amount',       r.amount);
+    setVal('.num',          r.num);
+    setVal('.detail',       r.detail);
+    setVal('.card',         r.card);
+    setVal('.total',        r.total);
   });
+
+  // 合計再計算
+  if (typeof window.updateTotals === "function") {
+    window.updateTotals();
+  }
+}
+
+/* app2（報酬計算）：id を持つ input/select/textarea を丸ごと保存/復元＋ボトル明細 */
+function collectApp2State(){
+  const root = document.getElementById('app2');
+  if(!root) return {};
+
+  const fields = {};
+  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
+    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
+  });
+
+  // ボトル明細（.bottle-form）
+  const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
+    details: form.querySelector('.bottleDetails')?.value ?? "",
+    split:   form.querySelector('.splitCount')?.value ?? "",
+    qty:     form.querySelector('.bottleQuantity')?.value ?? "",
+    amount:  form.querySelector('.bottleAmount')?.value ?? ""
+  }));
+
+  return { fields, bottles };
+}
+function applyApp2State(state){
+  const root = document.getElementById('app2');
+  if(!root || !state) return;
+
+  if(state.fields){
+    Object.entries(state.fields).forEach(([id, val])=>{
+      const el = root.querySelector('#'+CSS.escape(id));
+      if(!el) return;
+      if(el.type === 'checkbox'){ el.checked = !!val; }
+      else { el.value = val ?? ""; }
+    });
+  }
+  if(Array.isArray(state.bottles)){
+    const container = root.querySelector('#bottleFormsContainer');
+    if(container){
+      container.innerHTML = "";
+      state.bottles.forEach(b=>{
+        if(typeof window.addBottleForm === "function"){
+          const el = window.addBottleForm(); // 既存の追加関数があれば使用
+          (el?.querySelector('.bottleDetails')||{}).value = b.details ?? "";
+          (el?.querySelector('.splitCount')||{}).value    = b.split ?? "";
+          (el?.querySelector('.bottleQuantity')||{}).value= b.qty ?? "";
+          (el?.querySelector('.bottleAmount')||{}).value  = b.amount ?? "";
+        }else{
+          // フォールバック追加
+          const row = document.createElement('div');
+          row.className = 'bottle-form';
+          row.innerHTML = `
+            <div class="left-group">
+              <button type="button" class="delete-btn" onclick="this.closest('.bottle-form')?.remove()">×</button>
+              <select class="bottleDetails"><option value=""></option></select>
+            </div>
+            <input class="splitCount" type="text"/>
+            <input class="bottleQuantity" type="text"/>
+            <input class="bottleAmount" type="text"/>`;
+          container.appendChild(row);
+          row.querySelector('.bottleDetails').value = b.details ?? "";
+          row.querySelector('.splitCount').value    = b.split ?? "";
+          row.querySelector('.bottleQuantity').value= b.qty ?? "";
+          row.querySelector('.bottleAmount').value  = b.amount ?? "";
+        }
+      });
+    }
+  }
+}
+
+/* app3（ざっくり）：id付きの要素を一括保存/復元 */
+function collectApp3State(){
+  const root = document.getElementById('app3');
+  if(!root) return {};
+  const fields = {};
+  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
+    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
+  });
+  return { fields };
+}
+function applyApp3State(state){
+  const root = document.getElementById('app3');
+  if(!root || !state || !state.fields) return;
+  Object.entries(state.fields).forEach(([id, val])=>{
+    const el = root.querySelector('#'+CSS.escape(id));
+    if(!el) return;
+    if(el.type === 'checkbox'){ el.checked = !!val; }
+    else { el.value = val ?? ""; }
+  });
+}
+
+/*** ==== 読み込み・保存・購読 ==== ***/
+async function loadAllApps(key = monthKey()){
+  const snap = await getDoc(docRefFor(key));
+  const data = snap.exists() ? snap.data() : {};
+  applyApp1State(data.app1);
+  applyApp2State(data.app2);
+  applyApp3State(data.app3);
+}
+
+async function saveAllApps(key = monthKey()){
+  _showSaving();
+  const payload = {
+    app1: collectApp1State(),
+    app2: collectApp2State(),
+    app3: collectApp3State(),
+    updatedAt: serverTimestamp(),
+    lastAuthor: CLIENT_ID
+  };
+  await setDoc(docRefFor(key), payload, { merge:true });
+  _saved();
+}
+
+/* 他端末からの更新を受け取り反映（自端末の直後の書き込みはスキップ） */
+function subscribeRemote(key = monthKey()){
+  return onSnapshot(docRefFor(key), snap=>{
+    if(!snap.exists()) return;
+    const data = snap.data();
+    if(data?.lastAuthor === CLIENT_ID) return; // 自分の書き込みは無視
+    applyApp1State(data.app1 || {});
+    applyApp2State(data.app2 || {});
+    applyApp3State(data.app3 || {});
+  });
+}
+
+/*** ==== オートセーブ（デバウンス） ==== ***/
+let _saveTimer = null;
+function scheduleAutosave(){
+  if(_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=> saveAllApps(monthKey()), 800);
+}
+function attachAutosave(){
+  ['input','change'].forEach(evt=>{
+    document.body.addEventListener(evt, scheduleAutosave, { capture:true });
+  });
+}
+
+/*** ==== ユーティリティ（エラーで出ていた clearAllRemote も定義） ==== ***/
+async function clearAllRemote(key = monthKey()){
+  await setDoc(docRefFor(key), {
+    app1: {}, app2: {}, app3: {},
+    updatedAt: serverTimestamp(),
+    lastAuthor: CLIENT_ID
+  }, { merge:true });
+}
+window.clearAllRemote = clearAllRemote;
+window.saveAllApps   = saveAllApps;   // 手動保存したい時用
+window.loadAllApps   = loadAllApps;   // 手動読込したい時用
+
+/*** ==== 起動 ==== ***/
+window.addEventListener('DOMContentLoaded', async ()=>{
+  ensureIndicator();
+  await loadAllApps(monthKey());  // ①ページを開いたら即読み込み
+  attachAutosave();               // ②入力のたびに自動保存（800msデバウンス）
+  subscribeRemote(monthKey());    // ③他端末の更新を即時反映
+});
 </script>
+
 
 
 </body>
