@@ -5023,7 +5023,21 @@ function collectApp1State(){
     card:   tr.querySelector('.card')?.value ?? "",
     total:  tr.querySelector('.total')?.value ?? ""
   }));
-  return { rows };
+
+  // ★ ここから追加：CB表のチェックボックスを拾う
+  // 「UKtotal」「Ktotal」…の <span id="◯◯total"> をキーの元にして安定化
+  const catChecks = {};
+  document.querySelectorAll('#categorySection tbody tr').forEach(tr => {
+    const cb = tr.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    const key =
+      (tr.querySelector('span[id$="total"]')?.id || '')
+        .replace(/total$/, '')              // "UKtotal" -> "UK"
+      || (tr.textContent || '').trim().split(/\s+/)[0]; // 念のため保険
+    if (key) catChecks[key] = !!cb.checked;
+  });
+
+  return { rows, catChecks };   // ★ 追加した catChecks も返す
 }
 function applyApp1State(state){
   if(!state || !state.rows) return;
@@ -5082,6 +5096,17 @@ function applyApp1State(state){
     setVal('.card',         r.card);
     setVal('.total',        r.total);
   });
+
+    // ★ ここから追加：CB表のチェックを復元
+  if (state.catChecks) {
+    Object.entries(state.catChecks).forEach(([key, checked]) => {
+      // "UK" → "#UKtotal" を探し、その行のチェックボックスに反映
+      const span = document.querySelector(`#categorySection #${CSS.escape(key)}total`);
+      const tr   = span?.closest('tr');
+      const cb   = tr?.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = !!checked;
+    });
+  }
 
   // 合計再計算
   if (typeof window.updateTotals === "function") {
