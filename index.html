@@ -3265,61 +3265,49 @@ if (resultElem) {
 }
 }
 
-function confirmAndCalculate() {
-  // 入力内容まとめ
+function confirmAndCalculate(e){
+  // 送信を止める（Enter送信等も統一）
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+  // ==== ここはあなたの既存ロジック（確認用メッセージの作成など） ====
   const castName   = document.getElementById('castName').value || '（名前なし）';
   const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
   const sendoff    = document.getElementById('sendoffAmount').value || '0';
-
-  // メイン入力の集計
-  const labels = {
-    f:'F', f2:'F2', jounai:'場内', honshiri:'本指', douhan:'同伴', eda:'枝', help:'HELP',
-    set40:'SET40', set20:'SET20', vip:'VIP', a:'A', b:'B', c:'C', d:'D', e:'E'
-  };
-
+  const labels = { f:'F', f2:'F2', jounai:'場内', honshiri:'本指', douhan:'同伴', eda:'枝', help:'HELP',
+                   set40:'SET40', set20:'SET20', vip:'VIP', a:'A', b:'B', c:'C', d:'D', e:'E' };
   const mainItems = [];
-  Object.keys(labels).forEach(key => {
-    const val = document.getElementById(key).value;
+  Object.keys(labels).forEach(key=>{
+    const val = document.getElementById(key)?.value;
     if (parseInt(val)) mainItems.push(`${labels[key]} ×${val}`);
   });
 
-  // ボトル明細の集計
   const bottles = [];
-  document.querySelectorAll('.bottle-form').forEach(form => {
-  const sel = form.querySelector('.bottleDetails');
-  const opt = sel?.selectedOptions?.[0];
-  const det = (opt?.dataset?.base) || (sel?.value) || '';
+  document.querySelectorAll('.bottle-form').forEach(form=>{
+    const sel = form.querySelector('.bottleDetails');
+    const opt = sel?.selectedOptions?.[0];
+    const det = (opt?.dataset?.base) || (sel?.value) || '';
+    const spl = form.querySelector('.splitCount')?.value || '';
+    const qty = form.querySelector('.bottleQuantity')?.value || '';
+    const amtNum = parseInt((form.querySelector('.bottleAmount')?.value || '').replace(/,/g,''),10) || 0;
+    if (det || spl || qty || amtNum) {
+      const amt = amtNum.toLocaleString();
+      bottles.push(`¥${amt}（${det}${spl!==''?'/割:'+spl:''}${qty!==''?'/数量:'+qty:''}）`);
+    }
+  });
 
-  const spl = form.querySelector('.splitCount')?.value || '';
-  const qty = form.querySelector('.bottleQuantity')?.value || '';
-  const amtNum = parseInt((form.querySelector('.bottleAmount')?.value || '').replace(/,/g,''), 10) || 0;
-  const amt = amtNum.toLocaleString();
-
-  if (det || spl || qty || amtNum) {
-    bottles.push(`¥${amt}（${det}${spl !== '' ? "/割:" + spl : ""}${qty !== '' ? "/数量:" + qty : ""}）`);
-  }
-});
-
-  // 確認メッセージ
   let msg = `内容を確認してください。\n\n`
-    + `キャスト名:${castName}\n`
-    + `体験及び貸出:${experience}\n`
-    + `送迎金額:¥${sendoff}\n`
-    + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
-    + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
+          + `キャスト名:${castName}\n体験及び貸出:${experience}\n送迎金額:¥${sendoff}\n`
+          + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
+          + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
 
-  if (confirm(msg)) {
-    calculate();  // ← OKなら計算
-  }
+  if (!window.confirm(msg)) return false;
 
-  return false;    // ← フォーム送信を確実に中止（ページ上部スクロール防止）
+  // 実計算（あなたの既存の calculate が #result を更新します）
+  calculate();
 
-  // 計算が終わったら #resultSection にスクロール
-  const resultSection = document.getElementById("app2-resultSection");
-  if (resultSection) {
-   resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
+  // 描画が反映された次のフレームで結果へスクロール
+  requestAnimationFrame(()=> navScrollTo('app2-resultSection','smooth'));
+  return false; // 送信は常に抑止
 }
 
 
@@ -5241,6 +5229,49 @@ function scheduleAutosave(){
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=> saveAllApps(monthKey()), 800);
 }
+
+// ===== 同期ヘルパ =====
+function saveNow(reason=""){ 
+  try{ console.debug("[SYNC] now:", reason); }catch(_){}
+  return saveAllApps(monthKey());
+}
+
+// 関数をラップして「実行後」に同期するユーティリティ
+function wrapAndSync(name, {immediate=false} = {}){
+  const fn = window[name];
+  if(typeof fn !== "function") return;
+  window[name] = async function(...args){
+    const ret = fn.apply(this, args);
+    try { if (ret && typeof ret.then === "function") await ret; } catch(e){}
+    if (immediate) { await saveNow(name); } else { scheduleAutosave(); }
+    return ret;
+  };
+}
+
+// 各APPのクリア系関数（存在するものだけ動く）
+["clearApp1","clearApp2","clearApp3","resetAllApps","clearAll"].forEach(n=>{
+  wrapAndSync(n, { immediate:true });
+});
+
+// APP2 計算実行（フォーム onsubmit から呼ばれる想定）
+wrapAndSync("confirmAndCalculate", { immediate:true });
+
+// APP1 伝票フィルタ
+wrapAndSync("filterCategory",      { immediate:false });
+wrapAndSync("filterCashOnlyRows",  { immediate:false });
+wrapAndSync("filterCardInputRows", { immediate:false });
+wrapAndSync("resetSearch",         { immediate:false });
+
+(function observeApp2History(){
+  const his = document.getElementById("app2-historySection");
+  if(!his) return;
+  const mo = new MutationObserver(()=>{
+    // 頻発しても大丈夫なようにデバウンス保存
+    scheduleAutosave();
+  });
+  mo.observe(his, { childList:true, subtree:true, characterData:true });
+})();
+
 function attachAutosave(){
   ['input','change'].forEach(evt=>{
     document.body.addEventListener(evt, scheduleAutosave, { capture:true });
