@@ -3315,6 +3315,27 @@ function confirmAndCalculate(e){
 
   // 描画が反映された次のフレームで結果へスクロール
   requestAnimationFrame(()=> navScrollTo('app2-resultSection','smooth'));
+
+  // 例：計算済みの主要値（名称はあなたの計算ロジックに合わせて）
+const entry = {
+  time: new Date().toISOString(),
+  cast: document.getElementById('castName')?.value || '（名前なし）',
+  subtotal: Number(subtotal) || 0,   // ← 小計（あなたの変数名に合わせる）
+  total: Number(totalAmount) || 0,   // ← 合計（あなたの変数名に合わせる）
+  final: Number(finalAmount) || 0,   // ← 最終金額（あなたの変数名に合わせる）
+  // 必要なら入力スナップショットも
+  payload: {
+    f: document.getElementById('f')?.value || '',
+    f2: document.getElementById('f2')?.value || '',
+    // ...必要分
+  }
+};
+
+// ローカルに積む → 画面に描画 → Firebaseへ保存
+app2History.unshift(entry);
+renderApp2History();
+persistApp2History();
+
   return false; // 送信は常に抑止
 }
 
@@ -5305,6 +5326,88 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   attachAutosave();               // ②入力のたびに自動保存（800msデバウンス）
   subscribeRemote(monthKey());    // ③他端末の更新を即時反映
 });
+
+// ===== app2 履歴のローカル状態 =====
+let app2History = [];
+
+// HTMLエスケープ（XSS/レイアウト崩れ対策）
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// 履歴の描画
+function renderApp2History(){
+  const ul = document.getElementById('app2-historyList');
+  if(!ul) return;
+  ul.innerHTML = app2History.map(e => {
+    const when = new Date(e.time||Date.now()).toLocaleString();
+    return `<li><b>${escapeHtml(e.cast||'（名前なし）')}</b>｜${when}
+              ｜小計:${e.subtotal?.toLocaleString?.() ?? e.subtotal}
+              ｜合計:${e.total?.toLocaleString?.() ?? e.total}
+              ｜最終:${e.final?.toLocaleString?.() ?? e.final}
+            </li>`;
+  }).join('');
+}
+
+// Firebase へ履歴を保存（saveRemote があればそれを使う）
+async function persistApp2History(){
+  // ① 既存の saveRemote(appId, stateObj) がある場合
+  if (typeof saveRemote === 'function'){
+    await saveRemote('app2', { history: app2History });
+    return;
+  }
+  // ② ない場合のフォールバック（useFirebase を使う前提）
+  if (typeof useFirebase === 'function'){
+    const fb = await useFirebase();
+    if(!fb) return;
+    const { db, doc, setDoc, serverTimestamp } = fb;
+    await setDoc(
+      doc(db, 'apps', 'app2'),              // ← コレクション/ドキュメントは環境に合わせて
+      { history: app2History, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  }
+}
+
+// リアルタイム購読（他端末の更新を即反映）
+async function startApp2Realtime(){
+  if (typeof useFirebase !== 'function') return;
+  const fb = await useFirebase();
+  if(!fb) return;
+  const { db, doc, onSnapshot } = fb;
+  const ref = doc(db, 'apps', 'app2');      // ← 保存先に合わせて同じ参照にする
+  onSnapshot(ref, (snap) => {
+    const data = snap.data();
+    if (!data || !Array.isArray(data.history)) return;
+    // 自分の直後保存で重複しにくいよう簡単な等価チェック
+    const jsonLocal  = JSON.stringify(app2History);
+    const jsonRemote = JSON.stringify(data.history);
+    if (jsonLocal !== jsonRemote){
+      app2History = data.history;
+      renderApp2History();
+    }
+  });
+}
+
+// 初期ロード（ページ表示時に一度だけ取り込み）
+async function loadApp2HistoryOnce(){
+  if (typeof useFirebase !== 'function') return renderApp2History();
+  const fb = await useFirebase();
+  if(!fb) return renderApp2History();
+  const { db, doc, getDoc } = fb;
+  const ref = doc(db, 'apps', 'app2');      // ← 保存先に合わせる
+  const snap = await getDoc(ref);
+  const data = snap.exists() ? snap.data() : null;
+  app2History = Array.isArray(data?.history) ? data.history : [];
+  renderApp2History();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadApp2HistoryOnce();  // 一度だけ読み込む
+  startApp2Realtime();    // 以後はリアルタイム反映
+});
+
 </script>
 
 
