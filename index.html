@@ -5141,7 +5141,7 @@ function collectApp2State(){
     fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
   });
 
-  // ボトル明細（.bottle-form）
+  // 既存: ボトル明細
   const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
     details: form.querySelector('.bottleDetails')?.value ?? "",
     split:   form.querySelector('.splitCount')?.value ?? "",
@@ -5149,8 +5149,13 @@ function collectApp2State(){
     amount:  form.querySelector('.bottleAmount')?.value ?? ""
   }));
 
-  return { fields, bottles };
+  // ★追加: 履歴（HTMLそのまま）
+  const historyRoot = document.getElementById('historyList');
+  const historyHTML = historyRoot ? historyRoot.innerHTML : "";
+
+  return { fields, bottles, historyHTML };
 }
+
 function applyApp2State(state){
   const root = document.getElementById('app2');
   if(!root || !state) return;
@@ -5163,19 +5168,21 @@ function applyApp2State(state){
       else { el.value = val ?? ""; }
     });
   }
+
   if(Array.isArray(state.bottles)){
     const container = root.querySelector('#bottleFormsContainer');
     if(container){
       container.innerHTML = "";
       state.bottles.forEach(b=>{
+        // 既存の追加関数があればそれを使う
         if(typeof window.addBottleForm === "function"){
-          const el = window.addBottleForm(); // 既存の追加関数があれば使用
+          const el = window.addBottleForm();
           (el?.querySelector('.bottleDetails')||{}).value = b.details ?? "";
           (el?.querySelector('.splitCount')||{}).value    = b.split ?? "";
           (el?.querySelector('.bottleQuantity')||{}).value= b.qty ?? "";
           (el?.querySelector('.bottleAmount')||{}).value  = b.amount ?? "";
         }else{
-          // フォールバック追加
+          // フォールバック生成（既存実装に合わせる）
           const row = document.createElement('div');
           row.className = 'bottle-form';
           row.innerHTML = `
@@ -5195,7 +5202,20 @@ function applyApp2State(state){
       });
     }
   }
+
+  // ★追加: 履歴HTMLの反映＋派生処理
+  if (typeof state.historyHTML === "string") {
+    const historyRoot = document.getElementById('historyList');
+    if (historyRoot && historyRoot.innerHTML !== state.historyHTML) {
+      historyRoot.innerHTML = state.historyHTML;
+      try { localStorage.setItem('historyList', state.historyHTML); } catch(e){}
+      if (typeof window.renumberHistory === "function") renumberHistory();
+      if (typeof window.refreshBottleDropdownsFromHistory === "function") refreshBottleDropdownsFromHistory();
+      if (typeof window.updateSummary === "function") updateSummary();
+    }
+  }
 }
+
 
 /* app3（ざっくり）：id付きの要素を一括保存/復元 */
 function collectApp3State(){
