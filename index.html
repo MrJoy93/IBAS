@@ -1832,7 +1832,7 @@ body[data-active-app="app2"] #app2 {
   <button type="button" onclick="resetApp('app3')" class="red-btn">リセット</button>
   <button type="button" onclick="resetAllApps()" class="red-btn">完全リセット</button>
   <div style="text-align: center; margin-top: 20px;">
-  <button onclick="exportAsSelfContainedHTML()">入力済みでHTML保存</button>
+  <button onclick="exportAsFilledHTML()">入力済みHTMLとして保存</button>
   <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
   </div>
 
@@ -3990,52 +3990,7 @@ function attachApp3Listeners() {
   });
 }
 
-function exportAsSelfContainedHTML() {
-  // 1. ドキュメント全体をクローン
-  const doc = document.documentElement.cloneNode(true);
 
-  // 2. localStorageのデータも取得（本当は再インポート用にスクリプト化推奨）
-  const localStorageData = JSON.stringify(localStorage);
-
-  // 3. localStorageのデータ埋め込み用スクリプト作成
-  const storageScript = document.createElement('script');
-  storageScript.type = 'text/javascript';
-  storageScript.textContent = `
-    (function() {
-      try {
-        var data = ${localStorageData};
-        for (var key in data) {
-          if (data.hasOwnProperty(key)) {
-            localStorage.setItem(key, data[key]);
-          }
-        }
-      } catch (e) {}
-    })();
-  `;
-
-  // 4. <head>内に挿入
-  const head = doc.querySelector("head");
-  if (head) head.appendChild(storageScript);
-
-  // 5. HTML全体を文字列化
-  const html = "<!DOCTYPE html>\n" + doc.outerHTML;
-
-  // 6. Blob生成
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-
-  // 7. ダウンロード用リンク生成
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = getCustomFileName() + ".html";
-  a.click();
-  URL.revokeObjectURL(url);
-
-  // 8. 保存後リセット
-  setTimeout(() => {
-    resetAllApps();
-  }, 600);
-}
 
 
 function getCustomFileName() {
@@ -5428,6 +5383,217 @@ document.addEventListener('DOMContentLoaded', () => {
   startApp2Realtime();    // 以後はリアルタイム反映
 });
 
+/* 入力済みHTMLとして保存 v2.1
+   - 値を属性に焼き込み（value/checked/selected）
+   - タブをアンカー式に変換（:target）
+   - JSなし・編集不可
+   - createElementは常に document.createElement を使用
+*/
+/* 入力済みHTMLとして保存 v2.2（JS不要で切替、値を焼き込み、編集不可）
+   - createElement は常に document.createElement を使用
+   - onclick から呼べるように window に公開
+*/
+/* 入力済みHTMLとして保存 v2.3
+   - id/nameマッチで“正しい相手”に値を焼き込み（index依存をやめる）
+   - input/textarea/select/checkbox/radio に加え、span/div/output/contenteditable も固定
+   - タブは<a href="#appX">+ :target でJS不要切替
+   - 生成物は編集不可（disabled/readonly）＋全script削除
+*/
+/* 入力済みHTMLとして保存 v2.4
+   - 値を属性へ“焼き込み”（value / checked / selected）
+   - span/div/output など表示用ノードも固定
+   - contenteditable も中身を固定して非編集化
+   - タブは <a href="#appX"> + :target で JS不要切替
+   - 生成物は編集不可（全フォーム無効化）＋全 <script> 削除
+   - createElement は必ず document.createElement を使用
+*/
+/* 入力済みHTMLとして保存 v2.5
+   - 現在値を属性へ焼き込み（value/checked/selected）
+   - span/div/output/contenteditable も固定
+   - タブ(.tabs .tab)は <a href="#appX"> に置換して :target で切替
+   - 保存物は編集不可（disabled/readonly）＋ <script> 全削除
+   - createElement は document.createElement、id参照は querySelector で統一
+*/
+/* 入力済みHTMLとして保存 v2.6（安定版）
+   - input/textarea/select の現在値だけ“焼き込み”（value/checked/selected）
+   - span/div/output 等のテキスト焼き込みは一旦やめて安全側へ
+   - 3つのAPP(#app1,#app2,#app3)は強制 display:block にして全て見えるようにする
+   - 保存物は編集不可（disabled/readonly）＋ <script> 全削除
+   - タブ切替のCSSは追加しない（見えなくなる事故防止）
+*/
+/* 入力済みHTMLとして保存 v2.7
+   - 値を焼き込み（value/checked/selected）
+   - タブ<div.tab data-target="appX">→ <a class="tab" href="#appX"> に変換
+   - :target で .content を切替（JS不要）。ハッシュ無し時は #app1 を表示
+   - 既存JSは削除、保存物は編集不可
+*/
+/* 入力済みHTMLとして保存 v2.9
+   - 値焼き込み（id/name優先＋APP1は行×クラス、カテゴリ表チェックは出現順）
+   - タブ <div.tab data-target="appX"> → <a class="tab" href="#appX">
+   - :target で .content を切替（JS不要）。初期は app1 を表示
+   - 既存のopacity/transformアニメは上書きで無効化（見えない事故防止）
+   - 保存物は編集不可（disabled/readonly）＋ <script> 全削除
+*/
+window.exportAsFilledHTML = function(){
+  const doc = document;
+  const cloned = doc.documentElement.cloneNode(true);
+  const $all = (root, sel) => Array.from(root.querySelectorAll(sel));
+  const esc  = (window.CSS && CSS.escape) ? CSS.escape : s=>String(s).replace(/[^a-zA-Z0-9_\-]/g,'\\$&');
+  const byId = (root, id) => id ? root.querySelector('#'+esc(id)) : null;
+
+  // ===== 1) 値の焼き込み（id/name 優先） =====
+  // input
+  $all(doc,'input').forEach(oi=>{
+    const ci = (oi.id && byId(cloned,oi.id)) || (oi.name && cloned.querySelector(`[name="${esc(oi.name)}"]`));
+    if(!ci) return;
+    const type=(oi.getAttribute('type')||'text').toLowerCase();
+    if(type==='checkbox'||type==='radio'){
+      if(oi.checked) ci.setAttribute('checked',''); else ci.removeAttribute('checked');
+      if(type==='radio' && oi.name){
+        $all(cloned,`input[type="radio"][name="${esc(oi.name)}"]`).forEach(r=>{ if(r!==ci) r.removeAttribute('checked'); });
+      }
+    }else{
+      ci.setAttribute('value', oi.value ?? '');
+    }
+    ci.setAttribute('disabled','disabled'); ci.setAttribute('readonly','readonly');
+    ['onclick','onchange','oninput','onsubmit'].forEach(a=>ci.removeAttribute(a));
+  });
+  // textarea
+  $all(doc,'textarea').forEach(ot=>{
+    const ct = (ot.id && byId(cloned,ot.id)) || (ot.name && cloned.querySelector(`[name="${esc(ot.name)}"]`));
+    if(!ct) return;
+    ct.textContent = ot.value ?? '';
+    ct.setAttribute('disabled','disabled'); ct.setAttribute('readonly','readonly');
+    ['onclick','onchange','oninput','onsubmit'].forEach(a=>ct.removeAttribute(a));
+  });
+  // select
+  $all(doc,'select').forEach(os=>{
+    const cs = (os.id && byId(cloned,os.id)) || (os.name && cloned.querySelector(`[name="${esc(os.name)}"]`));
+    if(!cs) return;
+    const val = os.value ?? '';
+    $all(cs,'option').forEach(opt=>{ if(opt.value===val) opt.setAttribute('selected',''); else opt.removeAttribute('selected'); });
+    cs.setAttribute('disabled','disabled'); cs.setAttribute('readonly','readonly');
+    ['onclick','onchange','oninput','onsubmit'].forEach(a=>cs.removeAttribute(a));
+  });
+
+  // ===== 2) APP1 伝票行（#formRows tr.row）を行×クラスで焼き込み =====
+  const oRows = $all(doc,'#formRows tr.row');
+  const cRows = $all(cloned,'#formRows tr.row');
+  const fields = ['.table-number','.honshi','.c','.amount','.num','.detail','.card','.total'];
+  oRows.forEach((tr,i)=>{
+    const ctr = cRows[i]; if(!ctr) return;
+    fields.forEach(sel=>{
+      const oi = tr.querySelector(sel);
+      const ci = ctr.querySelector(sel);
+      if(!oi || !ci) return;
+      if (ci.tagName === 'SELECT') {
+        const val = oi.value ?? '';
+        $all(ci,'option').forEach(opt=>{ if(opt.value===val) opt.setAttribute('selected',''); else opt.removeAttribute('selected'); });
+      } else {
+        const type=(oi.getAttribute('type')||'text').toLowerCase();
+        if(type==='checkbox'||type==='radio'){
+          if(oi.checked) ci.setAttribute('checked',''); else ci.removeAttribute('checked');
+        }else{
+          ci.setAttribute('value', oi.value ?? '');
+        }
+      }
+      ci.setAttribute('disabled','disabled'); ci.setAttribute('readonly','readonly');
+      ['onclick','onchange','oninput','onsubmit'].forEach(a=>ci.removeAttribute(a));
+    });
+  });
+
+  // ===== 3) カテゴリ表チェック（#categorySection）を出現順で固定 =====
+  const oCbs = $all(doc,'#categorySection input[type="checkbox"]');
+  const cCbs = $all(cloned,'#categorySection input[type="checkbox"]');
+  oCbs.forEach((o,i)=>{
+    const c = cCbs[i]; if(!c) return;
+    if(o.checked) c.setAttribute('checked',''); else c.removeAttribute('checked');
+    c.setAttribute('disabled','disabled');
+    ['onclick','onchange'].forEach(a=>c.removeAttribute(a));
+  });
+
+  // ===== 4) タブをアンカー式に変換（JS不要の切替） =====
+  const tabsBar = cloned.querySelector('.tabs');
+  if(tabsBar){
+    $all(tabsBar,'.tab').forEach(old=>{
+      if(old.tagName.toLowerCase()==='a') return;
+      const target = old.getAttribute('data-target') || 'app1';
+      const label  = (old.textContent||'').trim() || target;
+      const a = document.createElement('a');
+      a.className = old.className.replace(/\bactive\b/g,'').trim();
+      a.setAttribute('href','#'+target);
+      a.setAttribute('role','tab');
+      a.textContent = label;
+      old.replaceWith(a);
+    });
+  }
+
+  // ===== 5) 保存版用CSSを追加（:target で切替 & アニメ無効化） =====
+  const head  = cloned.querySelector('head') || cloned.getElementsByTagName('head')[0];
+  const style = document.createElement('style');
+  style.textContent = `
+    /* 保存版バッジ＆操作不可 */
+    body[data-frozen="1"] * { caret-color: transparent; }
+    [disabled], input[readonly], select[disabled], textarea[disabled]{ opacity:.85; pointer-events:none; }
+    .frozen-banner{
+      position:fixed; top:8px; right:8px; z-index:99999;
+      padding:6px 10px; font:12px/1 system-ui,-apple-system,Segoe UI,Roboto,"M PLUS 2",sans-serif;
+      background:rgba(0,245,255,.14); border:1px solid rgba(0,245,255,.55);
+      border-radius:8px; color:#00f5ff; backdrop-filter: blur(6px);
+    }
+    /* 既存のアニメを打ち消して“表示優先” */
+    .content{ opacity:1 !important; transform:none !important; }
+
+    /* JSなしのAPP切替：デフォ非表示、:targetだけ表示 */
+    .content{ display:none !important; }
+    .content:target{ display:block !important; }
+    /* ハッシュ無しの初期表示はapp1 */
+    :root #app1{ display:block !important; }
+  `;
+  head.appendChild(style);
+
+  // ===== 6) バナー付与・初期表示の保険 =====
+  const body = cloned.querySelector('body') || cloned.getElementsByTagName('body')[0];
+  if(body){
+    body.setAttribute('data-frozen','1');
+    const banner = document.createElement('div');
+    banner.className = 'frozen-banner';
+    banner.textContent = 'このファイルは入力済みの保存版（編集不可）';
+    body.appendChild(banner);
+  }
+  ['app1','app2','app3'].forEach(id=>{
+    const el = byId(cloned,id);
+    if(el){ el.removeAttribute('hidden'); el.style.visibility='visible'; }
+  });
+
+  // ===== 7) クリック不可（証跡用） =====
+  $all(cloned,'button').forEach(b=>{ b.setAttribute('disabled','disabled'); b.removeAttribute('onclick'); b.type='button'; });
+  $all(cloned,'form').forEach(f=>{ f.setAttribute('onsubmit','return false;'); });
+
+  // ===== 8) <script> 全削除（完全静的化） =====
+  $all(cloned,'script').forEach(s=> s.remove());
+
+  // ===== 9) ダウンロード =====
+  const htmlText = '<!DOCTYPE html>\n' + cloned.outerHTML;
+  const blob = new Blob([htmlText], { type:'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  try{
+    const base = (typeof window.getCustomFileName==='function') ? window.getCustomFileName()
+               : 'IBASD_' + new Date().toISOString().slice(0,10);
+    a.href = url; a.download = base + '.html'; a.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
+
+/* 合計ユーティリティ（存在しなければ定義） */
+if (typeof window.subtotal !== 'function') {
+  window.subtotal = function(values){
+    let s = 0; for (const v of (values||[])) s += (Number(v)||0); return s;
+  };
+}
 </script>
 
 
