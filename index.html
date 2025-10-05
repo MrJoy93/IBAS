@@ -3409,7 +3409,7 @@ function restoreFromHistory(button) {
   });
 
   // 送迎金額を復元
-  const sendoffMatch = historyItem.textContent.match(/送迎:¥([\d,]+)/);
+  const sendoffMatch = (historyItem.textContent || '').match(/送迎:\s*¥([\d,]+)/);
   if (sendoffMatch) {
     document.getElementById('sendoffAmount').value = parseInt(sendoffMatch[1].replace(/,/g, ''), 10);
   } else {
