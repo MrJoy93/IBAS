@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 6.4.1</title>
+<title>IBASD  Ver. 6.5.1</title>
 <style>
 
   html, body {
@@ -4707,6 +4707,15 @@ window.preparePrintApp2 = function (mode = 'envelope') {
   if (typeof window.showApp === 'function') window.showApp('app2');
   if (typeof window.calculate === 'function') window.calculate();
 
+  // 🔽 ここから追加：結果までスムーズスクロール
+  setTimeout(() => {
+    const resultEl = document.getElementById('result');
+    if (resultEl) {
+      resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 600); // 計算完了後に遅れてスクロール（500〜800msが目安）
+  // 🔼 追加ここまで
+
   const html = (document.getElementById('result')?.innerHTML || '').trim();
   if (!html) {
     alert('印刷する内容がありません。先に「計算」で結果を出してください。');
@@ -4721,6 +4730,7 @@ window.preparePrintApp2 = function (mode = 'envelope') {
 
   openPrintApp2(inner, { scale: 1.05, rotateOnMobile: true, trimBottomMM: 20 });
 };
+
 
 function openPrintApp2(innerHTML, opts = {}) {
   const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
