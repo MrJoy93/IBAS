@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 6.5.1</title>
+<title>IBASD  Ver. 6.6.0</title>
 <style>
 
   html, body {
@@ -935,11 +935,14 @@ body[data-active-app="app3"] #app2-sideNav {
 }
 
 :root{
-  /* 英数字=Orbitron、日本語=M PLUS 2（なければ一般的なJPフォント） */
   --ff-orbi-jp: 'Orbitron', 'M PLUS 2', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', sans-serif;
   --subnav-bg: rgba(0, 34, 43, 0.95);
-    --tabs-h: 56px;      /* .tabs の実高（JSで上書き） */
-  --subnav-h: 50px;    /* サブナビの実高（SPでは後で40pxに） */
+  --tabs-h: 56px;
+  --subnav-h: 50px;
+
+  /* ★ 追加：スマホ時のサイドナビ幅とクリアランス */
+  --side-nav-w: 100px;
+  --side-nav-gap: 12px;
 }
 
 /* まず body に統一 */
@@ -1086,6 +1089,77 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 }
 
 
+
+
+/* 履歴インデックス（テーブル） */
+.history-index-table {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+  gap: 12px 16px !important;             /* 行と列のすき間 */
+  justify-content: center !important;    /* 中央寄せ */
+  align-items: center !important;
+  padding: 16px 12px !important;
+  background: rgba(20,28,40,0.82) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 18px #00eaff22 !important;
+}
+
+/* テーブル構造を無視してボタンだけグリッド内に並べる */
+.history-index-table thead,
+.history-index-table tbody,
+.history-index-table tr,
+.history-index-table td {
+  display: contents !important;
+}
+
+/* ボタンの見た目・間隔統一 */
+.history-index-table .idx-btn {
+  display: block !important;
+  width: 100% !important;
+  max-width: 120px !important;
+  margin: 0 !important;
+  padding: 8px 10px !important;
+  text-align: center !important;
+  border: 1px solid #00eaff !important;
+  border-radius: 8px !important;
+  background: rgba(0,245,255,.08) !important;
+  color: #00f5ff !important;
+  cursor: pointer !important;
+  transition: transform .15s, background .15s, color .15s !important;
+}
+.history-index-table .idx-btn:hover {
+  background: #00f5ff !important;
+  color: #111 !important;
+  transform: translateY(-2px) scale(1.03) !important;
+}
+
+/* スクロール時にサブナビに潜らないよう上余白を確保 */
+#app2-historySection .history-item{
+  scroll-margin-top: calc(var(--tabs-h) + var(--subnav-h) + 10px);
+}
+
+/* 見出しの左右レイアウト＆右端カウンタ */
+.history-index-table .history-index-head{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.history-index-table .history-index-count{
+  font-size: 14px;
+  color: #eaf6ff;
+  opacity: .95;
+}
+
+/* 共通：見出し行をボタン化（左右にタイトル/人数/▼） */
+.history-index-toggle{
+  width:100%;
+  display:flex; align-items:center; justify-content:space-between;
+  background: transparent; border: none; color: inherit; padding: 10px 12px;
+  font: inherit; cursor: pointer;
+}
+.history-index-toggle .caret{ opacity:.9; }
+
+
 /* =========================================================
    MOBILE (<=700px) — 統合版（app1/app2/app3）
    これ1つでOK。既存の max-width:700px ブロックは削除してOK。
@@ -1189,11 +1263,12 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   z-index:1200;
 }
 
-#app2 {
-  width: calc(100% - 110px) !important; /* ナビ100 + 右余白(約10) */
-  margin-right: 0 !important;           /* ダブりで溢れていたので 0 に */
+#app2{
+  width: 100% !important;
   max-width: none !important;
-  box-sizing: border-box;
+  margin-right: 0 !important;
+  padding-right: calc(var(--side-nav-w) + var(--side-nav-gap)) !important; /* サイドナビ分の逃げ */
+  box-sizing: border-box !important;
 }
 
 
@@ -1329,9 +1404,18 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
     display: block;
   }
 
+  /* 折りたたみ（ボディの高さをアニメで出し入れ） */
+  #historyIndexTable tbody{
+    display:block;                 /* 高さアニメのためblock化 */
+    max-height: 180px;             /* 展開時の上限（好みで） */
+    overflow: hidden;
+    transition: max-height .25s ease;
+  }
+  #historyIndexTable.collapsed tbody{
+    max-height: 0;
+  }
+
 }
-
-
 
 @media (min-width:700px){
   #app1 table{ table-layout:fixed; width:100%; }
@@ -1372,6 +1456,92 @@ body[data-active-app="app2"] #app2 {
 
 }
 
+@media (max-width: 700px) {
+  /* スマホ時：履歴インデックスを狭める */
+  /* 履歴インデックスをフレックスレイアウト化 */
+  #historyIndexTable {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-END !important; /* ← 左寄せに変更 */
+    align-items: flex-start !important; /* ← stretchをflex-startに変更（これが肝） */
+    gap: 6px !important;
+    padding: 6px 4px !important;
+    width: 100% !important;
+    background: rgba(20,28,40,0.82) !important;
+    border: 1px solid rgba(0,245,255,0.25) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 0 18px #00eaff22 !important;
+    box-sizing: border-box !important;
+  }
+
+  #historyIndexTable tr,
+  #historyIndexTable td,
+  #historyIndexBody {
+    display: contents !important; /* テーブルの行/列構造を無視して並べる */
+  }
+
+  /* 履歴ボタンを3列並び＋中央寄せ */
+  #historyIndexTable .idx-btn {
+    flex: 0 0 calc(33.333% - 6px) !important;  /* ← 3列維持しつつ左寄せ */
+    display: block !important;
+    height: auto !important;          /* ← 高さを自動に */
+    line-height: 1.4 !important;      /* ← テキスト中央に見えるように */
+    box-sizing: border-box !important;
+    text-align: center !important;
+    padding: 6px 0 !important;        /* ← 押しやすく */
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    border: 1px solid #00eaff !important;
+    border-radius: 8px !important;
+    background: rgba(0,245,255,.08) !important;
+    color: #00f5ff !important;
+    transition: transform .15s, background .15s, color .15s !important;
+  }
+
+    #historyIndexTable .idx-btn:hover {
+    background: #00f5ff !important;
+    color: #111 !important;
+    transform: translateY(-2px) scale(1.03) !important;
+  }
+
+  /* 全体調整 */
+  #historyIndexTable .history-chip-row {
+    display: contents !important; /* flex内で統合 */
+  }
+  
+}
+
+
+
+#app2-historySection .history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 出力ボタン：復元ボタンと同じ形状・赤文字 */
+#app2-historySection .output-btn {
+  background: linear-gradient(90deg, #00f5ff55 30%, #197b91 100%); /* 復元と同じ背景 */
+  color: #ff4d4d; /* 🔴 赤文字 */
+  border: 1px solid #00f5ff; /* 枠も同一 */
+  border-radius: 10px;
+  font-size: 14px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.3);
+}
+
+#app2-historySection .output-btn:hover {
+  background: #00f5ff;
+  color: #d40000; /* hoverで濃い赤文字 */
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.6);
+}
+
+
+
+
 </style>
 
 
@@ -1402,7 +1572,7 @@ body[data-active-app="app2"] #app2 {
 
 <!-- app2 用サブナビ（最初は非表示） -->
 <nav id="app2-nav" class="subnav">
-  <button data-target="app2-inputSection">入力</button>
+  <button data-target="app2-inputSection">目次</button>
   <button data-target="app2-resultSection">結果</button>
   <button data-target="app2-historySection">履歴</button>
 </nav>
@@ -1558,6 +1728,24 @@ body[data-active-app="app2"] #app2 {
   <div style="text-align: center; margin-top: 30px;">
 
   <section id="app2-inputSection">
+
+<!-- ▼ 履歴インデックス（テーブル版） -->
+<table id="historyIndexTable" class="history-index-table">
+<thead>
+  <tr>
+    <th>
+      <div class="history-index-head">
+        <span class="history-index-title">履歴</span>
+        <span id="historyIndexCount" class="history-index-count">0人</span>
+      </div>
+    </th>
+  </tr>
+</thead>
+  <tbody id="historyIndexBody">
+    <!-- JSでボタン行が入ります -->
+  </tbody>
+</table>
+<!-- ▲ 履歴インデックス -->
 
     <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
 
@@ -3274,10 +3462,14 @@ if (resultElem) {
 }
 
 function confirmAndCalculate(e){
+
+  let subtotal = 0;
+  let totalAmount = 0;   // ← 追加：定義漏れ修正
+  let finalAmount = 0;   // ← 追加：定義漏れ修正
+
   // 送信を止める（Enter送信等も統一）
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
-  // ==== ここはあなたの既存ロジック（確認用メッセージの作成など） ====
   const castName   = document.getElementById('castName').value || '（名前なし）';
   const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
   const sendoff    = document.getElementById('sendoffAmount').value || '0';
@@ -3316,28 +3508,36 @@ function confirmAndCalculate(e){
   // 描画が反映された次のフレームで結果へスクロール
   requestAnimationFrame(()=> navScrollTo('app2-resultSection','smooth'));
 
-  // 例：計算済みの主要値（名称はあなたの計算ロジックに合わせて）
-const entry = {
-  time: new Date().toISOString(),
-  cast: document.getElementById('castName')?.value || '（名前なし）',
-  subtotal: Number(subtotal) || 0,   // ← 小計（あなたの変数名に合わせる）
-  total: Number(totalAmount) || 0,   // ← 合計（あなたの変数名に合わせる）
-  final: Number(finalAmount) || 0,   // ← 最終金額（あなたの変数名に合わせる）
-  // 必要なら入力スナップショットも
-  payload: {
-    f: document.getElementById('f')?.value || '',
-    f2: document.getElementById('f2')?.value || '',
-    // ...必要分
+  // 合計・最終金額を #result から抽出
+  const resultText = document.querySelector('#result')?.innerText || '';
+  const match = resultText.match(/合計[^\d]*(\d[\d,]*)/);
+  if (match) {
+    totalAmount = parseInt(match[1].replace(/,/g,''),10);
+    finalAmount = totalAmount;
   }
-};
 
-// ローカルに積む → 画面に描画 → Firebaseへ保存
-app2History.unshift(entry);
-renderApp2History();
-persistApp2History();
+  // 結果オブジェクト
+  const entry = {
+    time: new Date().toISOString(),
+    cast: castName,
+    subtotal: subtotal,
+    total: totalAmount,
+    final: finalAmount,
+    payload: {
+      f: document.getElementById('f')?.value || '',
+      f2: document.getElementById('f2')?.value || '',
+      // ...必要分
+    }
+  };
+
+  // 🔴 以下3行を削除（app2Historyに依存しているため）
+  // app2History.unshift(entry);
+  // renderApp2History();
+  // persistApp2History();
 
   return false; // 送信は常に抑止
 }
+
 
 
 
@@ -5277,13 +5477,25 @@ wrapAndSync("filterCardInputRows", { immediate:false });
 wrapAndSync("resetSearch",         { immediate:false });
 
 (function observeApp2History(){
-  const his = document.getElementById("app2-historySection");
-  if(!his) return;
-  const mo = new MutationObserver(()=>{
-    // 頻発しても大丈夫なようにデバウンス保存
-    scheduleAutosave();
+  const historySection = document.getElementById("app2-historySection");
+  if (!historySection) return;
+
+  let debounceTimer = null;
+
+  const observer = new MutationObserver(() => {
+    clearTimeout(debounceTimer);
+    // 100ms デバウンスで両方の処理を安全に呼ぶ
+    debounceTimer = setTimeout(() => {
+      scheduleAutosave();
+      createHistoryIndex();
+    }, 100);
   });
-  mo.observe(his, { childList:true, subtree:true, characterData:true });
+
+  observer.observe(historySection, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
 })();
 
 function attachAutosave(){
@@ -5327,11 +5539,12 @@ function renderApp2History(){
   if(!ul) return;
   ul.innerHTML = app2History.map(e => {
     const when = new Date(e.time||Date.now()).toLocaleString();
-    return `<li><b>${escapeHtml(e.cast||'（名前なし）')}</b>｜${when}
-              ｜小計:${e.subtotal?.toLocaleString?.() ?? e.subtotal}
-              ｜合計:${e.total?.toLocaleString?.() ?? e.total}
-              ｜最終:${e.final?.toLocaleString?.() ?? e.final}
-            </li>`;
+  return `<li class="history-item">
+            <span class="history-name">${escapeHtml(e.cast||'（名前なし）')}</span>｜${when}
+            ｜小計:${e.subtotal?.toLocaleString?.() ?? e.subtotal}
+            ｜合計:${e.total?.toLocaleString?.() ?? e.total}
+            ｜最終:${e.final?.toLocaleString?.() ?? e.final}
+          </li>`;
   }).join('');
 }
 
@@ -5604,6 +5817,274 @@ if (typeof window.subtotal !== 'function') {
     let s = 0; for (const v of (values||[])) s += (Number(v)||0); return s;
   };
 }
+
+// ====== 履歴インデックス生成 ======
+// CSS変数(px)を取得（フォールバック付）
+function getVarPx(name, fallback = 0){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+// 固定ヘッダ（タブ＋サブナビ）の総高さを取得
+function getNavOffsetPx(){
+  const tabs = document.querySelector('.tabs')?.offsetHeight ?? getVarPx('--tabs-h', 56);
+  const sub  = document.querySelector('#app2-nav')?.offsetHeight ?? getVarPx('--subnav-h', 50);
+  return tabs + sub + 10; // 仕上げの余白10px
+}
+
+// オフセット付きスムーススクロール
+function scrollWithOffset(targetEl){
+  const y = targetEl.getBoundingClientRect().top + window.scrollY - getNavOffsetPx();
+  window.scrollTo({ top: y, behavior: 'smooth' });
+}
+
+// インデックス置き場（テーブル）を確保 or 作成（app2-inputSection の直前）
+function ensureHistoryIndexTable(){
+  let table = document.getElementById('historyIndexTable');
+  if (table) return table;
+
+  const inputSection = document.getElementById('app2-inputSection'); // ←ここを基準に差し込み
+  if (!inputSection) return null;
+
+  table = document.createElement('table');
+  table.id = 'historyIndexTable';
+  table.className = 'history-index-table';
+table.innerHTML = `
+  <thead>
+    <tr>
+      <th>
+        <button id="historyIndexToggle" class="history-index-toggle" type="button">
+          <span class="history-index-title">履歴</span>
+          <span id="historyIndexCount" class="history-index-count">0人</span>
+          <span class="caret">▾</span>
+        </button>
+      </th>
+    </tr>
+  </thead>
+  <tbody id="historyIndexBody"></tbody>
+`;
+
+  // app2-inputSection の「直前」に追加（フォームの上に出す）
+  inputSection.parentNode.insertBefore(table, inputSection);
+  return table;
+}
+
+document.addEventListener('click', (e)=>{
+  if (e.target.closest('#historyIndexToggle')) {
+    const tbl = document.getElementById('historyIndexTable');
+    tbl?.classList.toggle('collapsed');
+  }
+});
+
+// テーブル版：履歴から氏名ボタンを生成（列数は画面幅で変化）
+function createHistoryIndex(){
+  const historySection = document.getElementById('app2-historySection');
+  if (!historySection) return;
+
+  const table = ensureHistoryIndexTable();
+  if (!table) return;
+
+  const tbody = table.querySelector('#historyIndexBody');
+  if (!tbody) return;
+
+  // 1) 履歴アイテムを拾う（推奨: .history-item、旧: #historyList > li）
+  let items = historySection.querySelectorAll('.history-item');
+  if (items.length === 0) {
+    const list = document.getElementById('historyList');
+    if (list) items = list.querySelectorAll('li');
+  }
+  if (!items || items.length === 0){
+    tbody.innerHTML = '';
+    return;
+  }
+
+// 2) {name, el} の配列を作る（.history-name / .castName / <b>）
+const map = new Map();
+items.forEach(item => {
+  const nameEl = item.querySelector('.history-name')
+              || item.querySelector('.castName')
+              || item.querySelector('b');
+  const raw  = nameEl?.textContent?.trim() || '';
+  const base = stripLeadingSerial(raw);   // ★ 連番を除去した表示名
+  if (base && !map.has(base)) map.set(base, item);
+});
+
+const pairs = Array.from(map, ([name, el]) => ({ name, el }));
+
+  const countEl = document.getElementById('historyIndexCount');
+  if (countEl) countEl.textContent = `${pairs.length}人`;
+
+
+// 3) レイアウト：モバイルは横スクロールのチップ1行 / PCは表グリッド
+const isMobile = window.matchMedia('(max-width:700px)').matches;
+tbody.innerHTML = '';
+
+if (isMobile) {
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  const wrap = document.createElement('div');
+  wrap.className = 'history-chip-row'; // ← CSSで横スクロール
+
+  pairs.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'idx-btn';
+    btn.type = 'button';
+    btn.textContent = p.name;
+    btn.addEventListener('click', () => scrollWithOffset(p.el));
+    wrap.appendChild(btn);
+  });
+
+  td.appendChild(wrap);
+  tr.appendChild(td);
+  tbody.appendChild(tr);
+} else {
+  const COLS = 6; // PC列数
+  for (let i = 0; i < pairs.length; i += COLS){
+    const tr = document.createElement('tr');
+    for (let c = 0; c < COLS; c++){
+      const td = document.createElement('td');
+      const p = pairs[i + c];
+      if (p){
+        const btn = document.createElement('button');
+        btn.className = 'idx-btn';
+        btn.type = 'button';
+        btn.textContent = p.name;
+        btn.addEventListener('click', () => scrollWithOffset(p.el));
+        td.appendChild(btn);
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+}
+
+// 公開しておく（必要なら手動再生成で呼べる）
+window.createHistoryIndex = createHistoryIndex;
+
+// 初期化：履歴変化を監視して自動再生成＋初回実行
+document.addEventListener('DOMContentLoaded', () => {
+  const historySection = document.getElementById('app2-historySection');
+  if (historySection){
+    const mo = new MutationObserver(() => createHistoryIndex());
+    mo.observe(historySection, { childList:true, subtree:true });
+  }
+  createHistoryIndex();
+});
+
+// 先頭の連番「1. 」「１）」「#3 」などを削除
+function stripLeadingSerial(s){
+  if (!s) return '';
+  return s.replace(
+    /^\s*(?:No\.|#)?\s*[0-9０-９]+\s*[\)\]）.．、:：-]?\s*/u,
+    ''
+  ).trim();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  addOutputButtonsNextToRestore();
+  const his = document.getElementById('app2-historySection');
+  if (his) {
+    const mo = new MutationObserver(() => addOutputButtonsNextToRestore());
+    mo.observe(his, { childList: true, subtree: true });
+  }
+});
+
+function addOutputButtonsNextToRestore() {
+  const historySection = document.getElementById('app2-historySection');
+  if (!historySection) return;
+
+  let items = historySection.querySelectorAll('.history-item');
+  if (items.length === 0) {
+    const list = document.getElementById('historyList');
+    if (list) items = list.querySelectorAll('li');
+  }
+  if (!items.length) return;
+
+  items.forEach(item => {
+    if (item.querySelector('.output-btn')) return;
+
+    // 復元ボタン探す
+    const restoreBtn = Array.from(item.querySelectorAll('button'))
+      .find(b => b.textContent.includes('復元'));
+    if (!restoreBtn) return;
+
+    // 出力ボタン生成
+    const outBtn = document.createElement('button');
+    outBtn.className = 'output-btn';
+    outBtn.textContent = '出力';
+    outBtn.style.marginLeft = '8px';
+
+    outBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+
+      // 1️⃣ 該当の復元ボタンをクリック
+      restoreBtn.click();
+
+      // 2️⃣ 復元処理が終わるまで少し待つ（非同期処理対策）
+      await new Promise(res => setTimeout(res, 800));
+
+      // 3️⃣ 既存の出力処理（preparePrintApp2）を呼ぶ
+      if (typeof window.preparePrintApp2 === 'function') {
+        preparePrintApp2('envelope');
+      } else {
+        alert('出力機能が見つかりません。');
+      }
+    });
+
+    // 復元の右横に設置
+    restoreBtn.insertAdjacentElement('afterend', outBtn);
+
+    // 横並びを整える
+    const parent = restoreBtn.parentElement;
+    parent.style.display = 'flex';
+    parent.style.flexWrap = 'nowrap';
+    parent.style.alignItems = 'center';
+    parent.style.gap = '8px';
+  });
+}
+
+// 自動再適用
+document.addEventListener('DOMContentLoaded', () => {
+  addOutputButtonsNextToRestore();
+  const his = document.getElementById('app2-historySection');
+  if (his) {
+    const mo = new MutationObserver(() => addOutputButtonsNextToRestore());
+    mo.observe(his, { childList: true, subtree: true });
+  }
+});
+
+window.sortHistoryIndex = function() {
+  const container = document.querySelector('.history-index-table');
+  if (!container) return;
+
+  // ボタン要素を全部取得（表題行は除外）
+  const buttons = Array.from(container.querySelectorAll('.idx-btn'));
+
+  // 50音順ソート（濁音・半濁音・小文字も考慮）
+  buttons.sort((a, b) => {
+    const aText = a.textContent
+      .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60)) // カナ→ひらがな
+      .replace(/[ﾞﾟ]/g, ""); // 濁点除去
+    const bText = b.textContent
+      .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60))
+      .replace(/[ﾞﾟ]/g, "");
+    return aText.localeCompare(bText, 'ja');
+  });
+
+  // 並べ替え反映（タイトル以外を削除して再追加）
+  const title = container.querySelector('.history-index-title');
+  container.querySelectorAll('.idx-btn').forEach(btn => btn.remove());
+  buttons.forEach(btn => container.appendChild(btn));
+  
+  // 成功時の軽い視覚フィードバック（オプション）
+  title.style.textShadow = '0 0 8px #00f5ff';
+  setTimeout(() => title.style.textShadow = '', 800);
+};
+
+
 </script>
 
 
