@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 6.6.0</title>
+<title>IBASD  Ver. 6.7.0</title>
 <style>
 
   html, body {
@@ -1513,30 +1513,115 @@ body[data-active-app="app2"] #app2 {
 
 
 
-#app2-historySection .history-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+/* ==========================
+   APP2 履歴ボタン 強制レイアウト修正
+========================== */
+#app2-historySection .history-actions {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  margin-top: 8px !important;
 }
 
-/* 出力ボタン：復元ボタンと同じ形状・赤文字 */
-#app2-historySection .output-btn {
-  background: linear-gradient(90deg, #00f5ff55 30%, #197b91 100%); /* 復元と同じ背景 */
-  color: #ff4d4d; /* 🔴 赤文字 */
-  border: 1px solid #00f5ff; /* 枠も同一 */
-  border-radius: 10px;
-  font-size: 14px;
-  padding: 6px 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 0 8px rgba(0, 245, 255, 0.3);
+#app2-historySection .history-actions button,
+#app2-historySection .history-action {
+  all: unset !important;              /* ← 既存の button スタイルを完全リセット */
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background: linear-gradient(90deg, #202056 60%, #009be6 120%) !important;
+  border: 1.5px solid #00eaff !important;
+  border-radius: 10px !important;
+  color: #eaf6ff !important;
+  font-size: 15px !important;
+  padding: 8px 0 !important;
+  width: 100% !important;
+  height: 38px !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 8px #00eaff55 !important;
+  transition: all 0.2s ease !important;
 }
 
-#app2-historySection .output-btn:hover {
-  background: #00f5ff;
-  color: #d40000; /* hoverで濃い赤文字 */
-  box-shadow: 0 0 12px rgba(0, 245, 255, 0.6);
+/* ホバー時 */
+#app2-historySection .history-actions button:hover {
+  background: linear-gradient(90deg, #00f5ff 20%, #2636b3 80%) !important;
+  color: #fff !important;
+  transform: translateY(-2px) scale(1.03) !important;
+}
+
+/* スマホでは 2x2 */
+@media (max-width:700px){
+  #app2-historySection .history-actions {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+/* ===== Hotfix: App2サイドナビはapp2時のみ表示 ===== */
+#app2-sideNav{ display:none !important; }
+body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
+
+/* SP時の位置・サイズ調整 */
+@media (max-width:700px){
+  body[data-active-app="app2"] #app2-sideNav{
+    top:82px !important;
+    right:4px !important;
+    width:var(--side-nav-w);
+  }
+}
+
+/* 履歴詳細を3行の行レイアウトで整える（見た目は現状に寄せる） */
+#app2-historySection .history-summary-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:2px 0;
+  line-height:1.35;
+}
+#app2-historySection .history-summary-row .label{
+  opacity:.95;
+  letter-spacing:.02em;
+}
+#app2-historySection .history-summary-row .value{
+  font-weight:700;
+}
+
+/* 履歴のアクションは2ボタンに（復元・出力） */
+#app2-historySection .history-actions{
+  display:grid !important;
+  grid-template-columns:repeat(2,1fr) !important;   /* ← 2列固定 */
+  gap:8px !important;
+  align-items:stretch !important;
+  margin-top:8px !important;
+}
+
+/* ↑/↓ など余計なボタンは一応CSSでも隠しておく（JSでも削除するが保険） */
+#app2-historySection .history-actions button[data-role="up"],
+#app2-historySection .history-actions button[data-role="down"],
+#app2-historySection .history-actions .history-action--up,
+#app2-historySection .history-actions .history-action--down{
+  display:none !important;
+}
+
+@page { size: 90mm 205mm; margin: 0; }
+
+@media print {
+  .print-sheet      { width: 90mm; height: 205mm; margin: 0; }
+  .print-sheet__page{
+    width: 90mm; height: 205mm;
+    padding: 8mm 6mm;            /* 上下8mm・左右6mm */
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ★ スマホ時だけ付く .rotate180 でページを反転 */
+  .rotate180 .print-sheet__page{
+    transform: rotate(180deg);
+    transform-origin: 50% 50%;
+  }
 }
 
 
@@ -4354,7 +4439,12 @@ function resetApp2(full) {
     localStorage.removeItem('result');
     localStorage.removeItem('bottleForms');
     updateSummary();
-  }
+
+    // 👇 追加：履歴インデックス人数を0人にする＆再生成
+    const countEl = document.getElementById('historyIndexCount');
+    if (countEl) countEl.textContent = '0人';
+    if (typeof window.createHistoryIndex === 'function') window.createHistoryIndex();
+    }
 }
 
 
@@ -4807,93 +4897,65 @@ const rows = arr.map(d =>
   openPrintApp1(inner, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
 };
 
-function openPrintApp1(innerHTML, opts = {}) {
-  const { scale=1.00, rotateOnMobile=true, trimBottomMM=0 } = opts;
+function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
   const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
-  const rotate = rotateOnMobile && isSP;
-  const printHTML = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
-  <title>print</title><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  :root { --scale:${scale}; }
-  @page { size: 90mm 205mm; margin: 0; }
-  html,body{ margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  const w = window.open("", "app1print");
+  const doc = w.document;
 
-  /* 枠 */
-  #page{
-    width:90mm;
-    max-height:205mm !important;
-    margin:0 auto;
-    overflow:hidden;           /* 通常は隠す */
-  }
-  /* 回転時：クリップ回避＋高さ固定＋任意の下端トリム */
-  .rotate180 #page{
-    overflow:visible !important;
-    height:205mm !important;   /* max-height ではなく height で固定 */
-    margin-bottom:-${trimBottomMM}mm;
-  }
+  doc.open();
+  doc.write(`
+    <!doctype html>
+    <html lang="ja">
+    <head>
+      <meta charset="utf-8">
+      <title>APP1 出力</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        @page { size: 90mm 205mm; margin: 0; }
+        html, body {
+          margin: 0; padding: 0;
+          background: #fff;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        #page {
+          width: 90mm; height: 205mm;
+          padding: 8mm 6mm;
+          box-sizing: border-box;
+        }
+        .rotate180 #page {
+          transform: rotate(180deg);
+          transform-origin: 50% 50%;
+        }
+      </style>
+    </head>
+    <body class="${isSP && opts.rotateOnMobile ? 'rotate180' : ''}">
+      <div id="page">${innerHTML}</div>
 
-  /* 中身 */
-  #result{
-    width:calc(90mm/var(--scale));
-    min-height:calc(205mm/var(--scale));
-    margin:0 auto; padding:0; box-sizing:border-box;
-    transform:scale(var(--scale));
-    transform-origin:top center;  /* 上基準 */
-    -webkit-print-color-adjust:exact; print-color-adjust:exact;
-  }
-  /* 回転時：上基準のまま180°回転（氏名の上切れ防止） */
-  .rotate180 #result{
-    transform:rotate(180deg) scale(var(--scale));
-    transform-origin:top center !important;
-  }
+      <script>
+        // 🟩 印刷完了後にウィンドウを自動で閉じる処理
+        const done = () => {
+          window.close();
+          // 親ウィンドウがあればフォーカスを戻す
+          if (window.opener && !window.opener.closed) {
+            window.opener.focus();
+          }
+        };
 
-  /* 封筒UI（APP1用） */
-  .envelope{
-    width:86mm; max-height:205mm; margin:0 auto; text-align:center;
-    font-family:'ＭＳ 明朝',serif; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:.02em;
-  }
-  .print-date{ text-align:left;  font-size:11pt; margin: 4mm 0 0; }
-  .print-title{ text-align:center; font-size:14pt; margin: 2mm 0 8mm; font-weight:700; }
-  .print-detail-row{ display:flex; justify-content:center; align-items:baseline; gap:2mm; font-size:12pt; margin:1mm 0; }
+        // 🟩 印刷完了検知（onafterprintが最優先）
+        window.onafterprint = done;
 
-  .print-detail-container{
-    width:78mm; margin:6mm auto 0; padding:3mm 3.2mm;
-    border:2px solid #000; border-radius:2mm; box-sizing:border-box;
-  }
-  .print-detail-matrix{
-    display:grid;
-    grid-template-columns:1fr;     /* 1列 */
-    row-gap:1.5mm;                 /* 行間 */
-    justify-items:start;           /* 左寄せ */
-  }
-  .print-detail-inline{
-    width:100%; display:grid; grid-template-columns:12mm 1fr 13mm;
-    justify-items:center; align-items:center; text-align:center;
-    font-size:10.5pt; line-height:1.25; font-variant-numeric:tabular-nums; margin:1mm 0;
-  }
-  .print-detail-inline .details{ white-space:normal; letter-spacing:-0.2pt; }
-  .print-detail-inline .details span{ display:inline-block; margin:0 .9mm; }
-</style>
-  </head><body class="${rotate ? 'rotate180' : ''}">
-    <div id="page"><div id="result">${innerHTML}</div></div>
-    <script>
-      function tryClose(){ try{ window.close(); }catch(e){} }
-      window.onload = function(){
-        try{ window.focus(); window.print(); }catch(e){}
-        window.onafterprint = tryClose;
-        window.addEventListener('focus', tryClose, { once:true });
-        document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
-        setTimeout(tryClose, 2500);
-      };
+        // 🟩 モバイルSafariなど用のフォールバック
+        const mql = window.matchMedia('print');
+        mql.addListener(e => { if (!e.matches) done(); });
 
-      
-    <\/script>
-  </body></html>`;
-  try {
-    let w = window.open('', 'PRINT_APP1', 'width=480,height=800');
-    if (w && w.document) { w.document.open(); w.document.write(printHTML); w.document.close(); return; }
-  } catch(_) {}
-  try { const blob=new Blob([printHTML],{type:'text/html'}); const url=URL.createObjectURL(blob); window.open(url,'_blank'); return; } catch(_) {}
+        // 🟩 ページ描画が落ち着いてから印刷開始（描画→印刷→閉じる）
+        window.onload = () => setTimeout(() => window.print(), 120);
+      <\/script>
+    </body>
+    </html>
+  `);
+  doc.close();
 }
 
 /* =========================================================
@@ -6037,13 +6099,15 @@ function addOutputButtonsNextToRestore() {
     // 復元の右横に設置
     restoreBtn.insertAdjacentElement('afterend', outBtn);
 
-    // 横並びを整える
+    // 並びはCSSに任せる（親にクラスを付与）
     const parent = restoreBtn.parentElement;
-    parent.style.display = 'flex';
-    parent.style.flexWrap = 'nowrap';
-    parent.style.alignItems = 'center';
-    parent.style.gap = '8px';
-  });
+    parent.classList.add('history-actions');
+
+    // ついでに ↑/↓ ボタンがあれば統一クラスを付与
+    const upBtn   = Array.from(parent.querySelectorAll('button')).find(b => b.textContent.trim() === '↑');
+    const downBtn = Array.from(parent.querySelectorAll('button')).find(b => b.textContent.trim() === '↓');
+    [restoreBtn, outBtn, upBtn, downBtn].forEach(b => b && b.classList.add('history-action'));
+    });
 }
 
 // 自動再適用
@@ -6084,6 +6148,111 @@ window.sortHistoryIndex = function() {
   setTimeout(() => title.style.textShadow = '', 800);
 };
 
+/* 金額フォーマット（既存にあるなら差し替えてOK） */
+function fmtYen(n){
+  if(n == null || n === "") return "¥0";
+  const x = Number(n);
+  return "¥" + (isFinite(x) ? x.toLocaleString() : String(n));
+}
+
+/* 既存の履歴UIを「氏名・小計・合計」だけにトリミング */
+function slimHistoryUI(){
+  const root = document.querySelector('#app2-historySection') || document;
+  const items = root.querySelectorAll('.history-item');
+  if(!items.length) return;
+
+  items.forEach(it => {
+    // 1) 本文候補（実装違いに強めにしてある）
+    const body = it.querySelector('.history-details, .history-body, .history-text, pre, .details, .history') || it;
+
+    // 2) 元テキストを行に分割
+    const lines = body.innerText
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    // 3) 必要行を抽出（氏名／小計／合計(最終合計も拾う)）
+    //   - 氏名：明確に「氏名:」「名前:」が無い場合、"1. XXX" や先頭の人名らしき行を拾う
+    let nameLine =
+      lines.find(s => /^氏名[:：]/.test(s)) ||
+      lines.find(s => /^名前[:：]/.test(s)) ||
+      lines.find(s => /^\d+\s*[\.、]\s*\S+/.test(s)) ||   // 例: "1. TEST"
+      lines.find(s => /対象|様|さん/.test(s));
+
+    // 小計
+    let subtotalLine = lines.find(s => /^小計[:：]/.test(s));
+
+    // 合計（「最終合計」「合　¥123,456」等にも対応）
+    let totalLine =
+      lines.find(s => /^(最終)?合計[:：]/.test(s)) ||
+      lines.find(s => /^合\s*¥/.test(s));
+
+    // 4) もしテキストから拾えない場合、データ属性がある想定もフォールバック
+    //    （history要素に dataset があるなら使う）
+    const ds = it.dataset || {};
+    const n = ds.name || ds.customerName;
+    const sub = ds.subtotal || ds.subTotal;
+    const fin = ds.final || ds.total || ds.finalAmount;
+
+    if(!nameLine && n) nameLine = '氏名：' + n;
+    if(!subtotalLine && sub != null) subtotalLine = '小計：' + fmtYen(sub);
+    if(!totalLine && fin != null) totalLine = '合計：' + fmtYen(fin);
+
+    // 5) 表示HTMLを差し替え（現行の雰囲気を壊さず左右2カラム風）
+    const frag = document.createElement('div');
+    frag.className = 'history-summary';
+    frag.innerHTML = [
+      nameLine ? `<div class="history-summary-row"><span class="label">氏名</span><span class="value">${(nameLine.replace(/^氏名[:：]\s*/,'')).replace(/^\d+\s*[\.、]\s*/,'')}</span></div>` : '',
+      subtotalLine ? `<div class="history-summary-row"><span class="label">小計</span><span class="value">${subtotalLine.replace(/^小計[:：]\s*/,'')}</span></div>` : '',
+      totalLine ? `<div class="history-summary-row"><span class="label">合計</span><span class="value">${totalLine.replace(/^(最終)?合計[:：]\s*/,'').replace(/^合\s*/,'')}</span></div>` : ''
+    ].join('');
+
+    body.innerHTML = '';        // 旧テキストを消す
+    body.appendChild(frag);     // 新サマリーを入れる
+
+    // 6) アクションボタンを「復元・出力」に整理
+    const act = it.querySelector('.history-actions');
+    if(act){
+      // 不要（↑/↓）は削除
+      act.querySelectorAll('[data-role="up"],[data-role="down"],.history-action--up,.history-action--down')
+         .forEach(el => el.remove());
+
+      // 「復元」「出力」がなければ追加（クラス名やハンドラは既存に合わせて！）
+      const hasRestore = act.querySelector('[data-role="restore"], .history-restore');
+      const hasExport  = act.querySelector('[data-role="export"], .history-export, .output-btn');
+
+      if(!hasRestore){
+        const b = document.createElement('button');
+        b.className = 'history-restore';
+        b.textContent = '復元';
+        b.addEventListener('click', () => {
+          const id = it.dataset.id || it.getAttribute('data-id');
+          window.restoreHistory && window.restoreHistory(id, it);
+        });
+        act.appendChild(b);
+      }
+      if(!hasExport){
+        const b = document.createElement('button');
+        b.className = 'history-export output-btn';
+        b.textContent = '出力';
+        b.addEventListener('click', () => {
+          const id = it.dataset.id || it.getAttribute('data-id');
+          window.exportHistory && window.exportHistory(id, it);
+        });
+        act.appendChild(b);
+      }
+
+      // 2列グリッドを適用
+      act.style.display = 'grid';
+      act.style.gridTemplateColumns = 'repeat(2, 1fr)';
+      act.style.gap = '8px';
+    }
+  });
+}
+
+/* 初期化：描画が済んだあとに一度実行
+   - 自前の renderHistory() をお持ちなら、その直後でもOK */
+window.addEventListener('DOMContentLoaded', () => setTimeout(slimHistoryUI, 0));
 
 </script>
 
