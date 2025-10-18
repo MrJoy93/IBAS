@@ -4781,93 +4781,113 @@ function getApp3StyleDate() {
      - #resultをそのまま印刷 … preparePrintApp1()
    ========================================================= */
 
+/* =========================================================
+   APP1 印刷（全面作り直し版）
+   - preparePrintApp1: #result をそのまま（既存どおり）
+   - printEnvelopeApp1:
+       * category === 'ALL' → 金額＋人数＋「Total 本数のみ」
+       * その他（UK など）→ 従来の明細（単価×本数の行）＋Total
+   - openPrintApp1: 再構成は最小限（既存ロジックを維持）
+========================================================= */
+
 window.preparePrintApp1 = function () {
   const html = (document.getElementById('result')?.innerHTML || '').trim();
   if (!html) { alert('印刷する内容がありません。'); return; }
+
   const printCSS = `
     <style>
       @media print {
         @page { size: 90mm 205mm; margin: 0; }
-        html, body { margin: 0; padding: 0; background: #fff;
-          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body {
+          margin: 0; padding: 0; background: #fff;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
         #result {
           width: 90mm !important; max-height: 205mm !important;
           margin: 0 auto !important; padding: 8mm 6mm !important;
           box-sizing: border-box; font-size: 10.5pt; line-height: 1.25;
         }
-
         #result, .envelope {
-         page-break-before: avoid;
-         page-break-after: avoid;
-         page-break-inside: avoid;
+          page-break-before: avoid;
+          page-break-after: avoid;
+          page-break-inside: avoid;
         }
-
-        
       }
     </style>`;
+
   openPrintApp1(printCSS + html, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
 };
+
 
 window.printEnvelopeApp1 = function (category) {
   const dateStr = (typeof getApp3StyleDate === 'function')
     ? getApp3StyleDate()
-    : (()=>{const d=new Date();return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`})();
+    : (() => {
+        const d = new Date();
+        return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+      })();
 
-function summarizeDetails(arr) {
-  const summary = {};
-  (arr || []).forEach(d => {
-    const u = Number(String(d.unit).replace(/,/g,'')) || 0;   // 単価
-    const n = Number(String(d.count).replace(/,/g,'')) || 0;  // 本数
-    if (!u) return;  // 単価が無い行はスキップ
-    if (!summary[u]) summary[u] = { count: 0, total: 0 };
-    summary[u].count += n;
-    summary[u].total += u * n;
-  });
-  return summary;
-}
   const yen = v => Number(v||0).toLocaleString('ja-JP');
 
-  if (category === 'ALL') {
-    if (!confirm('伝票の記入はすべて完了していますか？')) return;
-    const countVal = parseInt((document.getElementById('totalCountValue')?.textContent || '0').replace(/,/g,''),10);
-    const bottles  = isNaN(countVal) ? 0 : countVal;
-    const amount   = bottles * 1000;
-    const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
-    const rowsHtml = CATEGORIES.map(key=>{
-      const arr = (window.catchbackDetails && window.catchbackDetails[key]) || [];
-      const sm  = summarizeDetails(arr);
-const details = Object.entries(sm).sort((a,b)=>Number(b[0])-Number(a[0]))
-  .map(([u,data]) => `<span>${u} × ${data.count}</span>`)
-  .join('<br>');
-      const total = Object.values(sm).reduce((s, v) => s + (v?.count || 0), 0);
-      return `<div class="print-detail-inline">
-                <strong>${key}</strong>
-                <div class="details">${details || '0'}</div>
-                <div class="total">(計${total})</div>
-              </div>`;
-    }).join('');
-    const inner = `
-      <div class="envelope">
-        <div class="print-date">${dateStr}</div>
-        <div class="print-title">顧問料</div>
-        <div style="text-align:center; font-size:26pt; margin:2mm 0 3mm;">￥${yen(amount)}</div>
-        <div style="text-align:center; font-size:14pt; margin-bottom:4mm;">（人数: ${bottles}）</div>
-        <div class="print-detail-container"><div class="print-detail-matrix">${rowsHtml}</div></div>
-      </div>`;
-    openPrintApp1(inner, { scale: 0.98, rotateOnMobile: true, trimBottomMM: 20 });
-    return;
-  }
+  // ===== 顧問（ALL）：トータル本数のみ =====
+// ===== 顧問（ALL）：各項目の合計＋総合計 =====
+if (category === 'ALL') {
+  if (!confirm('伝票の記入はすべて完了していますか？')) return;
 
-  // 個別カテゴリ
+  // 集計対象カテゴリ（必要に応じて順番や内容は調整OK）
+  const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
+
+  // 各カテゴリの合計本数を集計
+  const perCat = CATEGORIES.map(key => {
+    const arr = (window.catchbackDetails && window.catchbackDetails[key]) || [];
+    const total = arr.reduce((s, d) => {
+      const n = parseInt(String(d?.count ?? 0).replace(/,/g,''), 10);
+      return s + (isNaN(n) ? 0 : n);
+    }, 0);
+    return { key, total };
+  });
+
+  // 表示用：0件カテゴリは省略（全カテゴリ0なら全件表示）
+  const shown = perCat.filter(x => x.total > 0);
+  const list = (shown.length ? shown : perCat);
+
+  // 総合計（本数）
+  const grand = list.reduce((s, x) => s + x.total, 0);
+
+  // 金額（既存ルール：1本=¥1,000）
+  const yen = v => Number(v||0).toLocaleString('ja-JP');
+  const amount = grand * 1000;
+
+  // ★ openPrintApp1 が innerText ベースで再構成するため、
+  //   ここはシンプルな「1行=1項目」のテキストにしておく
+  const lines = list.map(x => `${x.key} (計${x.total})`).join('\n');
+
+  const innerAll = `
+    <div class="envelope">
+      <div class="print-date">${dateStr}</div>
+      <div class="print-title">顧問料</div>
+      <div style="text-align:center; font-size:26pt; margin:2mm 0 3mm;">￥${yen(amount)}</div>
+      <div style="text-align:center; font-size:14pt; margin-bottom:4mm;">（人数: ${grand}）</div>
+      ${lines}
+      <div style="text-align:center; font-size:14pt; margin-top:4mm;">Total ${grand}</div>
+    </div>`;
+
+  openPrintApp1(innerAll, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
+  return;
+}
+
+  // ===== 個別カテゴリ：従来の明細をそのまま =====
   const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
-const rows = arr.map(d =>
-  `<div class="print-detail-row">
-     <span>${d.unit}</span><span>×</span><span>${d.count}</span>
-   </div>`
-).join('');
-  const total = arr.reduce((s,d)=>s+Number(d.count||0),0);
+  const rows = arr.map(d =>
+    `<div class="print-detail-row">
+       <span>${d.unit}</span><span>×</span><span>${d.count}</span>
+     </div>`
+  ).join('');
+
+  const total = arr.reduce((s,d)=> s + Number(d.count||0), 0);
   const amountText = (document.getElementById(category + 'total')?.textContent || '0').trim();
-  const inner = `
+
+  const innerCat = `
     <div class="envelope">
       <div class="print-date">${dateStr}</div>
       <div class="print-title">${category}</div>
@@ -4875,10 +4895,12 @@ const rows = arr.map(d =>
       ${rows || '<div style="text-align:center;">0</div>'}
       <div style="text-align:center; font-size:12pt; margin-top:4mm;">Total ${total}</div>
     </div>`;
-  openPrintApp1(inner, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
+
+  openPrintApp1(innerCat, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
 };
 
-function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
+
+function openPrintApp1(innerHTML, opts = { rotateOnMobile:true, scale:1.0, trimBottomMM:0 }) {
   // 仮DOM作成してテキスト抽出
   const tmpEl = document.createElement('div');
   tmpEl.innerHTML = innerHTML;
@@ -4887,14 +4909,17 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
   // 行ごと分解
   const lines = text.split(/\r?\n/).map(s => s.trim());
 
+  // 既存の“3行パターン”整形は維持（マッチしない行は .misc として残す）
   let rebuilt = "";
   for (let i = 0; i < lines.length; i++) {
     const a = lines[i] || "";
     const b = lines[i + 1] || "";
     const c = lines[i + 2] || "";
 
-    // ✅ カテゴリ名＋金額＋(計n) の3行パターンを検出
-    if (/^[A-Z]{1,6}$/.test(a) && /^\d|^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$/.test(b) && c.includes("計")) {
+    // カテゴリ名＋金額＋(計n) の3行パターン
+    if (/^[A-Z]{1,6}$/.test(a) &&
+        (/^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$|^\d+$/.test(b)) &&
+        c.includes("計")) {
       rebuilt += `
         <div class="cat-line">
           <span class="cat">${a}</span>
@@ -4903,11 +4928,9 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
         </div>`;
       i += 2; // 3行消費
     }
-    // ✅ 空行（または区切り）はグループ改行に変換
     else if (a === "") {
       rebuilt += `<div class="group-sep"></div>`;
     }
-    // ✅ それ以外（顧問料・明細など）はそのまま維持
     else {
       rebuilt += `<div class="misc">${a}</div>`;
     }
@@ -4930,8 +4953,7 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
         @page { size: 90mm 205mm; margin: 0; }
         html, body {
           margin: 0; padding: 0; background: #fff;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
         #page {
           width: 90mm; height: 205mm;
@@ -4942,8 +4964,6 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
           transform: rotate(180deg);
           transform-origin: 50% 50%;
         }
-
-        /* カテゴリ1行化 */
         .cat-line {
           display: grid;
           grid-template-columns: 3.2em 6em auto;
@@ -4953,40 +4973,23 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
         .cat-line .cat { font-weight: 700; }
         .cat-line .val { text-align: right; }
         .cat-line .cnt { text-align: right; opacity: .9; }
-
-        /* 区切り */
         .group-sep { height: 0.8em; }
-
-        /* 顧問・明細など他行 */
-        .misc {
-          margin: 2px 0;
-        }
+        .misc { margin: 2px 0; }
       </style>
     </head>
     <body class="${isSP && opts.rotateOnMobile ? 'rotate180' : ''}">
       <div id="page">${rebuilt}</div>
-
       <script>
-        const done = () => {
-          window.close();
-          if (window.opener && !window.opener.closed) window.opener.focus();
-        };
         window.onload = () => {
-  // 印刷開始
-  setTimeout(() => window.print(), 120);
-
-  // ✅ スマホ(iPhone/iPad/Android)用フォールバック
-  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    // 印刷ダイアログが出た後に3秒で自動終了
-    setTimeout(() => {
-      window.close();
-      if (window.opener && !window.opener.closed) {
-        window.opener.focus();
-      }
-    }, 4000); // ←必要なら 3000〜5000ms に調整
-  }
-};
+          setTimeout(() => window.print(), 120);
+          const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            setTimeout(() => {
+              window.close();
+              if (window.opener && !window.opener.closed) window.opener.focus();
+            }, 4000);
+          }
+        };
       <\/script>
     </body>
     </html>
