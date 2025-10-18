@@ -4834,7 +4834,6 @@ window.printEnvelopeApp1 = function (category) {
 if (category === 'ALL') {
   if (!confirm('伝票の記入はすべて完了していますか？')) return;
 
-  // 集計対象カテゴリ（必要に応じて順番や内容は調整OK）
   const CATEGORIES = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
 
   // 各カテゴリの合計本数を集計
@@ -4847,19 +4846,16 @@ if (category === 'ALL') {
     return { key, total };
   });
 
-  // 表示用：0件カテゴリは省略（全カテゴリ0なら全件表示）
+  // 0件カテゴリは非表示（全て0のときは全件表示）
   const shown = perCat.filter(x => x.total > 0);
   const list = (shown.length ? shown : perCat);
 
-  // 総合計（本数）
-  const grand = list.reduce((s, x) => s + x.total, 0);
-
-  // 金額（既存ルール：1本=¥1,000）
-  const yen = v => Number(v||0).toLocaleString('ja-JP');
+  // 総合計（本数）と金額（1本=¥1,000の前提）
+  const grand  = list.reduce((s, x) => s + x.total, 0);
+  const yen    = v => Number(v||0).toLocaleString('ja-JP');
   const amount = grand * 1000;
 
-  // ★ openPrintApp1 が innerText ベースで再構成するため、
-  //   ここはシンプルな「1行=1項目」のテキストにしておく
+  // openPrintApp1 は innerText を再構成するので、1行テキストで渡す
   const lines = list.map(x => `${x.key} (計${x.total})`).join('\n');
 
   const innerAll = `
@@ -4872,6 +4868,7 @@ if (category === 'ALL') {
       <div style="text-align:center; font-size:14pt; margin-top:4mm;">Total ${grand}</div>
     </div>`;
 
+  // ※ openPrintApp1 内でプレビュー後に自動で元画面へ戻る（次項参照）
   openPrintApp1(innerAll, { scale: 1.00, rotateOnMobile: true, trimBottomMM: 0 });
   return;
 }
