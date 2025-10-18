@@ -5976,16 +5976,19 @@ function createHistoryIndex(){
   const tbody = table.querySelector('#historyIndexBody');
   if (!tbody) return;
 
-  // 1) 履歴アイテムを拾う（推奨: .history-item、旧: #historyList > li）
-  let items = historySection.querySelectorAll('.history-item');
-  if (items.length === 0) {
-    const list = document.getElementById('historyList');
-    if (list) items = list.querySelectorAll('li');
-  }
-  if (!items || items.length === 0){
-    tbody.innerHTML = '';
-    return;
-  }
+// 1) 履歴アイテムを拾う（推奨: .history-item、旧: #historyList > li）
+let items = historySection.querySelectorAll('.history-item');
+if (items.length === 0) {
+  const list = document.getElementById('historyList');
+  if (list) items = list.querySelectorAll('li');
+}
+if (!items || items.length === 0){
+  tbody.innerHTML = '';
+  return;
+}
+
+// ★ ここを追加：新しい登録が下に付く前提で、逆順にして「新→旧」の順で処理
+items = Array.from(items).reverse();
 
 // 2) {name, el} の配列を作る（.history-name / .castName / <b>）
 const map = new Map();
