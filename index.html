@@ -1605,25 +1605,6 @@ body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
   display:none !important;
 }
 
-@page { size: 90mm 205mm; margin: 0; }
-
-@media print {
-  .print-sheet      { width: 90mm; height: 205mm; margin: 0; }
-  .print-sheet__page{
-    width: 90mm; height: 205mm;
-    padding: 8mm 6mm;            /* 上下8mm・左右6mm */
-    box-sizing: border-box;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* ★ スマホ時だけ付く .rotate180 でページを反転 */
-  .rotate180 .print-sheet__page{
-    transform: rotate(180deg);
-    transform-origin: 50% 50%;
-  }
-}
-
 
 
 
@@ -4898,6 +4879,41 @@ const rows = arr.map(d =>
 };
 
 function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
+  // 仮DOM作成してテキスト抽出
+  const tmpEl = document.createElement('div');
+  tmpEl.innerHTML = innerHTML;
+  const text = tmpEl.innerText.trim();
+
+  // 行ごと分解
+  const lines = text.split(/\r?\n/).map(s => s.trim());
+
+  let rebuilt = "";
+  for (let i = 0; i < lines.length; i++) {
+    const a = lines[i] || "";
+    const b = lines[i + 1] || "";
+    const c = lines[i + 2] || "";
+
+    // ✅ カテゴリ名＋金額＋(計n) の3行パターンを検出
+    if (/^[A-Z]{1,6}$/.test(a) && /^\d|^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$/.test(b) && c.includes("計")) {
+      rebuilt += `
+        <div class="cat-line">
+          <span class="cat">${a}</span>
+          <span class="val">${b}</span>
+          <span class="cnt">${c}</span>
+        </div>`;
+      i += 2; // 3行消費
+    }
+    // ✅ 空行（または区切り）はグループ改行に変換
+    else if (a === "") {
+      rebuilt += `<div class="group-sep"></div>`;
+    }
+    // ✅ それ以外（顧問料・明細など）はそのまま維持
+    else {
+      rebuilt += `<div class="misc">${a}</div>`;
+    }
+  }
+
+  // 印刷ウィンドウ生成
   const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
   const w = window.open("", "app1print");
   const doc = w.document;
@@ -4913,43 +4929,51 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
       <style>
         @page { size: 90mm 205mm; margin: 0; }
         html, body {
-          margin: 0; padding: 0;
-          background: #fff;
+          margin: 0; padding: 0; background: #fff;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         #page {
           width: 90mm; height: 205mm;
-          padding: 8mm 6mm;
-          box-sizing: border-box;
+          padding: 8mm 6mm; box-sizing: border-box;
+          font-size: 11pt; line-height: 1.3;
         }
         .rotate180 #page {
           transform: rotate(180deg);
           transform-origin: 50% 50%;
         }
+
+        /* カテゴリ1行化 */
+        .cat-line {
+          display: grid;
+          grid-template-columns: 3.2em 6em auto;
+          column-gap: 8px;
+          align-items: baseline;
+        }
+        .cat-line .cat { font-weight: 700; }
+        .cat-line .val { text-align: right; }
+        .cat-line .cnt { text-align: right; opacity: .9; }
+
+        /* 区切り */
+        .group-sep { height: 0.8em; }
+
+        /* 顧問・明細など他行 */
+        .misc {
+          margin: 2px 0;
+        }
       </style>
     </head>
     <body class="${isSP && opts.rotateOnMobile ? 'rotate180' : ''}">
-      <div id="page">${innerHTML}</div>
+      <div id="page">${rebuilt}</div>
 
       <script>
-        // 🟩 印刷完了後にウィンドウを自動で閉じる処理
         const done = () => {
           window.close();
-          // 親ウィンドウがあればフォーカスを戻す
-          if (window.opener && !window.opener.closed) {
-            window.opener.focus();
-          }
+          if (window.opener && !window.opener.closed) window.opener.focus();
         };
-
-        // 🟩 印刷完了検知（onafterprintが最優先）
         window.onafterprint = done;
-
-        // 🟩 モバイルSafariなど用のフォールバック
         const mql = window.matchMedia('print');
-        mql.addListener(e => { if (!e.matches) done(); });
-
-        // 🟩 ページ描画が落ち着いてから印刷開始（描画→印刷→閉じる）
+        if (mql && mql.addListener) mql.addListener(e => { if (!e.matches) done(); });
         window.onload = () => setTimeout(() => window.print(), 120);
       <\/script>
     </body>
@@ -4957,6 +4981,8 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
   `);
   doc.close();
 }
+
+
 
 /* =========================================================
    APP2 だけで使うもの（#result を封筒サイズで出力）
