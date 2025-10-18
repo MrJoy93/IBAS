@@ -4971,10 +4971,22 @@ function openPrintApp1(innerHTML, opts = {rotateOnMobile:true, scale:1.0}) {
           window.close();
           if (window.opener && !window.opener.closed) window.opener.focus();
         };
-        window.onafterprint = done;
-        const mql = window.matchMedia('print');
-        if (mql && mql.addListener) mql.addListener(e => { if (!e.matches) done(); });
-        window.onload = () => setTimeout(() => window.print(), 120);
+        window.onload = () => {
+  // 印刷開始
+  setTimeout(() => window.print(), 120);
+
+  // ✅ スマホ(iPhone/iPad/Android)用フォールバック
+  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    // 印刷ダイアログが出た後に3秒で自動終了
+    setTimeout(() => {
+      window.close();
+      if (window.opener && !window.opener.closed) {
+        window.opener.focus();
+      }
+    }, 4000); // ←必要なら 3000〜5000ms に調整
+  }
+};
       <\/script>
     </body>
     </html>
