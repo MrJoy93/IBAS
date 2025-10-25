@@ -1608,134 +1608,30 @@ body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
 
 
 /* ==============================================================
-   APP2 一括入力フォーム：列幅調整（割＝人数幅／品名拡大版）
-================================================================ */
+   APP2 一括入力フォーム（#bulkGrid）— 整理版（機能そのまま）
+   ※ 必ずスタイルの一番最後に置くこと
+=================================================================*/
 
-/* 固定レイアウトで均等制御 */
-body[data-active-app="app2"] #bulkGrid {
-  table-layout: fixed !important;
-  width: 100% !important;
-  border-collapse: collapse !important;
+/* ========== 変数（PC用ガター等） ========== */
+:root{
+  /* サイドナビ（PC）の実幅／右端との隙間／ナビ左と本体の“間” */
+  --side-nav-w-pc: 100px;
+  --side-nav-gap-pc: 18px;
+  --side-nav-between-pc: 24px;
+
+  /* 一括入力フォーム展開時（PC）の左右ガター：18–40px 目安 */
+  --bulk-wide-gutter-pc: clamp(18px, 2.5vw, 28px);
 }
 
-/* #, 氏名, 体/貸, 送迎 の幅（元JSの colgroup と同等） */
-body[data-active-app="app2"] #bulkGrid th:nth-child(1) { width: 3.5%; } /* # */
-body[data-active-app="app2"] #bulkGrid th:nth-child(2) { width: 9%; }   /* 氏名 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(3) { width: 3%; }   /* 体/貸 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(4) { width: 5%; }   /* 送迎 */
-
-/* F1〜E（半角2文字） ← 正しくは 5〜19 列 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(5),
-body[data-active-app="app2"] #bulkGrid th:nth-child(6),
-body[data-active-app="app2"] #bulkGrid th:nth-child(7),
-body[data-active-app="app2"] #bulkGrid th:nth-child(8),
-body[data-active-app="app2"] #bulkGrid th:nth-child(9),
-body[data-active-app="app2"] #bulkGrid th:nth-child(10),
-body[data-active-app="app2"] #bulkGrid th:nth-child(11),
-body[data-active-app="app2"] #bulkGrid th:nth-child(12),
-body[data-active-app="app2"] #bulkGrid th:nth-child(13),
-body[data-active-app="app2"] #bulkGrid th:nth-child(14),
-body[data-active-app="app2"] #bulkGrid th:nth-child(15),
-body[data-active-app="app2"] #bulkGrid th:nth-child(16),
-body[data-active-app="app2"] #bulkGrid th:nth-child(17),
-body[data-active-app="app2"] #bulkGrid th:nth-child(18),
-body[data-active-app="app2"] #bulkGrid th:nth-child(19) { width: 3%; } /* F1〜E */
-
-body[data-active-app="app2"] #bulkGrid th:nth-child(20) { width: 11%; }  /* 品名 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(21) { width: 4%; }   /* 割 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(22) { width: 5%; }   /* 数量 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(23) { width: 9%; }   /* 金額 */
-/* ＋／−ボタン */
-body[data-active-app="app2"] #bulkGrid .btl-plus,
-body[data-active-app="app2"] #bulkGrid .btl-minus {
-  padding: 1px 4px !important;
-  min-width: 26px !important;
-  font-size: 11px !important;
-  border-radius: 6px !important;
-  border: 1px solid #2f4a7a !important;
-  background: #233255 !important;
-  color: #eaf6ff !important;
-  line-height: 1.2em !important;
-}
-
-/* ボトル行を親行と同じ高さ・幅で統一 */
-#bulkGrid tr.btl-subrow td {
-  padding: 3px 4px !important;
-  vertical-align: middle !important;
-  background: rgba(255,255,255,0.03) !important;
-  border-bottom: 1px dashed #28324a !important;
-}
-
-/* サブ行内の要素も揃える */
-#bulkGrid tr.btl-subrow select.bottleDetails,
-#bulkGrid tr.btl-subrow input.splitCount,
-#bulkGrid tr.btl-subrow input.bottleQuantity,
-#bulkGrid tr.btl-subrow input.bottleAmount {
-  height: 24px !important;
-  font-size: 0.8em !important;
-  line-height: 22px !important;
-  box-sizing: border-box !important;
-  text-align: right !important;
-}
-
-/* セレクト幅固定 */
-#bulkGrid select.bottleDetails {
-  width: 100% !important;
-  max-width: 140px !important;
-}
-
-/* サイドナビを非表示にする（app2時のみ） */
-body[data-active-app="app2"] .side-nav {
-  display: none !important;
-}
-
-/* APP2エリアを全幅に拡張 */
-body[data-active-app="app2"] #app2 {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 auto !important;
-  box-sizing: border-box !important;
-}
-
-/* 一括入力フォーム全体を広げる */
-body[data-active-app="app2"] .bulk-grid-wrap {
-  width: 100% !important;
-  max-width: 100% !important;
-  padding-right: 0 !important;
-  margin: 0 auto !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
-
-/* テーブル幅を全体に合わせて再拡張 */
-body[data-active-app="app2"] #bulkGrid {
-  width: 100% !important;          /* ← 99.2%から100%へ */
-  margin: 0 auto !important;
-  table-layout: fixed !important;
-  border-collapse: collapse !important;
-}
-
-body[data-active-app="app2"] #sideNav,
-body[data-active-app="app2"] .side-nav,
-body[data-active-app="app2"] [id*="sideNav"],
-body[data-active-app="app2"] [class*="side-nav"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* テーブル全体を固定レイアウトで幅統一 */
-body[data-active-app="app2"] #bulkGrid {
+/* ========== ベース：表・セル・フォーム ========== */
+body[data-active-app="app2"] #bulkGrid{
   table-layout: fixed !important;
   width: 100% !important;
   border-collapse: collapse !important;
   border-spacing: 0 !important;
 }
-
-/* ヘッダー・セルの共通設定（幅・中央寄せ） */
 body[data-active-app="app2"] #bulkGrid th,
-body[data-active-app="app2"] #bulkGrid td {
+body[data-active-app="app2"] #bulkGrid td{
   text-align: center !important;
   vertical-align: middle !important;
   padding: 3px 4px !important;
@@ -1743,13 +1639,11 @@ body[data-active-app="app2"] #bulkGrid td {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
-
-/* 入力欄・セレクト・ボタンをセル幅内にぴったり収める */
 body[data-active-app="app2"] #bulkGrid input,
 body[data-active-app="app2"] #bulkGrid select,
-body[data-active-app="app2"] #bulkGrid button {
-  width: 100% !important;              /* ← セル幅に自動フィット */
-  box-sizing: border-box !important;   /* ← 内側余白を含めて調整 */
+body[data-active-app="app2"] #bulkGrid button{
+  width: 100% !important;
+  box-sizing: border-box !important;
   margin: 0 !important;
   padding: 2px 3px !important;
   height: 24px !important;
@@ -1757,38 +1651,164 @@ body[data-active-app="app2"] #bulkGrid button {
   font-size: 0.8em !important;
 }
 
-/* プラスマイナスボタンの幅もセル基準で均等に */
-body[data-active-app="app2"] #bulkGrid .btl-plus,
-body[data-active-app="app2"] #bulkGrid .btl-minus {
-  width: 48% !important;               /* ← セル幅の半分ずつ（隙間を均等化） */
-  display: inline-block !important;
-  padding: 1px 0 !important;
-  margin: 0 1px !important;
-  text-align: center !important;
-  border-radius: 6px !important;
-  border: 1px solid #2f4a7a !important;
-  background: #233255 !important;
-  color: #eaf6ff !important;
-}
+/* ========== 列幅（PC時） ========== */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(1){ width: 3.5%; } /* # */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(2){ width: 9%;  } /* 氏名 */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(3){ width: 3%;  } /* 体/貸 */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(4){ width: 5%;  } /* 送迎 */
+/* F1〜E（5〜19列目） */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(n+5):nth-child(-n+19){ width: 3%; }
+/* 品名・割・数量・金額（20〜23列目） */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(20){ width: 11%; }
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(21){ width: 4%;  }
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(22){ width: 5%;  }
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(23){ width: 9%;  }
 
-/* 品名セルの中にボタンを中央揃え */
-body[data-active-app="app2"] #bulkGrid td:nth-child(19) {
-  text-align: center !important;
+/* ========== ボトル行（サブ行） ========== */
+#bulkGrid tr.btl-subrow td{
+  padding: 3px 4px !important;
+  vertical-align: middle !important;
+  background: rgba(255,255,255,0.03) !important;
+  border-bottom: 1px dashed #28324a !important;
 }
-
-/* サブ行（ボトル行）の入力欄もヘッダー幅と一致 */
-#bulkGrid tr.btl-subrow td > * {
-  width: 100% !important;
+#bulkGrid tr.btl-subrow select.bottleDetails,
+#bulkGrid tr.btl-subrow input.splitCount,
+#bulkGrid tr.btl-subrow input.bottleQuantity,
+#bulkGrid tr.btl-subrow input.bottleAmount{
+  height: 24px !important;
+  font-size: 0.8em !important;
+  line-height: 22px !important;
   box-sizing: border-box !important;
+  text-align: right !important;
+}
+#bulkGrid select.bottleDetails{ width: 100% !important; max-width: 140px !important; }
+body[data-active-app="app2"] #bulkGrid .btl-plus,
+body[data-active-app="app2"] #bulkGrid .btl-minus{
+  min-width: 26px !important; width: 48% !important;
+  display: inline-block !important;
+  padding: 1px 0 !important; margin: 0 1px !important;
+  text-align: center !important; line-height: 1.2em !important;
+  font-size: 11px !important; border-radius: 6px !important;
+  border: 1px solid #2f4a7a !important; background: #233255 !important; color: #eaf6ff !important;
 }
 
-/* ボトル行の列幅を上段と同期 */
-#bulkGrid tr.btl-subrow td:nth-child(19) { width: 11% !important; }  /* 品名 */
-#bulkGrid tr.btl-subrow td:nth-child(20) { width: 4% !important; }   /* 割 */
-#bulkGrid tr.btl-subrow td:nth-child(21) { width: 5% !important; }   /* 数量 */
-#bulkGrid tr.btl-subrow td:nth-child(22) { width: 9% !important; }   /* 金額 */
+/* ========== レイアウト補助（APP2フル幅の基本） ========== */
+body[data-active-app="app2"] #app2{
+  width:100% !important; max-width:100% !important;
+  margin:0 auto !important; box-sizing:border-box !important;
+}
+body[data-active-app="app2"] .bulk-grid-wrap{
+  width:100% !important; max-width:100% !important;
+  padding-right:0 !important; margin:0 auto !important;
+  overflow-x:hidden !important; overflow-y:auto !important;
+}
 
-/* ===================== /整理版CSS ここまで ===================== */
+/* ========== サイドナビ表示ルール ========== */
+/* 通常（PC/スマホ）：表示。特に指定なし＝既定表示 */
+/* 一括入力フォーム展開時だけ body.bulk-wide が付与される → PCは非表示 */
+body[data-active-app="app2"].bulk-wide #sideNav,
+body[data-active-app="app2"].bulk-wide .side-nav,
+body[data-active-app="app2"].bulk-wide [id*="sideNav"],
+body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+/* ただしスマホ(≤768px)では展開中も表示を維持 */
+@media (max-width: 768px){
+  body[data-active-app="app2"].bulk-wide #sideNav,
+  body[data-active-app="app2"].bulk-wide .side-nav,
+  body[data-active-app="app2"].bulk-wide [id*="sideNav"],
+  body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* ========== スマホ：氏名・体験・送迎のみ表示 ========== */
+@media (max-width: 768px){
+  body[data-active-app="app2"] #bulkGrid{
+    display: table !important;
+    font-size: 13px !important;
+  }
+  /* いったん全列非表示 */
+  body[data-active-app="app2"] #bulkGrid thead th,
+  body[data-active-app="app2"] #bulkGrid tbody td{ display: none !important; }
+  /* 2:氏名 / 3:体験(貸出) / 4:送迎 を再表示 */
+  body[data-active-app="app2"] #bulkGrid thead th:nth-child(2),
+  body[data-active-app="app2"] #bulkGrid tbody td:nth-child(2),
+  body[data-active-app="app2"] #bulkGrid thead th:nth-child(3),
+  body[data-active-app="app2"] #bulkGrid tbody td:nth-child(3),
+  body[data-active-app="app2"] #bulkGrid thead th:nth-child(4),
+  body[data-active-app="app2"] #bulkGrid tbody td:nth-child(4){
+    display: table-cell !important; visibility: visible !important;
+  }
+  /* 入力しやすさ微調整 */
+  body[data-active-app="app2"] #bulkGrid input,
+  body[data-active-app="app2"] #bulkGrid select{
+    font-size: 14px !important; height: 26px !important; padding: 3px 4px !important;
+  }
+  /* 横スクロール抑止 */
+  body[data-active-app="app2"] .bulk-grid-wrap{ overflow-x: hidden !important; }
+}
+
+/* ========== PC：通常時の“サイドナビと本体の間”を広げる ========== */
+@media (min-width: 769px){
+  /* サイドナビ位置・幅（通常時のみ） */
+  body[data-active-app="app2"]:not(.bulk-wide) #app2-sideNav{
+    display: block !important;
+    position: fixed !important;
+    top: calc(var(--tabs-h) + var(--subnav-h) + 12px) !important;
+    right: var(--side-nav-gap-pc) !important;
+    width: var(--side-nav-w-pc) !important;
+    z-index: 1200;
+  }
+  /* 本体の右側に「ナビ幅＋右端余白＋ナビ左の間」を確保 */
+  body[data-active-app="app2"]:not(.bulk-wide) #app2,
+  body[data-active-app="app2"]:not(.bulk-wide) #app2.content{
+    width: 100% !important; max-width: none !important;
+    padding-right: calc(
+      var(--side-nav-w-pc) + var(--side-nav-gap-pc) + var(--side-nav-between-pc)
+    ) !important;
+    box-sizing: border-box !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* ========== PC：一括入力フォーム展開中（bulk-wide）の左右ガター統一 ========== */
+@media (min-width: 769px){
+  /* PCでは bulk-wide 中にサイドナビを非表示にし、左右ガターを同値に */
+  body[data-active-app="app2"].bulk-wide #app2-sideNav{ display: none !important; }
+
+  body[data-active-app="app2"].bulk-wide #app2,
+  body[data-active-app="app2"].bulk-wide #app2.content{
+    padding-left:  var(--bulk-wide-gutter-pc) !important;
+    padding-right: var(--bulk-wide-gutter-pc) !important;
+    box-sizing: border-box !important;
+  }
+  /* ラッパ／テーブルが端に張り付くのを防ぐ保険 */
+  body[data-active-app="app2"].bulk-wide .bulk-grid-wrap{
+    padding-left:  var(--bulk-wide-gutter-pc) !important;
+    padding-right: var(--bulk-wide-gutter-pc) !important;
+  }
+  body[data-active-app="app2"].bulk-wide #bulkGrid{
+    margin-left: 0 !important; margin-right: 0 !important; width: 100% !important;
+  }
+}
+
+/* ========== 保険：どこかで幅を上書きしていても守る ========== */
+body[data-active-app="app2"] #app2-sideNav{
+  width: var(--side-nav-w-pc) !important;
+}
+body[data-active-app="app2"] #app2 table,
+body[data-active-app="app2"] #app2 .group{
+  max-width: 100% !important; overflow: visible;
+}
+/* ===================== /整理版 ここまで ===================== */
+
 
 
 </style>
@@ -2006,7 +2026,7 @@ body[data-active-app="app2"] #bulkGrid td:nth-child(19) {
   <div class="bulk-toolbar">
     <div>
       <strong>一括入力</strong>
-      <span class="hint">（氏名/体験/送迎）</span>
+      <span class="hint">（各項目入力）</span>
     </div>
     <div class="bulk-actions">
       <label>行数:
@@ -6621,11 +6641,16 @@ function addBottleSubrow(mainTr) {
   mainTr.dataset.bottleCount = String(count);
   const minusBtn = mainTr.querySelector('.btl-minus');
   if (minusBtn) minusBtn.removeAttribute('disabled');
+
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    tr.style.display = 'none';
+  }
 }
 
 function removeBottleSubrow(mainTr) {
   const subs = getBottleSubrows(mainTr);
   if (subs.length === 0) return;
+
   subs[subs.length - 1].remove();
 
   const remain = subs.length - 1;
@@ -6634,12 +6659,6 @@ function removeBottleSubrow(mainTr) {
     const minusBtn = mainTr.querySelector('.btl-minus');
     if (minusBtn) minusBtn.setAttribute('disabled', 'true');
   }
-
-  // イベントを付与：選択変更で自動入力する
-tr.querySelector('.bottleDetails').addEventListener('change', e => {
-  applySelectRule(e.target);
-});
-
 }
 
 // === テーブル構築 ===========================================================
@@ -6692,6 +6711,7 @@ function buildGrid(n){
     tbody.appendChild(tr);
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  applyApp2MobileView();
 }
 
 // === 一括登録 ===============================================================
@@ -6797,6 +6817,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     if (e.target.closest('.btl-plus'))  addBottleSubrow(r);
     if (e.target.closest('.btl-minus')) removeBottleSubrow(r);
   });
+
+   window.addEventListener('resize', applyApp2MobileView);
+
 });
 
 })(); 
@@ -7078,6 +7101,58 @@ document.addEventListener('keydown', function(e) {
     }
   }
 });
+
+
+// === スマホ表示：氏名・体/貸・送迎 だけ表示（一本化） ==================
+(function(){
+  function applyApp2MobileView(){
+    const grid = document.getElementById('bulkGrid');
+    if (!grid || !grid.tHead || !grid.tBodies[0]) return;
+
+    const isMobile = window.innerWidth <= 768;
+
+    // ✅ モバイルでは colgroup を外して、隠した列の幅配分をリセット
+    const cg = grid.querySelector('colgroup');
+    if (isMobile && cg) cg.remove();
+
+    // サブ行（ボトル行）はスマホで隠す
+    grid.querySelectorAll('tbody tr.btl-subrow')
+      .forEach(tr => tr.style.display = isMobile ? 'none' : '');
+
+    const ths  = Array.from(grid.tHead.rows[0].cells || []);
+    const rows = Array.from(grid.tBodies[0].rows || []);
+
+    for (let i = 0; i < ths.length; i++){
+      const colIndex = i + 1; // 1-based
+      const show = !isMobile || (colIndex === 2 || colIndex === 3 || colIndex === 4);
+
+      if (ths[i]) ths[i].style.display = show ? 'table-cell' : 'none';
+
+      rows.forEach(tr => {
+        if (tr.classList.contains('btl-subrow')) return;
+        const td = tr.cells[i];
+        if (td) td.style.display = show ? 'table-cell' : 'none';
+      });
+    }
+
+    // 見た目補助
+    const wrap = grid.closest('.bulk-grid-wrap');
+    if (wrap) wrap.style.overflowX = isMobile ? 'hidden' : '';
+    grid.style.tableLayout = 'fixed';
+    grid.style.width = '100%';
+    grid.style.borderCollapse = 'collapse';
+  }
+
+  // グローバルに公開（buildGrid 直後でも呼べるように）
+  window.applyApp2MobileView = applyApp2MobileView;
+
+  // 初期 & リサイズで適用
+  document.addEventListener('DOMContentLoaded', applyApp2MobileView);
+  window.addEventListener('load', applyApp2MobileView);
+  window.addEventListener('resize', applyApp2MobileView);
+})();
+
+
 //app2一括入力JS終了
 
 </script>
