@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 6.7.0</title>
+<title>IBASD  Ver. 7.0.0</title>
 <style>
 
   html, body {
@@ -1607,6 +1607,189 @@ body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
 
 
 
+/* ==============================================================
+   APP2 一括入力フォーム：列幅調整（割＝人数幅／品名拡大版）
+================================================================ */
+
+/* 固定レイアウトで均等制御 */
+body[data-active-app="app2"] #bulkGrid {
+  table-layout: fixed !important;
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+/* #, 氏名, 体/貸, 送迎 の幅（元JSの colgroup と同等） */
+body[data-active-app="app2"] #bulkGrid th:nth-child(1) { width: 3.5%; } /* # */
+body[data-active-app="app2"] #bulkGrid th:nth-child(2) { width: 9%; }   /* 氏名 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(3) { width: 3%; }   /* 体/貸 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(4) { width: 5%; }   /* 送迎 */
+
+/* F1〜E（半角2文字） ← 正しくは 5〜19 列 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(5),
+body[data-active-app="app2"] #bulkGrid th:nth-child(6),
+body[data-active-app="app2"] #bulkGrid th:nth-child(7),
+body[data-active-app="app2"] #bulkGrid th:nth-child(8),
+body[data-active-app="app2"] #bulkGrid th:nth-child(9),
+body[data-active-app="app2"] #bulkGrid th:nth-child(10),
+body[data-active-app="app2"] #bulkGrid th:nth-child(11),
+body[data-active-app="app2"] #bulkGrid th:nth-child(12),
+body[data-active-app="app2"] #bulkGrid th:nth-child(13),
+body[data-active-app="app2"] #bulkGrid th:nth-child(14),
+body[data-active-app="app2"] #bulkGrid th:nth-child(15),
+body[data-active-app="app2"] #bulkGrid th:nth-child(16),
+body[data-active-app="app2"] #bulkGrid th:nth-child(17),
+body[data-active-app="app2"] #bulkGrid th:nth-child(18),
+body[data-active-app="app2"] #bulkGrid th:nth-child(19) { width: 3%; } /* F1〜E */
+
+body[data-active-app="app2"] #bulkGrid th:nth-child(20) { width: 11%; }  /* 品名 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(21) { width: 4%; }   /* 割 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(22) { width: 5%; }   /* 数量 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(23) { width: 9%; }   /* 金額 */
+/* ＋／−ボタン */
+body[data-active-app="app2"] #bulkGrid .btl-plus,
+body[data-active-app="app2"] #bulkGrid .btl-minus {
+  padding: 1px 4px !important;
+  min-width: 26px !important;
+  font-size: 11px !important;
+  border-radius: 6px !important;
+  border: 1px solid #2f4a7a !important;
+  background: #233255 !important;
+  color: #eaf6ff !important;
+  line-height: 1.2em !important;
+}
+
+/* ボトル行を親行と同じ高さ・幅で統一 */
+#bulkGrid tr.btl-subrow td {
+  padding: 3px 4px !important;
+  vertical-align: middle !important;
+  background: rgba(255,255,255,0.03) !important;
+  border-bottom: 1px dashed #28324a !important;
+}
+
+/* サブ行内の要素も揃える */
+#bulkGrid tr.btl-subrow select.bottleDetails,
+#bulkGrid tr.btl-subrow input.splitCount,
+#bulkGrid tr.btl-subrow input.bottleQuantity,
+#bulkGrid tr.btl-subrow input.bottleAmount {
+  height: 24px !important;
+  font-size: 0.8em !important;
+  line-height: 22px !important;
+  box-sizing: border-box !important;
+  text-align: right !important;
+}
+
+/* セレクト幅固定 */
+#bulkGrid select.bottleDetails {
+  width: 100% !important;
+  max-width: 140px !important;
+}
+
+/* サイドナビを非表示にする（app2時のみ） */
+body[data-active-app="app2"] .side-nav {
+  display: none !important;
+}
+
+/* APP2エリアを全幅に拡張 */
+body[data-active-app="app2"] #app2 {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+/* 一括入力フォーム全体を広げる */
+body[data-active-app="app2"] .bulk-grid-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-right: 0 !important;
+  margin: 0 auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* テーブル幅を全体に合わせて再拡張 */
+body[data-active-app="app2"] #bulkGrid {
+  width: 100% !important;          /* ← 99.2%から100%へ */
+  margin: 0 auto !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+body[data-active-app="app2"] #sideNav,
+body[data-active-app="app2"] .side-nav,
+body[data-active-app="app2"] [id*="sideNav"],
+body[data-active-app="app2"] [class*="side-nav"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* テーブル全体を固定レイアウトで幅統一 */
+body[data-active-app="app2"] #bulkGrid {
+  table-layout: fixed !important;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+
+/* ヘッダー・セルの共通設定（幅・中央寄せ） */
+body[data-active-app="app2"] #bulkGrid th,
+body[data-active-app="app2"] #bulkGrid td {
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 3px 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* 入力欄・セレクト・ボタンをセル幅内にぴったり収める */
+body[data-active-app="app2"] #bulkGrid input,
+body[data-active-app="app2"] #bulkGrid select,
+body[data-active-app="app2"] #bulkGrid button {
+  width: 100% !important;              /* ← セル幅に自動フィット */
+  box-sizing: border-box !important;   /* ← 内側余白を含めて調整 */
+  margin: 0 !important;
+  padding: 2px 3px !important;
+  height: 24px !important;
+  line-height: 22px !important;
+  font-size: 0.8em !important;
+}
+
+/* プラスマイナスボタンの幅もセル基準で均等に */
+body[data-active-app="app2"] #bulkGrid .btl-plus,
+body[data-active-app="app2"] #bulkGrid .btl-minus {
+  width: 48% !important;               /* ← セル幅の半分ずつ（隙間を均等化） */
+  display: inline-block !important;
+  padding: 1px 0 !important;
+  margin: 0 1px !important;
+  text-align: center !important;
+  border-radius: 6px !important;
+  border: 1px solid #2f4a7a !important;
+  background: #233255 !important;
+  color: #eaf6ff !important;
+}
+
+/* 品名セルの中にボタンを中央揃え */
+body[data-active-app="app2"] #bulkGrid td:nth-child(19) {
+  text-align: center !important;
+}
+
+/* サブ行（ボトル行）の入力欄もヘッダー幅と一致 */
+#bulkGrid tr.btl-subrow td > * {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ボトル行の列幅を上段と同期 */
+#bulkGrid tr.btl-subrow td:nth-child(19) { width: 11% !important; }  /* 品名 */
+#bulkGrid tr.btl-subrow td:nth-child(20) { width: 4% !important; }   /* 割 */
+#bulkGrid tr.btl-subrow td:nth-child(21) { width: 5% !important; }   /* 数量 */
+#bulkGrid tr.btl-subrow td:nth-child(22) { width: 9% !important; }   /* 金額 */
+
+/* ===================== /整理版CSS ここまで ===================== */
+
 
 </style>
 
@@ -1816,6 +1999,41 @@ body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
     <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
 
       <div class="group" style="background:#2e2e2e">
+        <button type="button" id="toggleBulkInput" class="mini-btn" style="margin-left:8px;">一括入力</button>
+
+<!-- ▼ 一括入力パネル（通常は非表示） -->
+<div id="bulkPanel" class="bulk-panel" hidden>
+  <div class="bulk-toolbar">
+    <div>
+      <strong>一括入力</strong>
+      <span class="hint">（氏名/体験/送迎）</span>
+    </div>
+    <div class="bulk-actions">
+      <label>行数:
+        <select id="bulkRows">
+          <option>10</option><option>20</option><option selected>40</option>
+        </select>
+      </label>
+      <button type="button" id="bulkClear">クリア</button>
+      <button type="button" id="bulkRegister">一括登録（計算→履歴）</button>
+    </div>
+  </div>
+
+  <div class="bulk-grid-wrap">
+    <table id="bulkGrid" class="bulk-grid" aria-label="一括入力グリッド">
+      <thead>
+        <tr>
+          <th style="width:3em;">#</th>
+          <th>氏名</th>
+          <th style="width:8.5em;">体験/貸出</th>
+          <th style="width:10em;">送迎（¥）</th>
+        </tr>
+      </thead>
+      <tbody><!-- JSで行を生成 --></tbody>
+    </table>
+  </div>
+  <div class="bulk-note">Enter/Tab/矢印キーで移動可。Excelから「氏名・体験（TRUE/1/✓）・送迎」の順で貼り付けできます。</div>
+</div>
         <label>キャスト名:
          <input type="text" id="castName"
           autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -2000,8 +2218,17 @@ body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
 <div id="app3" class="content">
 
 <div class="group no-bg">
-    <label><span>開始時金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="updateCalculations()"></label>
-  </div>
+  <label>
+    <span>開始時金庫金:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="updateCalculations()">
+  </label>
+
+  <!-- ▼追加金庫金 -->
+  <label>
+    <span>追加金庫金:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash" oninput="updateCalculations()">
+  </label>
+</div>
 
   <table class="outer-table" style="width: 100%; border: 2px solid #333; border-collapse: collapse; margin-bottom: 20px;">
   <tr>
@@ -2886,71 +3113,7 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   form.innerHTML = `
   <div class="left-group">
     <button type="button" class="delete-btn">×</button>
-    <select class="bottleDetails">
-      <option value="">選択してください</option>
-      <optgroup label="リステル等">
-        <option value="リステル">リステル</option>
-        <option value="パリ">パリ</option>
-        <option value="マバム">マバム</option>
-      </optgroup>
-      <optgroup label="モエ">
-        <option value="モエ白">モエ白</option>
-        <option value="モエロゼ">モエロゼ</option>
-        <option value="モエネク">モエネク</option>
-        <option value="モエピカ">モエピカ</option>
-      </optgroup>
-      <optgroup label="ヴーヴ">
-        <option value="ヴーヴ">ヴーヴ</option>
-        <option value="ヴーヴホワイト">ヴーヴホワイト</option>
-        <option value="ヴーヴローズ">ヴーヴローズ</option>
-      </optgroup>
-      <optgroup label="ベルエ">
-        <option value="ベルエ">ベルエ</option>
-        <option value="ベルエロゼ">ベルエロゼ</option>
-      </optgroup>
-      <optgroup label="ソウメイ">
-        <option value="ソウメイ">ソウメイ</option>
-      </optgroup>
-      <optgroup label="ドンペリ">
-        <option value="ドンペリ">ドンペリ</option>
-        <option value="ドンペリルミナス">ドンペリルミナス</option>
-        <option value="ドンペリロゼ">ドンペリロゼ</option>
-        <option value="ドンペリルミナスロゼ">ドンペリルミナスロゼ</option>
-        <option value="ドンペリP2">ドンペリP2</option>
-        <option value="ドンペリゴールド">ドンペリゴールド</option>
-      </optgroup>
-      <optgroup label="アルマンド">
-        <option value="アルマンド">アルマンド</option>
-        <option value="アルマンドロゼ">アルマンドロゼ</option>
-        <option value="アルマンドグリーン">アルマンドグリーン</option>
-      </optgroup>
-      <optgroup label="オリシャン">
-        <option value="オリシャンR">オリシャンR</option>
-        <option value="オリシャンB">オリシャンB</option>
-      </optgroup>
-      <optgroup label="焼酎・リキュール等">
-        <option value="柚子小町">柚子小町</option>
-        <option value="黒霧島">黒霧島</option>
-        <option value="吉四六">吉四六</option>
-        <option value="富乃宝山">富乃宝山</option>
-        <option value="赤霧島">赤霧島</option>
-      </optgroup>
-      <optgroup label="ウイスキー">
-        <option value="知多">知多</option>
-        <option value="山崎">山崎</option>
-      </optgroup>
-      <optgroup label="ワイン">
-        <option value="ベリンジャー">ベリンジャー</option>
-      </optgroup>
-      <optgroup label="テキーラ">
-        <option value="テキカン">テキカン</option>
-      </optgroup>
-      <optgroup label="その他">
-        <option value="枝">枝</option>
-        <option value="その他">その他</option>
-        <option value="保障補正">保障補正</option>
-      </optgroup>
-    </select>
+    <select class="bottleDetails">${window.BOTTLE_OPTIONS_HTML}</select>
     <input type="number" class="splitCount" placeholder="割">
     <input type="number" class="bottleQuantity" placeholder="数量">
   </div>
@@ -3029,13 +3192,16 @@ sel.addEventListener('change', () => {
     }
   });
 
-    // ===== スクロール処理を追加 =====
-  setTimeout(() => {
-    form.scrollIntoView({
-      behavior: "smooth",
-      block: "center"  // 中央あたりに表示
-    });
-  }, 50);
+  // ===== スクロール処理：ユーザー操作時だけ発火 =====
+  if (scroll && !window.BOTTLE_REFRESHING && !window.SUPPRESS_BOTTLE_SCROLL) {
+    // レイアウト確定後に実行（フリッカー対策）
+    const doScroll = () => form.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => requestAnimationFrame(doScroll));
+    } else {
+      setTimeout(doScroll, 50);
+    }
+  }
 
   return form;
 }
@@ -4123,7 +4289,9 @@ function updateCalculations() {
 
   const startCash = get('startCash');
   const finalCash = get('finalCash');
-  const difference = (finalCash - remaining - tax) - startCash;
+  // 新（extraSafeCashを加算）
+  const extraSafeCash = get('extraSafeCash'); // ← 追加項目
+  const difference = (finalCash - remaining - tax) - (startCash + extraSafeCash);
   const diffEl = document.getElementById('cashDifference');
   if (diffEl) diffEl.value = formatNumber(difference);
 
@@ -4403,29 +4571,59 @@ document.getElementById("totalBackAmount").textContent = "0";
 // app2用リセット
 // =========================
 function resetApp2(full) {
-  // 入力欄クリア
+  // === 通常フォームのクリア =========================================
+  // テキスト/数値
   document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
+  // 体験/貸出
   const exp = document.getElementById('experienceAndRental');
   if (exp) exp.checked = false;
+  // 計算結果
   const result = document.getElementById('result');
   if (result) result.innerHTML = '';
+  // 通常ボトルフォーム
   const bottleForms = document.getElementById('bottleFormsContainer');
   if (bottleForms) bottleForms.innerHTML = '';
 
+  // === 一括入力フォームのクリア（内包） ===============================
+  (function clearBulkInputForm() {
+    const grid = document.getElementById('bulkGrid');
+    if (!grid) return;
+
+    // 名前/送迎/数値欄クリア
+    grid.querySelectorAll('.bulk-name, .bulk-send, .bulk-num').forEach(el => el.value = '');
+    // 体/貸 チェック解除
+    grid.querySelectorAll('.bulk-exp').forEach(el => (el.checked = false));
+
+    // 追加されたボトルサブ行を全削除
+    grid.querySelectorAll('.btl-subrow').forEach(tr => tr.remove());
+
+    // 各メイン行の「－」ボタンは無効化、bottleCountを0に戻す
+    grid.querySelectorAll('tr.bulk-mainrow').forEach(row => {
+      row.dataset.bottleCount = '0';
+      const minusBtn = row.querySelector('.btl-minus');
+      if (minusBtn) minusBtn.setAttribute('disabled', 'true');
+    });
+  })();
+
+  // === 完全クリア時（履歴/保存データも削除） =========================
   if (full) {
     const historyList = document.getElementById('historyList');
     if (historyList) historyList.innerHTML = '';
+
+    // ローカル保存クリア（通常フォーム関係）
     localStorage.removeItem('inputs');
     localStorage.removeItem('historyList');
     localStorage.removeItem('result');
     localStorage.removeItem('bottleForms');
-    updateSummary();
 
-    // 👇 追加：履歴インデックス人数を0人にする＆再生成
+    // 集計の再計算/再描画
+    if (typeof updateSummary === 'function') updateSummary();
+
+    // 履歴インデックス人数を0人にして再生成
     const countEl = document.getElementById('historyIndexCount');
     if (countEl) countEl.textContent = '0人';
     if (typeof window.createHistoryIndex === 'function') window.createHistoryIndex();
-    }
+  }
 }
 
 
@@ -6294,6 +6492,538 @@ function slimHistoryUI(){
 /* 初期化：描画が済んだあとに一度実行
    - 自前の renderHistory() をお持ちなら、その直後でもOK */
 window.addEventListener('DOMContentLoaded', () => setTimeout(slimHistoryUI, 0));
+
+
+
+
+
+
+
+//app2一括入力JS開始
+(function(){
+
+// === カラム定義 ============================================================
+const COLS = [
+  { key:'name', type:'text', header:'氏名', cls:'bulk-name' },
+  { key:'exp', type:'check', header:'体/貸', cls:'bulk-exp' },
+  { key:'send', type:'num', header:'送迎', cls:'bulk-send' },
+  { key:'f', type:'num', header:'F1' },
+  { key:'f2', type:'num', header:'F2' },
+  { key:'jounai', type:'num', header:'場内' },
+  { key:'honshiri', type:'num', header:'本指' },
+  { key:'douhan', type:'num', header:'同伴' },
+  { key:'eda', type:'num', header:'枝' },
+  { key:'help', type:'num', header:'HE' },
+  { key:'set40', type:'num', header:'40' },
+  { key:'set20', type:'num', header:'20' },
+  { key:'vip', type:'num', header:'VIP' },
+  { key:'a', type:'num', header:'A' },
+  { key:'b', type:'num', header:'B' },
+  { key:'c', type:'num', header:'C' },
+  { key:'d', type:'num', header:'D' },
+  { key:'e', type:'num', header:'E' },
+  { key:'btl_detail', type:'text', header:'品名' },
+  { key:'btl_split', type:'num', header:'割' },
+  { key:'btl_qty', type:'num', header:'数量' },
+  { key:'btl_amount', type:'num', header:'金額' }
+];
+
+// === ボトルオプション抽出（簡略版・副作用なし） ===========================
+function getBottleOptionsHTML() {
+  // 通常フォームに既にセレクトがある場合はそれを優先（同一ソースに揃う）
+  const inPage = document.querySelector('#bottleFormsContainer select.bottleDetails');
+  if (inPage && inPage.innerHTML.trim()) {
+    return inPage.innerHTML;
+  }
+  // 無いときはフォールバック（↑の定数）を必ず返す
+  return BOTTLE_OPTIONS_HTML;
+}
+
+// === サブ行追加・削除 =======================================================
+function getBottleSubrows(mainTr){
+  const arr = [];
+  let n = mainTr.nextElementSibling;
+  while(n && n.classList.contains('btl-subrow')){
+    arr.push(n);
+    n = n.nextElementSibling;
+  }
+  return arr;
+}
+
+function addBottleSubrow(mainTr) {
+  const grid  = document.getElementById('bulkGrid');
+  const cols  = grid?.tHead?.rows?.[0]?.cells?.length || 0;
+  const start = cols - 4;
+
+  const tr = document.createElement('tr');
+  tr.className = 'btl-subrow';
+
+  let html = '';
+  for (let i = 0; i < start; i++) html += '<td class="btl-pad"></td>';
+  html += `
+    <td class="btl-detail">
+      <select class="bottleDetails">${getBottleOptionsHTML()}</select>
+      <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
+    </td>
+    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
+    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
+    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+  `;
+  tr.innerHTML = html;
+
+  // ✅ 未選択状態にリセット
+  const sel = tr.querySelector('.bottleDetails');
+  if (sel) {
+    sel.selectedIndex = -1; // ←「選択してください」も選ばれない完全未選択
+  }
+
+  // 既存行の下に挿入
+  const subs = getBottleSubrows(mainTr);
+  const anchor = subs.length ? subs[subs.length - 1] : mainTr;
+  anchor.insertAdjacentElement('afterend', tr);
+
+  // 金額再計算イベント付与
+  const split = tr.querySelector('.splitCount');
+  const qty   = tr.querySelector('.bottleQuantity');
+  [split, qty].forEach(el => el.addEventListener('input', () => {
+    if (typeof updateBottleAmountForRow === 'function') {
+      updateBottleAmountForRow(tr);
+    }
+  }));
+
+  // ボトル詳細変更時に自動入力
+  sel?.addEventListener('change', e => applySelectRule(e.target));
+
+  // 行数更新とマイナスボタン活性化
+  const count = (parseInt(mainTr.dataset.bottleCount || '0', 10) || 0) + 1;
+  mainTr.dataset.bottleCount = String(count);
+  const minusBtn = mainTr.querySelector('.btl-minus');
+  if (minusBtn) minusBtn.removeAttribute('disabled');
+}
+
+function removeBottleSubrow(mainTr) {
+  const subs = getBottleSubrows(mainTr);
+  if (subs.length === 0) return;
+  subs[subs.length - 1].remove();
+
+  const remain = subs.length - 1;
+  mainTr.dataset.bottleCount = String(Math.max(remain, 0));
+  if (remain === 0) {
+    const minusBtn = mainTr.querySelector('.btl-minus');
+    if (minusBtn) minusBtn.setAttribute('disabled', 'true');
+  }
+
+  // イベントを付与：選択変更で自動入力する
+tr.querySelector('.bottleDetails').addEventListener('change', e => {
+  applySelectRule(e.target);
+});
+
+}
+
+// === テーブル構築 ===========================================================
+function buildGrid(n){
+  const grid  = document.getElementById('bulkGrid');
+  const thead = grid.querySelector('thead');
+  const tbody = grid.querySelector('tbody');
+  if(!thead || !tbody) return;
+
+  grid.querySelector('colgroup')?.remove();
+
+  const widths = [
+    "2.8%","9%","3%","5%",
+    "4%","4%","4%","4%","4%","4%","4%",
+    "3.5%","3.5%","4%","3.5%","3.5%","3.5%","3.5%","3.5%",
+    "12%","4%","4%","8%"
+  ];
+  const cg = document.createElement('colgroup');
+  widths.forEach(w => { const c = document.createElement('col'); c.style.width = w; cg.appendChild(c); });
+  grid.insertBefore(cg, grid.firstChild);
+
+  thead.innerHTML = '';
+  const trh = document.createElement('tr');
+  const thNo = document.createElement('th'); thNo.textContent = '#'; trh.appendChild(thNo);
+  COLS.forEach(c => { const th = document.createElement('th'); th.textContent = c.header; trh.appendChild(th); });
+  thead.appendChild(trh);
+
+  tbody.innerHTML = '';
+  for (let i = 1; i <= n; i++){
+    const tr = document.createElement('tr');
+    tr.className = 'bulk-mainrow';
+    let html = `
+      <td>${i}</td>
+      <td><input class="bulk-name" placeholder="氏名"></td>
+      <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
+      <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
+    `;
+    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+      .forEach(k => html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="0"></td>`);
+    html += `
+      <td class="btl-anchor">
+        <div class="btl-toolbar">
+          <button type="button" class="btl-plus mini-btn">＋</button>
+          <button type="button" class="btl-minus mini-btn" disabled>－</button>
+        </div>
+      </td>
+      <td></td><td></td><td></td>
+    `;
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// === 一括登録 ===============================================================
+async function bulkRegister(){
+  const tb=document.querySelector('#bulkGrid tbody');
+  if(!tb) return alert('内部テーブルが見つかりません');
+  const mains=[...tb.querySelectorAll('.bulk-mainrow')];
+  const rows=mains.map(m=>{
+    const nums={};
+    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+      .forEach(k=>nums[k]=parseInt(m.querySelector(`[data-k="${k}"]`)?.value||0));
+    const bottles=[];
+    let n=m.nextElementSibling;
+    while(n&&n.classList.contains('btl-subrow')){
+      bottles.push({
+        detail:n.querySelector('.bottleDetails')?.selectedOptions[0]?.textContent||'',
+        split:n.querySelector('.splitCount')?.value||'',
+        qty:n.querySelector('.bottleQuantity')?.value||'',
+        amount:parseInt((n.querySelector('.bottleAmount')?.value||'0').replace(/,/g,''))||0
+      });
+      n=n.nextElementSibling;
+    }
+    return {
+      name:m.querySelector('.bulk-name')?.value||'',
+      exp:m.querySelector('.bulk-exp')?.checked||false,
+      send:parseInt(m.querySelector('.bulk-send')?.value||0),
+      nums,bottles
+    };
+  }).filter(r=>r.name||r.exp||r.send||Object.values(r.nums).some(v=>v>0)||r.bottles.length);
+  if(!rows.length) return alert('入力がありません');
+  if(!confirm(`${rows.length}人分を登録しますか？`)) return;
+  for(const r of rows){
+    setValue('castName',r.name);
+    setChecked('experienceAndRental',r.exp);
+    setValue('sendoffAmount',r.send);
+    Object.entries(r.nums).forEach(([id,val])=>setValue(id,val));
+    const cont=document.getElementById('bottleFormsContainer');
+    if(cont){
+      cont.innerHTML='';
+      r.bottles.forEach(b=>{
+        const f=createBottleForm(b.detail,b.split,b.qty,b.amount);
+        cont.appendChild(f);
+      });
+    }
+    if(typeof calculate==='function') calculate();
+  }
+  alert('一括登録完了');
+}
+
+function setValue(id,val){
+  const el=document.getElementById(id);
+  if(el){ el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); }
+}
+function setChecked(id,v){
+  const el=document.getElementById(id);
+  if(el){ el.checked=!!v; el.dispatchEvent(new Event('change',{bubbles:true})); }
+}
+
+// === 初期化 ================================================================
+document.addEventListener('DOMContentLoaded',()=>{
+  const panel=document.getElementById('bulkPanel');
+  const toggle=document.getElementById('toggleBulkInput');
+  const sel=document.getElementById('bulkRows');
+  const clearBt=document.getElementById('bulkClear');
+  const regBt=document.getElementById('bulkRegister');
+  const grid=document.getElementById('bulkGrid');
+  if(panel) panel.hidden=true;
+
+  toggle?.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      document.body.classList.add('bulk-wide');
+      buildGrid(parseInt(sel?.value || 40, 10));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      panel.setAttribute('tabindex', '-1');
+      panel.focus({ preventScroll: false });
+    } else {
+      document.body.classList.remove('bulk-wide');
+    }
+  });
+
+  sel?.addEventListener('change',()=>buildGrid(parseInt(sel.value||40,10)));
+  clearBt?.addEventListener('click',()=>{
+    document.querySelectorAll('.bulk-num,.bulk-name,.bulk-send').forEach(e=>e.value='');
+    document.querySelectorAll('.bulk-exp').forEach(e=>e.checked=false);
+    document.querySelectorAll('.btl-subrow').forEach(e=>e.remove());
+  });
+  regBt?.addEventListener('click',bulkRegister);
+
+  grid?.addEventListener('click', e => {
+    let r = e.target.closest('tr.bulk-mainrow');
+    if (!r) {
+      const sub = e.target.closest('tr.btl-subrow');
+      if (sub) {
+        let prev = sub.previousElementSibling;
+        while (prev && !prev.classList.contains('bulk-mainrow')) {
+          prev = prev.previousElementSibling;
+        }
+        r = prev;
+      }
+    }
+    if (!r) return;
+    if (e.target.closest('.btl-plus'))  addBottleSubrow(r);
+    if (e.target.closest('.btl-minus')) removeBottleSubrow(r);
+  });
+});
+
+})(); 
+
+
+// 一括入力用のフォールバック選択肢（通常フォームが無くても出る）
+// これだけを唯一のソースにする（<select>は含めない）
+window.BOTTLE_OPTIONS_HTML = `
+  <option value="">選択してください</option>
+  <optgroup label="リステル等">
+    <option value="リステル">リステル</option>
+    <option value="パリ">パリ</option>
+    <option value="マバム">マバム</option>
+  </optgroup>
+  <optgroup label="モエ">
+    <option value="モエ白">モエ白</option>
+    <option value="モエロゼ">モエロゼ</option>
+    <option value="モエネク">モエネク</option>
+    <option value="モエピカ">モエピカ</option>
+  </optgroup>
+  <optgroup label="ヴーヴ">
+    <option value="ヴーヴ">ヴーヴ</option>
+    <option value="ヴーヴホワイト">ヴーヴホワイト</option>
+    <option value="ヴーヴローズ">ヴーヴローズ</option>
+  </optgroup>
+  <optgroup label="ベルエ">
+    <option value="ベルエ">ベルエ</option>
+    <option value="ベルエロゼ">ベルエロゼ</option>
+  </optgroup>
+  <optgroup label="ソウメイ">
+    <option value="ソウメイ">ソウメイ</option>
+  </optgroup>
+  <optgroup label="ドンペリ">
+    <option value="ドンペリ">ドンペリ</option>
+    <option value="ドンペリルミナス">ドンペリルミナス</option>
+    <option value="ドンペリロゼ">ドンペリロゼ</option>
+    <option value="ドンペリルミナスロゼ">ドンペリルミナスロゼ</option>
+    <option value="ドンペリP2">ドンペリP2</option>
+    <option value="ドンペリゴールド">ドンペリゴールド</option>
+  </optgroup>
+  <optgroup label="アルマンド">
+    <option value="アルマンド">アルマンド</option>
+    <option value="アルマンドロゼ">アルマンドロゼ</option>
+    <option value="アルマンドグリーン">アルマンドグリーン</option>
+  </optgroup>
+  <optgroup label="オリシャン">
+    <option value="オリシャンR">オリシャンR</option>
+    <option value="オリシャンB">オリシャンB</option>
+  </optgroup>
+  <optgroup label="焼酎・リキュール等">
+    <option value="柚子小町">柚子小町</option>
+    <option value="黒霧島">黒霧島</option>
+    <option value="吉四六">吉四六</option>
+    <option value="富乃宝山">富乃宝山</option>
+    <option value="赤霧島">赤霧島</option>
+  </optgroup>
+  <optgroup label="ウイスキー">
+    <option value="知多">知多</option>
+    <option value="山崎">山崎</option>
+  </optgroup>
+  <optgroup label="ワイン">
+    <option value="ベリンジャー">ベリンジャー</option>
+  </optgroup>
+  <optgroup label="テキーラ">
+    <option value="テキカン">テキカン</option>
+  </optgroup>
+  <optgroup label="その他">
+    <option value="枝">枝</option>
+    <option value="その他">その他</option>
+    <option value="保障補正">保障補正</option>
+  </optgroup>
+`;
+
+// === 金額変換ユーティリティ ==========================================
+// 入力 → 数値変換（カンマ除去・数値化）
+function intSafe(v, d = 0) {
+  const n = parseInt(String(v ?? '').toString().replace(/,/g,''), 10);
+  return Number.isFinite(n) ? n : d;
+}
+
+// 100円未満切り捨て（例: 3750 → 3700）
+function floor100(yen) {
+  return Math.floor(intSafe(yen) / 100) * 100;
+}
+
+// === ボトル自動入力ルール ============================================
+// キー：セレクトの value
+// 値：{ split: 割人数, qty: 数量, amt: 金額 }
+const bottleRules = {
+  // --- リステル等 ---
+  "リステル": { split: 1, qty: 1, amt: 6000 },
+  "パリ": { split: 1, qty: 1, amt: 7500 },
+  "マバム": { split: 1, qty: 1, amt: 17500 },
+
+  // --- モエ ---
+  "モエ白": { split: 1, qty: 1, amt: 15000 },
+  "モエロゼ": { split: 1, qty: 1, amt: 17500 },
+  "モエネク": { split: 1, qty: 1, amt: 20000 },
+  "モエピカ": { split: 1, qty: 1, amt: 22500 },
+
+  // --- ヴーヴ ---
+  "ヴーヴ": { split: 1, qty: 1, amt: 16000 },
+  "ヴーヴホワイト": { split: 1, qty: 1, amt: 17500 },
+  "ヴーヴローズ": { split: 1, qty: 1, amt: 19000 },
+
+  // --- ベルエ ---
+  "ベルエ": { split: 1, qty: 1, amt: 70000 },
+  "ベルエロゼ": { split: 1, qty: 1, amt: 140000 },
+
+  // --- ソウメイ ---
+  "ソウメイ": { split: 1, qty: 1, amt: 60000 },
+
+  // --- ドンペリ ---
+  "ドンペリ": { split: 1, qty: 1, amt: 50000 },
+  "ドンペリルミナス": { split: 1, qty: 1, amt: 60000 },
+  "ドンペリロゼ": { split: 1, qty: 1, amt: 70000 },
+  "ドンペリルミナスロゼ": { split: 1, qty: 1, amt: 85000 },
+  "ドンペリP2": { split: 1, qty: 1, amt: 150000 },
+  "ドンペリゴールド": { split: 1, qty: 1, amt: 250000 },
+
+  // --- アルマンド ---
+  "アルマンド": { split: 1, qty: 1, amt: 85000 },
+  "アルマンドロゼ": { split: 1, qty: 1, amt: 140000 },
+  "アルマンドグリーン": { split: 1, qty: 1, amt: 200000 },
+
+  // --- オリシャン ---
+  "オリシャンR": { split: 1, qty: 1, amt: 12500 },
+  "オリシャンB": { split: 1, qty: 1, amt: 30000 },
+
+  // --- 焼酎・リキュール等 ---
+  "柚子小町": { split: 1, qty: 1, amt: 5000 },
+  "黒霧島": { split: 1, qty: 1, amt: 7500 },
+  "吉四六": { split: 1, qty: 1, amt: 7500 },
+  "富乃宝山": { split: 1, qty: 1, amt: 8500 },
+  "赤霧島": { split: 1, qty: 1, amt: 10000 },
+
+  // --- ウイスキー ---
+  "知多": { split: 1, qty: 1, amt: 20000 },
+  "山崎": { split: 1, qty: 1, amt: 35000 },
+
+  // --- ワイン ---
+  "ベリンジャー": { split: 1, qty: 1, amt: 10000 },
+
+  // --- テキーラ ---
+  "テキカン": { split: 1, qty: 5, amt: 35000 },
+
+  // --- その他 ---
+  "枝": { split: 1, qty: 1, amt: 200 },
+  "その他": { split: 1, qty: 1, amt: 0 },
+  "保障補正": { split: 1, qty: 1, amt: 0 },
+};
+
+// --- 履歴オプションを生成して追加する関数 ---
+function appendBottleHistoryOptions(selectEl, historyList){
+  const grp = document.createElement('optgroup');
+  grp.label = '最近の登録（履歴）';
+
+  historyList.forEach(item => {
+    const o = document.createElement('option');
+    const s = parseInt(item.splitCount || 1, 10);
+    const q = parseInt(item.bottleQuantity || 1, 10);
+    const a = parseInt(item.bottleAmount || 0, 10);
+    o.textContent = `${item.bottleDetails}${s ? ` / 割${s}` : ''}${q ? ` / 数${q}` : ''}${a ? ` / ￥${a.toLocaleString()}` : ''}`;
+    o.value = `hist:${item.bottleDetails}:${s||''}:${q||''}:${a||''}`;
+    o.dataset.base  = item.bottleDetails || '';
+    o.dataset.split = String(s || '');
+    o.dataset.qty   = String(q || '');
+    o.dataset.amt   = String(a || '');
+    grp.appendChild(o);
+  });
+
+  [...selectEl.querySelectorAll('optgroup[label="最近の登録（履歴）"]')].forEach(n=>n.remove());
+  selectEl.insertBefore(grp, selectEl.firstChild);
+}
+
+
+// === 自動入力処理本体 ================================================
+function applySelectRule(selectEl) {
+  const tr = selectEl.closest('.btl-subrow') || selectEl.closest('.bottle-form');
+  const splitEl = tr.querySelector('.splitCount');
+  const qtyEl   = tr.querySelector('.bottleQuantity');
+  const amtEl   = tr.querySelector('.bottleAmount');
+
+  const opt  = selectEl.selectedOptions && selectEl.selectedOptions[0];
+  const val  = selectEl.value;
+  const rule = bottleRules[val];
+
+  // 1) 履歴由来オプション
+  if (opt && (opt.dataset.split || opt.dataset.qty || opt.dataset.amt || opt.dataset.base)) {
+    const baseName = opt.dataset.base || val;
+    if (splitEl) splitEl.value = opt.dataset.split ?? '';
+    if (qtyEl)   qtyEl.value   = opt.dataset.qty   ?? '';
+    const savedAmt = parseInt(opt.dataset.amt || '0', 10) || 0;
+
+    if (savedAmt) {
+      amtEl.value = savedAmt ? savedAmt.toLocaleString() : '';
+    } else {
+      const base = bottleRules[baseName]?.amt ?? 0;
+      const s = Math.max(1, parseInt(splitEl.value || '1', 10) || 1);
+      const q = Math.max(1, parseInt(qtyEl.value   || '1', 10) || 1);
+      const per   = Math.floor(base / s);
+      const total = per * q;
+      amtEl.value = total ? total.toLocaleString() : '';
+    }
+
+  } else if (rule) {
+    // 2) 通常オプション
+    if (splitEl) splitEl.value = rule.split ?? '';
+    if (qtyEl)   qtyEl.value   = rule.qty   ?? '';
+    amtEl.value = Math.floor(rule.amt ?? 0).toLocaleString();
+
+  } else {
+    // 3) その他
+    if (splitEl) splitEl.value = '';
+    if (qtyEl)   qtyEl.value   = '';
+    if (amtEl)   amtEl.value   = '';
+  }
+
+  // 入力イベントを発火
+  splitEl?.dispatchEvent(new Event('input',  { bubbles:true }));
+  qtyEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
+  amtEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
+}
+
+// === 一括入力フォーム用：金額再計算 ======================================
+function updateBottleAmountForRow(tr) {
+  const sel   = tr.querySelector('.bottleDetails');
+  const split = intSafe(tr.querySelector('.splitCount')?.value || 1, 1);
+  const qty   = intSafe(tr.querySelector('.bottleQuantity')?.value || 1, 1);
+  const amtEl = tr.querySelector('.bottleAmount');
+
+  const val = sel?.value || '';
+  const base = bottleRules[val]?.amt ?? 0;
+  const perPerson = floor100(base / Math.max(1, split));
+  const total = perPerson * Math.max(1, qty);
+
+  amtEl.value = total ? total.toLocaleString() : '';
+}
+
+// === ボトル選択時に自動入力 + 金額自動計算 ===============================
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('bottleDetails')) {
+    applySelectRule(e.target);
+
+    const tr = e.target.closest('.btl-subrow');
+    if (tr) updateBottleAmountForRow(tr);
+  }
+});
+//app2一括入力JS終了
 
 </script>
 
