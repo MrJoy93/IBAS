@@ -7023,6 +7023,39 @@ document.addEventListener('change', e => {
     if (tr) updateBottleAmountForRow(tr);
   }
 });
+
+document.addEventListener('keydown', function(e) {
+  // Enterキーのみ処理（IME変換中は無視）
+  if (e.key === 'Enter' && !e.isComposing) {
+    const el = e.target;
+    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+      e.preventDefault();
+
+      // 対象テーブルを特定
+      const grid = document.getElementById('bulkGrid');
+      if (!grid) return;
+
+      const allInputs = Array.from(grid.querySelectorAll('input, select'));
+      const idx = allInputs.indexOf(el);
+      if (idx === -1) return;
+
+      // 現在行を取得し、次の行を探す
+      const currentRow = el.closest('tr');
+      const allRows = Array.from(grid.querySelectorAll('tbody tr'));
+      const rowIndex = allRows.indexOf(currentRow);
+      const nextRow = allRows[rowIndex + 1];
+
+      if (nextRow) {
+        // 次の行の最初の入力要素（左端セル）
+        const firstInput = nextRow.querySelector('input, select');
+        if (firstInput) {
+          firstInput.focus();
+          firstInput.select?.();
+        }
+      }
+    }
+  }
+});
 //app2一括入力JS終了
 
 </script>
