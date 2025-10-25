@@ -5176,15 +5176,37 @@ function openPrintApp1(innerHTML, opts = { rotateOnMobile:true, scale:1.0, trimB
       <div id="page">${rebuilt}</div>
       <script>
         window.onload = () => {
-          setTimeout(() => window.print(), 120);
-          const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            setTimeout(() => {
-              window.close();
-              if (window.opener && !window.opener.closed) window.opener.focus();
-            }, 4000);
-          }
-        };
+  // 印刷プレビューを開く
+  setTimeout(() => {
+    window.print();
+
+    // ✅ フォーカスが戻った時点で閉じる（印刷完了 or キャンセル後）
+    let closed = false;
+    window.onfocus = function() {
+      if (closed) return;
+      closed = true;
+      setTimeout(() => {
+        if (window.opener && !window.opener.closed) {
+          window.close();
+          window.opener.focus();
+        }
+      }, 300);
+    };
+
+    // ✅ 念のため：フォーカスが戻らないブラウザ用フォールバック
+    const checkInterval = setInterval(() => {
+      if (document.hasFocus() && closed === false) {
+        closed = true;
+        clearInterval(checkInterval);
+        if (window.opener && !window.opener.closed) {
+          window.close();
+          window.opener.focus();
+        }
+      }
+    }, 800);
+
+  }, 150);
+};
       <\/script>
     </body>
     </html>
