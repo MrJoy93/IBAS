@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.1.0</title>
+<title>IBASD  Ver. 7.2.0</title>
 <style>
 
   html, body {
@@ -1930,6 +1930,8 @@ body[data-active-app="app2"] #bulkGrid td.hl-col:focus-within {
 body[data-active-app="app2"] #bulkGrid tr.btl-subrow.hl-row > td {
   background: rgba(0, 245, 255, 0.08) !important;
 }
+
+#bulkGrid tr.bulk-mainrow.bulk-empty td { opacity: .55; }
 
 
 
@@ -7538,6 +7540,284 @@ function addAndGetSubrow(mainRow){
     return subs[subs.length - 1] || null;
   }
   return null;
+}
+
+/* =========================================================
+   一括入力グリッド：選択→まとめて出力
+   - # 列にチェックボックス追加（見出しに全選択）
+   - 選択行だけ通常フォームへ流し込んで既存の出力ボタンを順にClick
+   --------------------------------------------------------- */
+
+(function(){
+  const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
+  const WAIT_BETWEEN_PRINT_MS = 500;   // 1件出力→次までの待機（必要なら調整）
+
+  // 1) ツールバー（ボタン）をグリッド上に追加
+  function ensureToolbar(){
+    if (document.getElementById('bulkPrintToolbar')) return;
+    const gridWrap = document.querySelector('#bulkGrid')?.closest('.bulk-grid-wrap') || document.querySelector('#bulkGrid')?.parentElement;
+    if (!gridWrap) return;
+    const bar = document.createElement('div');
+    bar.id = 'bulkPrintToolbar';
+    bar.style.display = 'flex';
+    bar.style.gap = '8px';
+    bar.style.margin = '8px 0';
+
+    bar.innerHTML = `
+      <button type="button" id="bulkPrintSelected" class="btn">選択行を出力</button>
+      <button type="button" id="bulkToggleChecks" class="btn">選択反転</button>
+    `;
+    gridWrap.insertAdjacentElement('beforebegin', bar);
+  }
+
+  // 2) #列をチェックボックス化（見出し=全選択、各行=個別選択）
+  function installCheckboxColumn(){
+    const grid = document.getElementById('bulkGrid');
+    if (!grid) return;
+
+    // ヘッダ
+    const th0 = grid.tHead?.rows?.[0]?.cells?.[0];
+    if (th0 && !th0.querySelector('input[type="checkbox"]')) {
+      th0.style.width = '3em';
+      th0.innerHTML = `<input type="checkbox" id="bulkCheckAll" aria-label="全選択">`;
+    }
+
+    // 各メイン行
+    const rows = grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [];
+    rows.forEach((tr, i) => {
+      const td0 = tr.cells?.[0];
+      if (!td0) return;
+      if (!td0.querySelector('input[type="checkbox"]')) {
+        td0.innerHTML = `<input type="checkbox" class="bulk-check" aria-label="行${i+1}を選択">`;
+      }
+      // ← 追加：生成直後に活性/選択状態を更新
+      updateRowCheckState(tr);
+    });
+  }
+
+  // 3) グリッドの内容を通常フォームへ流し込む（既存IDへセット）
+  function pushBulkRowToNormalForm(mainRow){
+    if (!mainRow) return;
+
+    // 氏名
+    const name = mainRow.querySelector('.bulk-name')?.value ?? '';
+    const nameEl = document.getElementById('castName');
+    if (nameEl) { nameEl.value = name; nameEl.dispatchEvent(new Event('input', {bubbles:true})); }
+
+    // 体験/貸出
+    const exp = !!mainRow.querySelector('.bulk-exp')?.checked;
+    const expEl = document.getElementById('experienceAndRental');
+    if (expEl) { expEl.checked = exp; expEl.dispatchEvent(new Event('change', {bubbles:true})); }
+
+    // 送迎
+    const send = mainRow.querySelector('.bulk-send')?.value ?? '';
+    const sendEl = document.getElementById('sendoffAmount');
+    if (sendEl) { sendEl.value = send; sendEl.dispatchEvent(new Event('input', {bubbles:true})); }
+
+    // 数値系（F, F2, …）
+    QUANT_IDS.forEach(id => {
+      const v = mainRow.querySelector(`[data-k="${id}"]`)?.value ?? '';
+      const dest = document.getElementById(id);
+      if (dest) { dest.value = v; dest.dispatchEvent(new Event('input', {bubbles:true})); }
+    });
+
+    // ボトルサブ行 → 通常フォームへ再構成
+    // 既存のフォーム側コンテナを前提（ない場合はスキップ）
+    const container = document.getElementById('bottleFormsContainer');
+    if (container) {
+      // 既存クリア
+      container.querySelectorAll('.bottle-form').forEach(el => el.remove());
+
+      // 一括サブ行を走査
+      let anchor = mainRow.nextElementSibling;
+      while (anchor && anchor.classList.contains('btl-subrow')) {
+        const detail = anchor.querySelector('.bottleDetails')?.value ?? '';
+        const split  = anchor.querySelector('.splitCount')?.value ?? '';
+        const qty    = anchor.querySelector('.bottleQuantity')?.value ?? '';
+        const amt    = anchor.querySelector('.bottleAmount')?.value ?? '';
+
+        // 既存の新規追加API/関数があればそれを使う（なければ素直にDOM生成）
+        const form = document.createElement('div');
+        form.className = 'bottle-form';
+        form.innerHTML = `
+          <div class="left-group">
+            <select class="bottleDetails">${window.BOTTLE_OPTIONS_HTML || '<option value=""></option>'}</select>
+          </div>
+          <input class="splitCount" inputmode="numeric">
+          <input class="bottleQuantity" inputmode="numeric">
+          <input class="bottleAmount" inputmode="numeric">
+        `;
+        container.appendChild(form);
+
+        const sel = form.querySelector('.bottleDetails');
+        const sEl = form.querySelector('.splitCount');
+        const qEl = form.querySelector('.bottleQuantity');
+        const aEl = form.querySelector('.bottleAmount');
+
+        if (sel) { sel.value = detail; sel.dispatchEvent(new Event('change', {bubbles:true})); }
+        if (sEl) { sEl.value = split;  sEl.dispatchEvent(new Event('input',  {bubbles:true})); }
+        if (qEl) { qEl.value = qty;    qEl.dispatchEvent(new Event('input',  {bubbles:true})); }
+        if (aEl) { aEl.value = amt;    aEl.dispatchEvent(new Event('input',  {bubbles:true})); }
+
+        anchor = anchor.nextElementSibling;
+      }
+    }
+  }
+
+  // 4) まとめて出力（選択行を順に通常フォームへ流し→既存の出力ボタンをClick）
+  async function printSelectedRows() {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return alert('一括入力テーブルが見つかりません。');
+
+  const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
+    .filter(tr => {
+    // チェック済み かつ 非空行のみ
+    const on = tr.querySelector('.bulk-check')?.checked;
+    return on && !isBulkRowEmpty(tr);
+  });
+  if (!selected.length) return alert('出力する行をチェックしてください。');
+
+  // ←★あなたの出力ボタンの実セレクタに変更（例）
+  const APP2_PRINT_SELECTOR = '#app2 #outputButtonApp2';
+  const WAIT_BETWEEN_PRINT_MS = 500;
+
+  for (const row of selected) {
+    // 1) グリッド → 通常フォームへ反映
+    pushBulkRowToNormalForm(row);
+
+    // 2) まずは（あれば）APP2の印刷関数を直接呼ぶ
+    let printed = false;
+    try {
+    if (typeof window.preparePrintApp2 === 'function') {
+     await window.preparePrintApp2(); // ← 直接呼ぶ
+     printed = true;
+    }
+    } catch (e) {
+    // 失敗時はボタンにフォールバック
+    }
+
+    // 3) 関数が無ければ APP2 の出力ボタンをクリック
+    if (!printed) {
+      const btn = document.querySelector(APP2_PRINT_SELECTOR);
+      if (!btn) {
+        alert('APP2の出力ボタンが見つかりません。\nAPP2_PRINT_SELECTOR を正しいセレクタに直してください。');
+        return;
+      }
+      // 必要なら APP2 をアクティブ化
+      document.body.dataset.activeApp = 'app2';
+      // 無効なら解除
+      if (btn.disabled) btn.disabled = false;
+      // クリック実行
+      btn.click();
+      printed = true;
+    }
+
+    // 4) 次の行に進む前に少し待機（印刷/生成のため）
+    await new Promise(r => setTimeout(r, WAIT_BETWEEN_PRINT_MS));
+  }
+}
+
+  // 5) イベント束ね
+  function bindEvents(){
+    // 全選択
+    document.addEventListener('change', e => {
+      if (e.target && e.target.id === 'bulkCheckAll') {
+        const on = !!e.target.checked;
+        document.querySelectorAll('#bulkGrid .bulk-check').forEach(cb => {
+        if (!cb.disabled) cb.checked = on;  // 空行(=disabled)は触らない
+        });
+      }
+    });
+    // 反転
+    document.addEventListener('click', e => {
+      if (e.target && e.target.id === 'bulkToggleChecks') {
+        document.querySelectorAll('#bulkGrid .bulk-check').forEach(cb => { cb.checked = !cb.checked; });
+      }
+    });
+    // 選択出力
+    document.addEventListener('click', e => {
+      if (e.target && e.target.id === 'bulkPrintSelected') {
+        printSelectedRows();
+      }
+    });
+
+    // グリッドが再構築されたらチェック列を再注入（行数変更・再描画に対応）
+    const mo = new MutationObserver(() => installCheckboxColumn());
+    const tbody = document.querySelector('#bulkGrid tbody');
+    if (tbody) mo.observe(tbody, { childList: true, subtree: false });
+
+    // tbody内の入力変化で、その行の状態を更新
+document.addEventListener('input',  (e) => {
+  if (!e.target || !e.target.closest('#bulkGrid')) return;
+  const row = e.target.closest('tr.bulk-mainrow') || e.target.closest('tr')?.previousElementSibling;
+  if (row && row.classList.contains('bulk-mainrow')) updateRowCheckState(row);
+});
+document.addEventListener('change', (e) => {
+  if (!e.target || !e.target.closest('#bulkGrid')) return;
+  const row = e.target.closest('tr.bulk-mainrow') || e.target.closest('tr')?.previousElementSibling;
+  if (row && row.classList.contains('bulk-mainrow')) updateRowCheckState(row);
+});
+
+  }
+
+  // 初期化
+  function init(){
+    ensureToolbar();
+    installCheckboxColumn();
+    bindEvents();
+  }
+
+  // DOMReady後に一度実行、既にグリッドがある/後から生成の両方に対応
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+// ===== 空行判定：氏名/体験/送迎/数量群/ボトルのどれも入ってなければ空 =====
+function isBulkRowEmpty(mainRow){
+  if (!mainRow) return true;
+
+  // 氏名・送迎・体験(貸出)チェック
+  const name = mainRow.querySelector('.bulk-name')?.value?.trim() || '';
+  const send = mainRow.querySelector('.bulk-send')?.value?.trim() || '';
+  const exp  = mainRow.querySelector('.bulk-exp')?.checked ? '1' : '';
+
+  // F〜Eなど数量系
+  const ids = (window.QUANT_IDS && Array.isArray(window.QUANT_IDS))
+    ? window.QUANT_IDS
+    : ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
+
+  let anyQuant = false;
+  ids.forEach(k => {
+    const v = mainRow.querySelector(`[data-k="${k}"]`)?.value?.trim() || '';
+    if (v !== '') anyQuant = true;
+  });
+
+  // ボトル（直後の .btl-subrow 連鎖に何か入っているか）
+  let anchor = mainRow.nextElementSibling;
+  let anyBottle = false;
+  while (anchor && anchor.classList.contains('btl-subrow')) {
+    const d = anchor.querySelector('.bottleDetails')?.value?.trim() || '';
+    const s = anchor.querySelector('.splitCount')?.value?.trim() || '';
+    const q = anchor.querySelector('.bottleQuantity')?.value?.trim() || '';
+    const a = anchor.querySelector('.bottleAmount')?.value?.trim() || '';
+    if (d || s || q || a) { anyBottle = true; break; }
+    anchor = anchor.nextElementSibling;
+  }
+
+  return !(name || send || exp || anyQuant || anyBottle);
+}
+
+// チェックボックスの活性/選択を空行に合わせて更新
+function updateRowCheckState(mainRow){
+  const cb = mainRow.querySelector('.bulk-check');
+  if (!cb) return;
+  const empty = isBulkRowEmpty(mainRow);
+  cb.disabled = empty;
+  if (empty) cb.checked = false;       // 空行は強制で外す
+  mainRow.classList.toggle('bulk-empty', empty); // 見た目用（任意CSSで淡色化可）
 }
 
 //app2一括入力JS終了
