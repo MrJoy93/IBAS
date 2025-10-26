@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.0.0</title>
+<title>IBASD  Ver. 7.1.0</title>
 <style>
 
   html, body {
@@ -1654,7 +1654,7 @@ body[data-active-app="app2"] #bulkGrid button{
 /* ========== 列幅（PC時） ========== */
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(1){ width: 3.5%; } /* # */
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(2){ width: 9%;  } /* 氏名 */
-body[data-active-app="app2"] #bulkGrid thead th:nth-child(3){ width: 3%;  } /* 体/貸 */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(3){ width: 5%;  } /* 体/貸 */
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(4){ width: 5%;  } /* 送迎 */
 /* F1〜E（5〜19列目） */
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(n+5):nth-child(-n+19){ width: 3%; }
@@ -1807,7 +1807,129 @@ body[data-active-app="app2"] #app2 table,
 body[data-active-app="app2"] #app2 .group{
   max-width: 100% !important; overflow: visible;
 }
-/* ===================== /整理版 ここまで ===================== */
+
+/* 一括入力ツール行：幅いっぱいを使ってレイアウト */
+.bulk-actions{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr; /* 左 / 行数 / 中央 / 余白 / 右 */
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  position: relative;   /* 重なり対策の基準 */
+  z-index: 5;           /* テーブルより前面にしてクリック阻害を回避 */
+}
+
+/* 一括入力ツール行：幅いっぱいを使ってレイアウト */
+.bulk-actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* 左 / 中央 / 右 */
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  position: relative;
+  z-index: 5; /* ボタン押下を優先 */
+}
+
+/* 3ボタンの配置（左・中央・右） */
+#bulkClear{ grid-column: 1; justify-self: start; }
+#bulkRegister{ grid-column: 2; justify-self: center; }  /* 中央 */
+#bulkImportFromHistory{ grid-column: 3; justify-self: end; }
+
+/* 行数ラベル（<label>…<select id="bulkRows">…）を右端に寄せる */
+#bulkRows {
+  position: absolute;
+  top: 0;
+  right: 0;              /* ← 左ではなく右端に固定 */
+  transform: translateY(-140%); /* 高さ調整（-120〜-150%で微調整） */
+  margin-right: 8px;     /* 端に貼りつかないよう余白 */
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #12192b;
+  color: #00faff;
+  border: 1px solid #00a8e8;
+  box-shadow: 0 0 8px rgba(0,255,255,0.25);
+  cursor: pointer;
+}
+
+/* クリアボタンを赤に */
+#bulkClear{
+  background: linear-gradient(90deg,#f73378 30%,#d80032 100%);
+  color:#fff;
+  border:1.5px solid #d80032;
+  box-shadow:0 0 12px rgba(255,0,98,.45);
+}
+#bulkClear:hover{
+  background: linear-gradient(90deg,#ff3b6e 10%,#b00020 90%);
+  transform: translateY(-1px);
+}
+
+/* モバイル微調整 */
+@media (max-width:700px){
+  .bulk-actions{ gap:8px; }
+  .bulk-actions > label:has(#bulkRows){
+    transform: translateY(-120%);
+  }
+}
+
+/* ==============================================================
+   APP2 一括入力フォーム（#bulkGrid）— サブナビの下で固定（完全版）
+   ============================================================= */
+
+/* transformの影響を完全に無効化 */
+body[data-active-app="app2"] #app2,
+body[data-active-app="app2"] #app2.active,
+body[data-active-app="app2"] #app2.content {
+  transform: none !important;
+}
+
+/* bulk-grid-wrap の overflowを解除して sticky を有効化 */
+body[data-active-app="app2"].bulk-wide .bulk-grid-wrap {
+  overflow: visible !important;
+}
+
+/* ヘッダーをサブナビ直下で固定 */
+body[data-active-app="app2"].bulk-wide #bulkGrid thead {
+  position: sticky !important;
+  top: calc(var(--tabs-h) + var(--subnav-h) + 2px) !important; /* ← +2px補正で潜らず下にピタッと */
+  z-index: 1890 !important; /* サブナビ(1900前後)より下、テーブルより上 */
+  background: #0f1625 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+/* theadセルは通常配置 */
+body[data-active-app="app2"].bulk-wide #bulkGrid thead th {
+  position: static !important;
+  background: #0f1625 !important;     /* 透け防止 */
+}
+
+/* tbodyとの境界線 */
+body[data-active-app="app2"].bulk-wide #bulkGrid thead tr {
+  border-bottom: 1.5px solid rgba(0,255,255,0.25);
+}
+
+/* bulkGrid位置補正（親との境界影を綺麗に） */
+body[data-active-app="app2"].bulk-wide #bulkGrid {
+  position: relative !important;
+  z-index: 100 !important;
+  margin-top: 0 !important;
+}
+
+/* ===== BulkGrid: フォーカス行・列ハイライト ===== */
+body[data-active-app="app2"] #bulkGrid tr.hl-row > td {
+  background: rgba(0, 245, 255, 0.12) !important;
+}
+body[data-active-app="app2"] #bulkGrid td.hl-col,
+body[data-active-app="app2"] #bulkGrid th.hl-col {
+  background: rgba(153, 221, 255, 0.16) !important;
+}
+body[data-active-app="app2"] #bulkGrid td.hl-col:focus-within {
+  outline: 2px solid rgba(0, 245, 255, 0.55);
+  outline-offset: -2px;
+}
+/* サブ行も同じルールで馴染むよう薄めのボーダー */
+body[data-active-app="app2"] #bulkGrid tr.btl-subrow.hl-row > td {
+  background: rgba(0, 245, 255, 0.08) !important;
+}
 
 
 
@@ -2019,23 +2141,22 @@ body[data-active-app="app2"] #app2 .group{
     <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
 
       <div class="group" style="background:#2e2e2e">
-        <button type="button" id="toggleBulkInput" class="mini-btn" style="margin-left:8px;">一括入力</button>
+      <button type="button" id="toggleBulkInput" class="mini-btn" style="margin-left:8px;">一括入力</button>
 
 <!-- ▼ 一括入力パネル（通常は非表示） -->
 <div id="bulkPanel" class="bulk-panel" hidden>
   <div class="bulk-toolbar">
-    <div>
-      <strong>一括入力</strong>
-      <span class="hint">（各項目入力）</span>
-    </div>
     <div class="bulk-actions">
-      <label>行数:
         <select id="bulkRows">
-          <option>10</option><option>20</option><option selected>40</option>
+        <option>10</option>
+        <option>20</option>
+        <option>30</option> 
+        <option value="40" selected>40</option>
         </select>
       </label>
       <button type="button" id="bulkClear">クリア</button>
-      <button type="button" id="bulkRegister">一括登録（計算→履歴）</button>
+      <button type="button" id="bulkRegister">一括登録</button>
+      <button type="button" id="bulkImportFromHistory">一括復元</button>
     </div>
   </div>
 
@@ -3508,42 +3629,42 @@ function calculate() {
     }
   }
 
-const kouseiStoreCovered = (actualKousei === 0) ? 1000 : 0;
-const kouseiCastCovered = 0;
+  const kouseiStoreCovered = (actualKousei === 0) ? 1000 : 0;
+  const kouseiCastCovered = 0;
 
-let welfareText = `厚生費: ¥${actualKousei.toLocaleString()} (店舗負担:¥${kouseiStoreCovered.toLocaleString()})`;
+  let welfareText = `厚生費: ¥${actualKousei.toLocaleString()} (店舗負担:¥${kouseiStoreCovered.toLocaleString()})`;
 
   // 送迎金額の取得
   let sendoffAmount = parseInt(document.getElementById('sendoffAmount').value)||0;
 
-// 合計 = 小計 - 源泉費 - 厚生費
-let totalAmount = afterGensen - actualKousei;
+  // 合計 = 小計 - 源泉費 - 厚生費
+  let totalAmount = afterGensen - actualKousei;
 
-let adjustedSendoff = 0;
+    let adjustedSendoff = 0;
 
-if (!isExperienceAndRentalChecked) {
-  adjustedSendoff = sendoffAmount;
-  const tempFinalAmount = totalAmount - adjustedSendoff;
+    if (!isExperienceAndRentalChecked) {
+    adjustedSendoff = sendoffAmount;
+    const tempFinalAmount = totalAmount - adjustedSendoff;
 
-  if (tempFinalAmount < 5000) {
+    if (tempFinalAmount < 5000) {
     const maxDeductible = totalAmount - 5000;
     adjustedSendoff = Math.max(0, maxDeductible);
+    }
   }
-}
 
-// 最終合計
-let finalAmount = totalAmount - adjustedSendoff;
+  // 最終合計
+  let finalAmount = totalAmount - adjustedSendoff;
 
-// 店舗負担・本人負担の計算
-const castCoveredAmount = adjustedSendoff;
-const storeCoveredAmount = sendoffAmount - adjustedSendoff;
+  // 店舗負担・本人負担の計算
+  const castCoveredAmount = adjustedSendoff;
+  const storeCoveredAmount = sendoffAmount - adjustedSendoff;
 
-let sendoffText = `送迎: ¥${sendoffAmount.toLocaleString()}(本人負担: ¥${castCoveredAmount.toLocaleString()}`;
-if (storeCoveredAmount > 0) {
+  let sendoffText = `送迎: ¥${sendoffAmount.toLocaleString()}(本人負担: ¥${castCoveredAmount.toLocaleString()}`;
+  if (storeCoveredAmount > 0) {
   sendoffText += `店舗負担: ¥${storeCoveredAmount.toLocaleString()})`;
-} else {
+  } else {
   sendoffText += `)`; // ←これを追加すると安心
-}
+  }
 
   const labels = {
     f: 'F',
@@ -3575,31 +3696,31 @@ if (storeCoveredAmount > 0) {
     }
   }
 
-// 追加された全ボトル明細
-bottleForms.forEach(form => {
-  const sel = form.querySelector('.bottleDetails');
-  const opt = sel?.selectedOptions?.[0];
-  const bottleDetail = (opt?.dataset?.base) || (sel?.value) || '詳細なし';
+  // 追加された全ボトル明細
+  bottleForms.forEach(form => {
+    const sel = form.querySelector('.bottleDetails');
+    const opt = sel?.selectedOptions?.[0];
+    const bottleDetail = (opt?.dataset?.base) || (sel?.value) || '詳細なし';
 
-  const split = form.querySelector('.splitCount')?.value || '';
-  const quantity = form.querySelector('.bottleQuantity')?.value || '';
-  const amountStr = (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '');
-  const bottleAmount = parseInt(amountStr, 10) || 0;
+    const split = form.querySelector('.splitCount')?.value || '';
+    const quantity = form.querySelector('.bottleQuantity')?.value || '';
+    const amountStr = (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '');
+    const bottleAmount = parseInt(amountStr, 10) || 0;
 
-  if (bottleAmount > 0 || bottleDetail || split || quantity) {
-    detailsHTML += `<div>ボトル:¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
-    if (split) detailsHTML +=`/割:${split}`;
-    if (quantity) detailsHTML +=`/数量:${quantity}`;
-    detailsHTML +=`）</div>`;
-  }
-});
+    if (bottleAmount > 0 || bottleDetail || split || quantity) {
+      detailsHTML += `<div>ボトル:¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
+      if (split) detailsHTML +=`/割:${split}`;
+      if (quantity) detailsHTML +=`/数量:${quantity}`;
+      detailsHTML +=`）</div>`;
+    }
+  });
 
-detailsHTML += '</div>';
+  detailsHTML += '</div>';
 
   const castName = document.getElementById('castName').value || '（名前なし）';
 
   // 10万を超える場合だけ表示（封筒印字専用）
-const congratsHTML =
+  const congratsHTML =
   (finalAmount > 100000)
     ? `
       <div class="congrats-box print-only">
@@ -3611,7 +3732,7 @@ const congratsHTML =
       <div class="finalAmount print-highlight"><strong>最終合計: </strong>¥${finalAmount.toLocaleString()}</div>
     `;
 
-const resultText = `
+  const resultText = `
   <div class="castName"><strong></strong> ${castName}</div>
   <div class="experienceAndRental">${experienceText}</div>
   <div class="subtotal"><strong>小計:</strong> ¥${total.toLocaleString()}</div>
@@ -3630,10 +3751,10 @@ const resultText = `
   ${congratsHTML}
 
   ${detailsHTML}
-`;
+  `;
 
   // 履歴に新しい項目を追加
-const existingItem = Array.from(historyList.children).find(item => {
+  const existingItem = Array.from(historyList.children).find(item => {
   const nameElem = item.querySelector('.castName');
   if (!nameElem) return false;
 
@@ -3641,13 +3762,13 @@ const existingItem = Array.from(historyList.children).find(item => {
   const nameText = nameElem.textContent.replace(/^\s*\d+\.\s*/, '').trim();
   
   return nameText === castName;
-});
+  });
 
 
-// detailsHTMLを囲んで非表示にする
-const detailsHiddenHTML = `<div class="details-html-container" style="display:none; font-size:14px; margin-top:5px;">${detailsHTML}</div>`;
+  // detailsHTMLを囲んで非表示にする
+  const detailsHiddenHTML = `<div class="details-html-container" style="display:none; font-size:14px; margin-top:5px;">${detailsHTML}</div>`;
 
-const fullHTML = `
+  const fullHTML = `
   <div>
     <label><input type="checkbox" class="history-checkbox"> 削除対象</label>
     ${resultText.replace(detailsHTML, '')}
@@ -3658,15 +3779,15 @@ const fullHTML = `
       <button onclick="moveHistoryItem(this, 'down')" style="font-size: 12px;">↓</button>
     </div>
   </div>
-`;
+  `;
 
-if (existingItem) {
+  if (existingItem) {
   existingItem.innerHTML = fullHTML;
-} else {
+  } else {
   const listItem = document.createElement('li');
   listItem.innerHTML = fullHTML;
   historyList.prepend(listItem);
-}
+  }
 
   renumberHistory();
 
@@ -7069,36 +7190,66 @@ document.addEventListener('change', e => {
   }
 });
 
-document.addEventListener('keydown', function(e) {
-  // Enterキーのみ処理（IME変換中は無視）
-  if (e.key === 'Enter' && !e.isComposing) {
-    const el = e.target;
-    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-      e.preventDefault();
+// Enterで“真下(同じ列)”に、Shift+Enterで“真上(同じ列)”に移動
+document.addEventListener('keydown', function (e) {
+  // IME変換中はスルー
+  if (e.key !== 'Enter' || e.isComposing) return;
 
-      // 対象テーブルを特定
-      const grid = document.getElementById('bulkGrid');
-      if (!grid) return;
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+  if (el.tagName !== 'INPUT' && el.tagName !== 'SELECT' && el.tagName !== 'TEXTAREA') return;
 
-      const allInputs = Array.from(grid.querySelectorAll('input, select'));
-      const idx = allInputs.indexOf(el);
-      if (idx === -1) return;
+  // 対象テーブル限定
+  const grid = document.getElementById('bulkGrid');
+  if (!grid || !grid.contains(el)) return;
 
-      // 現在行を取得し、次の行を探す
-      const currentRow = el.closest('tr');
-      const allRows = Array.from(grid.querySelectorAll('tbody tr'));
-      const rowIndex = allRows.indexOf(currentRow);
-      const nextRow = allRows[rowIndex + 1];
+  e.preventDefault();
 
-      if (nextRow) {
-        // 次の行の最初の入力要素（左端セル）
-        const firstInput = nextRow.querySelector('input, select');
-        if (firstInput) {
-          firstInput.focus();
-          firstInput.select?.();
-        }
+  // 現在の行・列インデックスを取得（行内の input/select/textarea の並び順を列とみなす）
+  const currentRow = el.closest('tr');
+  if (!currentRow) return;
+
+  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
+  const colIdx = rowInputs.indexOf(el);
+  if (colIdx === -1) return;
+
+  // 次に見る方向
+  const dir = e.shiftKey ? -1 : 1;
+
+  // tbody 内のすべての行（上から順）
+  const allRows = Array.from(grid.querySelectorAll('tbody tr'));
+
+  // 現在行のインデックス
+  let r = allRows.indexOf(currentRow);
+
+  // 1行ずつ上下に探索して、同じ“列インデックス”に要素がある行を探す
+  while (true) {
+    r += dir;
+    if (r < 0 || r >= allRows.length) break; // 端まで来た
+
+    const candidateRow = allRows[r];
+    const candInputs = Array.from(candidateRow.querySelectorAll('input, select, textarea'));
+
+    // その行に十分な数の入力があり、同じ列位置の要素が存在すればそこへ
+    if (colIdx < candInputs.length) {
+      const target = candInputs[colIdx];
+      if (target) {
+        target.focus();
+        target.select?.();
+        return;
       }
     }
+
+    // 同じ列が無い（例：サブ行は左側の列に入力無しなど）→さらに次の行を探す
+  }
+
+  // 見つからなかったときのフォールバック：
+  // 通常の「次の行の先頭」または「前の行の先頭」に移動
+  const fallbackRow = allRows[r - dir] || currentRow;
+  const first = fallbackRow.querySelector('input, select, textarea');
+  if (first) {
+    first.focus();
+    first.select?.();
   }
 });
 
@@ -7152,6 +7303,195 @@ document.addEventListener('keydown', function(e) {
   window.addEventListener('resize', applyApp2MobileView);
 })();
 
+// =====================================================
+// 履歴 → 一括入力へ一括復元（ボトル含む）
+// =====================================================
+document.addEventListener('click', async (e) => {
+  if (!e.target || e.target.id !== 'bulkImportFromHistory') return;
+
+  // ===== 設定 =====
+  // 古い→新しいの順で行1から詰めたい: true（1,2,3...）
+  // 新しい→古いの順で行1から詰めたい: false（5,4,3...）
+  const FILL_OLD_TO_NEW = true;
+  const RESTORE_WAIT_MS = 700; // 復元→フォーム反映の待機
+
+  // 通常フォーム → グリッドへ流し込む数値系ID
+  const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help',
+                     'set40','set20','vip','a','b','c','d','e'];
+
+  // ===== ユーティリティ =====
+  const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+  const setVal = (el, v, kind='input') => { if(!el) return; el.value = v ?? ''; el.dispatchEvent(new Event(kind,{bubbles:true})); };
+
+  // 指定行にぶら下がる既存サブ行（.btl-subrow）を全削除
+  const clearSubrows = (mainRow) => {
+    while (mainRow.nextElementSibling && mainRow.nextElementSibling.classList.contains('btl-subrow')) {
+      mainRow.nextElementSibling.remove();
+    }
+  };
+
+  // ✅ ヘッダー列数から動的にパディングを計算して“正しい位置”にサブ行を追加
+  const addAndGetSubrow = (mainRow) => {
+    const grid = document.getElementById('bulkGrid');
+    const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0; // 総列数
+    const pads = Math.max(0, cols - 4);                       // 末尾4列（品名/割/数量/金額）以外の数
+
+    const tr = document.createElement('tr');
+    tr.className = 'btl-subrow';
+
+    // パディング列を動的に生成
+    for (let i = 0; i < pads; i++) {
+      const td = document.createElement('td');
+      td.className = 'btl-pad';
+      tr.appendChild(td);
+    }
+
+    // 末尾4列
+    const tdDetail = document.createElement('td');
+    tdDetail.className = 'btl-detail';
+    tdDetail.innerHTML = `
+      <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
+      <input class="bottleFreeText" type="text" style="display:none;">
+    `;
+    const tdSplit  = document.createElement('td'); tdSplit.innerHTML  = `<input class="splitCount" inputmode="numeric">`;
+    const tdQty    = document.createElement('td'); tdQty.innerHTML    = `<input class="bottleQuantity" inputmode="numeric">`;
+    const tdAmount = document.createElement('td'); tdAmount.innerHTML = `<input class="bottleAmount" inputmode="numeric">`;
+
+    tr.appendChild(tdDetail);
+    tr.appendChild(tdSplit);
+    tr.appendChild(tdQty);
+    tr.appendChild(tdAmount);
+
+    // mainRow直後（既存サブ行があれば最後尾）へ差し込み
+    let anchor = mainRow;
+    while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
+      anchor = anchor.nextElementSibling;
+    }
+    anchor.insertAdjacentElement('afterend', tr);
+
+    return tr;
+  };
+
+  // ===== 1) 履歴ノード取得 =====
+  let items = document.querySelectorAll('#app2-historySection .history-item');
+  if (!items.length) {
+    const list = document.getElementById('historyList');
+    if (list) items = list.querySelectorAll('li');
+  }
+  items = Array.from(items);
+  if (!items.length) return alert('復元できる履歴がありません。');
+
+  if (FILL_OLD_TO_NEW) items.reverse();
+
+  // ===== 2) 行数を合わせる =====
+  const need = items.length;
+  const rowsSel = document.getElementById('bulkRows');
+  if (rowsSel) rowsSel.value = String(Math.max(need, parseInt(rowsSel.value||'0',10)||0));
+  if (typeof buildGrid === 'function') buildGrid(need);
+
+  const tbody = document.querySelector('#bulkGrid tbody');
+  if (!tbody) return alert('一括入力テーブルが見つかりません。');
+
+  // ===== 3) 履歴→フォーム復元→一括グリッドへ流し込み =====
+  let rowIndex = 0;
+  for (const it of items) {
+    const row = tbody.querySelectorAll('tr.bulk-mainrow')[rowIndex];
+    if (!row) break;
+
+    const restoreBtn = Array.from(it.querySelectorAll('button')).find(b => b.textContent.includes('復元'));
+    if (!restoreBtn) { rowIndex++; continue; }
+
+    restoreBtn.click();
+    await sleep(RESTORE_WAIT_MS); // 復元反映待ち
+
+    // （A）通常フィールド
+    setVal(row.querySelector('.bulk-name'), document.getElementById('castName')?.value, 'input');
+
+    const exp = row.querySelector('.bulk-exp');
+    if (exp) { exp.checked = !!document.getElementById('experienceAndRental')?.checked; exp.dispatchEvent(new Event('change', {bubbles:true})); }
+
+    setVal(row.querySelector('.bulk-send'), document.getElementById('sendoffAmount')?.value, 'input');
+
+    QUANT_IDS.forEach(id => {
+      const v = document.getElementById(id)?.value || '';
+      const input = row.querySelector(`[data-k="${id}"]`);
+      if (input) setVal(input, v, 'input');
+    });
+
+    // （B）ボトル：既存サブ行クリア → 1本ずつ追加して値セット
+    clearSubrows(row);
+
+    const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
+    for (const f of forms) {
+      const d = f.querySelector('.bottleDetails')?.value || '';
+      const s = f.querySelector('.splitCount')?.value  || '';
+      const q = f.querySelector('.bottleQuantity')?.value || '';
+      const a = f.querySelector('.bottleAmount')?.value || '';
+      if (!d && !s && !q && !a) continue;
+
+      const sub = addAndGetSubrow(row);
+      if (!sub) continue;
+
+      const sel = sub.querySelector('.bottleDetails');
+      if (sel) { sel.value = d; sel.dispatchEvent(new Event('change', { bubbles:true })); }
+      setVal(sub.querySelector('.splitCount'),    s, 'input');
+      setVal(sub.querySelector('.bottleQuantity'), q, 'input');
+      setVal(sub.querySelector('.bottleAmount'),   a, 'input');
+
+      if (typeof updateBottleAmountForRow === 'function') updateBottleAmountForRow(sub);
+    }
+
+    rowIndex++;
+  }
+
+  // 仕上げ：全体の再計算/バインド反映
+  document.querySelectorAll('#bulkGrid input, #bulkGrid select')
+    .forEach(el => el.dispatchEvent(new Event(el.tagName==='SELECT' ? 'change' : 'input', { bubbles:true })));
+
+  alert('履歴を一括入力フォームに復元しました。');
+});
+
+(function () {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  const clearHighlight = () => {
+    grid.querySelectorAll('tr.hl-row').forEach(el => el.classList.remove('hl-row'));
+    grid.querySelectorAll('.hl-col').forEach(el => el.classList.remove('hl-col'));
+  };
+
+  grid.addEventListener('focusin', (e) => {
+    const td = e.target.closest('td');
+    if (!td || !grid.contains(td)) return;
+
+    clearHighlight();
+
+    // 行をハイライト
+    const tr = td.parentElement;
+    tr.classList.add('hl-row');
+
+    // 列インデックスを取得
+    const idx = td.cellIndex;
+    if (idx < 0) return;
+
+    // ヘッダの同列をハイライト
+    const th = grid.tHead && grid.tHead.rows && grid.tHead.rows[0] && grid.tHead.rows[0].cells[idx];
+    if (th) th.classList.add('hl-col');
+
+    // 本文の同列をハイライト
+    grid.tBodies[0] && Array.from(grid.tBodies[0].rows).forEach(r => {
+      const c = r.cells[idx];
+      if (c) c.classList.add('hl-col');
+    });
+  });
+
+  // グリッド外へフォーカスが抜けたら消す（内部移動はfocusinで上書き）
+  grid.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!grid.contains(document.activeElement)) clearHighlight();
+    }, 0);
+  });
+})();
 
 //app2一括入力JS終了
 
