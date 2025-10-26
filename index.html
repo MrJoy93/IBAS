@@ -3287,7 +3287,7 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   if (amount  !== undefined) amountInput.value = amount;
 
 // 品目変更時
-sel.addEventListener('change', () => {
+sel.addEventListener('change', (e) => {
   if (window.BOTTLE_REFRESHING) return;
   const opt = sel.selectedOptions[0];
   if (!opt) return;
@@ -3296,12 +3296,14 @@ sel.addEventListener('change', () => {
     // 履歴選択：従来どおり履歴の値を復元
     splitInput.value  = opt.dataset.split  || '';
     qtyInput.value    = opt.dataset.qty    || '';
-    amountInput.value = opt.dataset.amount ?? 0;
+    amountInput.value = opt.dataset.amount || '';
   } else {
-    // 静的な品目選択：登録金額で初期化（割=1 / 数量=1）
-    splitInput.value = '1';
-    qtyInput.value   = '1';
-    updateBottleAmountForForm(form);  // ← 登録金額から算出
+    // 静的な品目選択：ユーザー操作のときだけ初期化
+    if (!e.isTrusted) return;                 // ★合成change（復元後など）なら何もしない
+    // ★保険：空欄のときだけ既定値を入れる（既存値は崩さない）
+    if (splitInput.value === '') splitInput.value = '1';
+    if (qtyInput.value   === '') qtyInput.value   = '1';
+    updateBottleAmountForForm(form);          // 登録金額から算出
   }
   saveBottleForms?.();
 });
@@ -6522,6 +6524,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+document.addEventListener('DOMContentLoaded', () => {
+  // ← 既存の addOutputButtonsNextToRestore() と MutationObserver はそのままでOK
+
+  const sel = document.getElementById('bulkRows');
+  if (!sel) return;
+
+  sel.addEventListener('change', () => {
+    // ★ 復元中フラグON（合成change対策）
+    window.BULK_RESTORING = true;
+
+    const snapshot = (typeof snapshotBulkGrid === 'function') ? snapshotBulkGrid() : [];
+    const nextN = parseInt(sel.value || '40', 10) || 40;
+
+    if (typeof buildGrid === 'function') buildGrid(nextN);
+
+    if (typeof restoreBulkGrid === 'function') {
+      restoreBulkGrid((snapshot || []).slice(0, nextN));
+    }
+
+    // ★ 再発火は input のみ。select には触れない
+    document.querySelectorAll('#bulkGrid input')
+      .forEach(el => el.dispatchEvent(new Event('input', {bubbles:true})));
+
+    // ★ フラグOFF
+    window.BULK_RESTORING = false;
+  });
+});
+
 window.sortHistoryIndex = function() {
   const container = document.querySelector('.history-index-table');
   if (!container) return;
@@ -7148,9 +7178,10 @@ function applySelectRule(selectEl) {
 
   } else if (rule) {
     // 2) 通常オプション
-    if (splitEl) splitEl.value = rule.split ?? '';
-    if (qtyEl)   qtyEl.value   = rule.qty   ?? '';
-    amtEl.value = Math.floor(rule.amt ?? 0).toLocaleString();
+    if (splitEl && splitEl.value === '') splitEl.value = rule.split ?? '';
+    if (qtyEl   && qtyEl.value   === '') qtyEl.value   = rule.qty   ?? '';
+    if (amtEl)  { const v = Math.floor(rule.amt ?? 0).toLocaleString();
+              if (amtEl.value === '') amtEl.value = v; }
 
   } else {
     // 3) その他
@@ -7309,6 +7340,9 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('click', async (e) => {
   if (!e.target || e.target.id !== 'bulkImportFromHistory') return;
 
+  // ★ 復元中フラグON（合成change対策）
+  window.BULK_RESTORING = true;
+
   // ===== 設定 =====
   // 古い→新しいの順で行1から詰めたい: true（1,2,3...）
   // 新しい→古いの順で行1から詰めたい: false（5,4,3...）
@@ -7433,7 +7467,8 @@ document.addEventListener('click', async (e) => {
       if (!sub) continue;
 
       const sel = sub.querySelector('.bottleDetails');
-      if (sel) { sel.value = d; sel.dispatchEvent(new Event('change', { bubbles:true })); }
+      // ★ change を投げない。値だけ入れる（上書き防止）
+      if (sel) sel.value = d;
       setVal(sub.querySelector('.splitCount'),    s, 'input');
       setVal(sub.querySelector('.bottleQuantity'), q, 'input');
       setVal(sub.querySelector('.bottleAmount'),   a, 'input');
@@ -7444,11 +7479,14 @@ document.addEventListener('click', async (e) => {
     rowIndex++;
   }
 
-  // 仕上げ：全体の再計算/バインド反映
-  document.querySelectorAll('#bulkGrid input, #bulkGrid select')
-    .forEach(el => el.dispatchEvent(new Event(el.tagName==='SELECT' ? 'change' : 'input', { bubbles:true })));
+  // ★ 仕上げ：input のみ再発火（selectは触らない）
+  document.querySelectorAll('#bulkGrid input')
+    .forEach(el => el.dispatchEvent(new Event('input', { bubbles:true })));
 
   alert('履歴を一括入力フォームに復元しました。');
+
+  // ★ フラグOFF
+  window.BULK_RESTORING = false;
 });
 
 (function () {
@@ -7492,6 +7530,15 @@ document.addEventListener('click', async (e) => {
     }, 0);
   });
 })();
+
+function addAndGetSubrow(mainRow){
+  if (typeof addBottleSubrow === 'function') addBottleSubrow(mainRow);
+  if (typeof getBottleSubrows === 'function') {
+    const subs = getBottleSubrows(mainRow);
+    return subs[subs.length - 1] || null;
+  }
+  return null;
+}
 
 //app2一括入力JS終了
 
