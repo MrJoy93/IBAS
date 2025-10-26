@@ -3337,17 +3337,6 @@ sel.addEventListener('change', (e) => {
     }
   });
 
-  // ===== スクロール処理：ユーザー操作時だけ発火 =====
-  if (scroll && !window.BOTTLE_REFRESHING && !window.SUPPRESS_BOTTLE_SCROLL) {
-    // レイアウト確定後に実行（フリッカー対策）
-    const doScroll = () => form.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => requestAnimationFrame(doScroll));
-    } else {
-      setTimeout(doScroll, 50);
-    }
-  }
-
   return form;
 }
 
