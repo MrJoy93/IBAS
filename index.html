@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.5.4</title>
+<title>IBASD  Ver. 7.5.5</title>
 <style>
 
   html, body {
@@ -1913,6 +1913,19 @@ body[data-active-app="app2"] #bulkGrid textarea.is-filled{
 }
 body[data-active-app="app2"] #bulkGrid td.cell-filled{
   background: rgba(0,245,255,.06) !important;
+}
+
+/* === bulkGrid フォーカス強調（JSが付けるクラス用） === */
+body[data-active-app="app2"] #bulkGrid tr.hl-row td{
+  background: linear-gradient(180deg, rgba(0,245,255,.10), rgba(0,0,0,0)) !important;
+  box-shadow: inset 0 2px 10px rgba(0,245,255,.10), inset 0 -2px 10px rgba(0,245,255,.10) !important;
+}
+
+body[data-active-app="app2"] #bulkGrid .hl-col{
+  background: rgba(0,245,255,.08) !important;
+}
+body[data-active-app="app2"] #bulkGrid thead th.hl-col{
+  background: rgba(0,245,255,.15) !important;
 }
 
 
@@ -7332,92 +7345,88 @@ document.addEventListener('change', e => {
   }
 });
 
-// Enterで“真下(同じ列)”、Shift+Enterで“真上(同じ列)”へ移動。
-// 直下がボトル用の空白行（btl-subrow など）や、対象セルが空/無効/非表示のときはスキップしてさらに進む。
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Enter' || e.isComposing) return;
-
-  const el = e.target;
-  if (!(el instanceof HTMLElement)) return;
-  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
-
+// ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
+(function(){
   const grid = document.getElementById('bulkGrid');
-  if (!grid || !grid.contains(el)) return;
+  if (!grid) return;
 
-  e.preventDefault();
+  const isInvisible = (node) => node?.offsetParent === null;
+  const isDisabledLike = (node) => !node || node.disabled || node.readOnly || isInvisible(node);
+  const isBottleSpacerRow = (tr) =>
+    tr?.classList?.contains('btl-subrow') || tr?.dataset?.rowType === 'bottle-subrow';
 
-  // === ユーティリティ =========================================
-  const isInvisible = (node) => node.offsetParent === null; // display:none 等
-  const isEmpty = (node) => {
-    if (!node) return true;
-    const t = node.tagName;
-    if (t === 'SELECT') return (node.value ?? '') === '';
-    if (t === 'INPUT' || t === 'TEXTAREA') return (node.value ?? '') === '';
-    return true;
-  };
-  const isDisabledLike = (node) => node.disabled || node.readOnly || isInvisible(node);
+  function onGridNav(e){
+    const key = e.key;
+    if (!['Enter','Tab'].includes(key) || e.isComposing) return;
 
-  // 行全体が“実質空白”か？（ボトル用空白行を丸ごと飛ばす用）
-  const isRowEffectivelyEmpty = (tr) => {
-    // 入力系を全部見て、どれも編集可能かつ値ありのものが無ければ空白
-    const inputs = tr.querySelectorAll('input, select, textarea');
-    if (!inputs.length) return true;
-    for (const n of inputs) {
-      if (!isDisabledLike(n) && !isEmpty(n)) return false;
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+
+    if (!grid.contains(el)) return;
+
+    // ここで既定動作と以降の伝播を止める（必要に応じて復帰させる）
+    e.preventDefault();
+
+    const currentRow = el.closest('tr');
+    if (!currentRow) { e.stopImmediatePropagation(); return; }
+
+    const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
+    const colIdx = rowInputs.indexOf(el);
+    if (colIdx === -1) { e.stopImmediatePropagation(); return; }
+
+    // ───────── Enter：縦（直下/直上のみ）─────────
+    if (key === 'Enter'){
+      const allRows = Array.from(grid.querySelectorAll('tbody tr'));
+      const r0 = allRows.indexOf(currentRow);
+      let r = r0 + (e.shiftKey ? -1 : 1);
+
+      // 範囲外 → 完全停止
+      if (r < 0 || r >= allRows.length){ e.stopImmediatePropagation(); return; }
+
+      // 直後が btl-subrow なら連続スキップ（ここだけ許可）
+      while (r >= 0 && r < allRows.length && isBottleSpacerRow(allRows[r])) {
+        r += (e.shiftKey ? -1 : 1);
+      }
+      if (r < 0 || r >= allRows.length){ e.stopImmediatePropagation(); return; }
+
+      const tr = allRows[r];
+      const candInputs = Array.from(tr.querySelectorAll('input, select, textarea'));
+
+      // 同じ列スロットが無い → 完全停止
+      if (colIdx >= candInputs.length){ e.stopImmediatePropagation(); return; }
+
+      const target = candInputs[colIdx];
+
+      // 非表示/無効 → 完全停止（未記入はOKで止まらずフォーカス移動）
+      if (isDisabledLike(target)){ e.stopImmediatePropagation(); return; }
+
+      // ここでだけ移動
+      target.focus();
+      target.select?.();
+      e.stopImmediatePropagation();
+      return;
     }
-    return true;
-  };
 
-  // ============================================================
+    // ───────── Tab：横（同じ行のみ）─────────
+    if (key === 'Tab'){
+      const delta = e.shiftKey ? -1 : 1;
+      const nextInRow = rowInputs[colIdx + delta];
 
-  // 現在位置（行・列インデックス）
-  const currentRow = el.closest('tr');
-  if (!currentRow) return;
-
-  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
-  const colIdx = rowInputs.indexOf(el);
-  if (colIdx === -1) return;
-
-  const dir = e.shiftKey ? -1 : 1; // 下=+1 / 上=-1
-  const allRows = Array.from(grid.querySelectorAll('tbody tr'));
-  let r = allRows.indexOf(currentRow);
-
-  // 同じ“列”で、有効かつ（可能なら）値入りのセルへフォーカス。
-  while (true) {
-    r += dir;
-    if (r < 0 || r >= allRows.length) break;
-
-    const tr = allRows[r];
-
-    // ボトル用の空白サブ行（例: class="btl-subrow"）や、入力が全て空なら行ごとスキップ
-    if (tr.classList.contains('btl-subrow') || isRowEffectivelyEmpty(tr)) {
-      continue;
+      if (nextInRow && !isDisabledLike(nextInRow)){
+        nextInRow.focus();
+        nextInRow.select?.();
+      }
+      // 見つからなければ完全停止
+      e.stopImmediatePropagation();
+      return;
     }
-
-    const candInputs = Array.from(tr.querySelectorAll('input, select, textarea'));
-
-    // 同じ列位置の要素がなければ次の行へ
-    if (colIdx >= candInputs.length) continue;
-
-    const target = candInputs[colIdx];
-
-    // 対象セルが無効/非表示なら次の行へ
-    if (isDisabledLike(target)) continue;
-
-    // 対象セルが“空”ならその行はスキップ（= さらに下へ）
-    if (isEmpty(target)) continue;
-
-    // 条件を満たしたら移動
-    target.focus();
-    target.select?.();
-    return;
   }
 
-  // 何も見つからなければ、近い方の行の先頭へフォールバック
-  const fallbackRow = allRows[Math.max(0, Math.min(allRows.length - 1, r - dir))] || currentRow;
-  const first = fallbackRow.querySelector('input, select, textarea');
-  if (first) { first.focus(); first.select?.(); }
-});
+  // capture=true で最優先捕捉し、他ハンドラより先に制御
+  document.addEventListener('keydown', onGridNav, true);
+})();
+
 
 
 
