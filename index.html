@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.2.1</title>
+<title>IBASD  Ver. 7.3.2</title>
 <style>
 
   html, body {
@@ -1914,26 +1914,68 @@ body[data-active-app="app2"].bulk-wide #bulkGrid {
   margin-top: 0 !important;
 }
 
-/* ===== BulkGrid: フォーカス行・列ハイライト ===== */
-body[data-active-app="app2"] #bulkGrid tr.hl-row > td {
-  background: rgba(0, 245, 255, 0.12) !important;
-}
-body[data-active-app="app2"] #bulkGrid td.hl-col,
-body[data-active-app="app2"] #bulkGrid th.hl-col {
-  background: rgba(153, 221, 255, 0.16) !important;
-}
-body[data-active-app="app2"] #bulkGrid td.hl-col:focus-within {
-  outline: 2px solid rgba(0, 245, 255, 0.55);
-  outline-offset: -2px;
-}
-/* サブ行も同じルールで馴染むよう薄めのボーダー */
-body[data-active-app="app2"] #bulkGrid tr.btl-subrow.hl-row > td {
-  background: rgba(0, 245, 255, 0.08) !important;
+/* ===============================================================
+   一括入力グリッド：グループ仕切り線（最終版・指定位置に太線）
+   =============================================================== */
+body[data-active-app="app2"] #bulkGrid th,
+body[data-active-app="app2"] #bulkGrid td{
+  border-right: 1px solid rgba(0,245,255,.18);
 }
 
-#bulkGrid tr.bulk-mainrow.bulk-empty td { opacity: .55; }
+/* ┃ 強調したい区切り（右側）→ 1 | 4 | 7 | 11 | 14 | 19 列の右に太線 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(1),
+body[data-active-app="app2"] #bulkGrid td:nth-child(1),
+body[data-active-app="app2"] #bulkGrid th:nth-child(4),
+body[data-active-app="app2"] #bulkGrid td:nth-child(4),
+body[data-active-app="app2"] #bulkGrid th:nth-child(7),
+body[data-active-app="app2"] #bulkGrid td:nth-child(7),
+body[data-active-app="app2"] #bulkGrid th:nth-child(11),
+body[data-active-app="app2"] #bulkGrid td:nth-child(11),
+body[data-active-app="app2"] #bulkGrid th:nth-child(14),
+body[data-active-app="app2"] #bulkGrid td:nth-child(14),
+body[data-active-app="app2"] #bulkGrid th:nth-child(19),
+body[data-active-app="app2"] #bulkGrid td:nth-child(19){
+  border-right: 2.4px solid #00f5ff !important;
+  box-shadow: 1px 0 8px rgba(0,245,255,.7);
+}
+
+/* theadでも光が途切れないよう強めに */
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(1),
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(4),
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(7),
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(11),
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(14),
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(19){
+  box-shadow: 1px 0 10px rgba(0,255,255,.8);
+}
+
+/* 以前つけた“左側”の強調をオフ（必要なら） */
+body[data-active-app="app2"] #bulkGrid th:nth-child(2),
+body[data-active-app="app2"] #bulkGrid td:nth-child(2),
+body[data-active-app="app2"] #bulkGrid th:nth-child(20),
+body[data-active-app="app2"] #bulkGrid td:nth-child(20){
+  border-left: none !important;
+  box-shadow: none !important;
+}
 
 
+/*一括入力グリッドで入力のあるフォームのみ色を変えるCSS開始*/
+
+/* 入力ありのときだけ目立たせる（フォーム本体） */
+body[data-active-app="app2"] #bulkGrid input.is-filled,
+body[data-active-app="app2"] #bulkGrid select.is-filled,
+body[data-active-app="app2"] #bulkGrid textarea.is-filled {
+  background: rgba(0,245,255,.12) !important;
+  border-color: #00eaff !important;
+  box-shadow: inset 0 0 10px #00eaff33 !important;
+  color: #eaf6ff !important;
+}
+/* ついでにセル全体もほんのり */
+body[data-active-app="app2"] #bulkGrid td.cell-filled {
+  background: rgba(0,245,255,.06) !important;
+}
+
+/*一括入力グリッドで入力のあるフォームのみ色を変えるCSS終了*/
 
 </style>
 
@@ -6701,8 +6743,151 @@ function slimHistoryUI(){
    - 自前の renderHistory() をお持ちなら、その直後でもOK */
 window.addEventListener('DOMContentLoaded', () => setTimeout(slimHistoryUI, 0));
 
+(function(){
+  const nav = document.getElementById('app2-nav');
+  if (!nav) return;
+
+  // 既存のボタン群に一括・個別ボタンを追加
+  const bulkBtn = document.createElement('button');
+  bulkBtn.id = 'scrollToBulk';
+  bulkBtn.textContent = '一括';
+
+  const indivBtn = document.createElement('button');
+  indivBtn.id = 'scrollToIndiv';
+  indivBtn.textContent = '個別';
+
+  // nav 内に重複防止して追加
+  if (!document.getElementById('scrollToBulk')) {
+    nav.insertBefore(bulkBtn, nav.children[1] || null);
+  }
+  if (!document.getElementById('scrollToIndiv')) {
+    nav.insertBefore(indivBtn, nav.children[2] || null);
+  }
+
+  // スクロールイベント
+  bulkBtn.addEventListener('click', () => {
+    const grid = document.getElementById('bulkGrid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  indivBtn.addEventListener('click', () => {
+    const firstForm = document.querySelector('#app2 .group, #app2 .bottle-form');
+    if (firstForm) firstForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // グリッドが存在しない場合は非表示にする
+  function updateButtonVisibility() {
+    const gridVisible = !!document.getElementById('bulkGrid');
+    bulkBtn.style.display = gridVisible ? '' : 'none';
+    indivBtn.style.display = gridVisible ? '' : 'none';
+  }
+
+  // 初期化
+  updateButtonVisibility();
+  const observer = new MutationObserver(updateButtonVisibility);
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
 
 
+
+//app2個別一括スクロール関数開始
+
+(function(){
+  const nav = document.getElementById('app2-nav');
+  if (!nav) return;
+
+  // ===== 画面に見えているか判定 =====
+  function isVisible(el){
+    if (!el) return false;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
+  // ===== 固定ヘッダ＋微調整付きスクロール =====
+  function getBaseOffset(){
+    const tabs  = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tabs-h'))   || 56;
+    const sub   = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--subnav-h')) || 50;
+    return tabs + sub + 10; // 既定の余白
+  }
+  function scrollToAnchor(anchorEl, extraAdjust = 0){
+    if (!anchorEl) return;
+    const top = anchorEl.getBoundingClientRect().top + window.scrollY - (getBaseOffset() - extraAdjust);
+    window.scrollTo({ top, behavior: 'smooth' });
+  }
+
+  // ===== ボタン生成（重複防止） =====
+  function ensureButton(id, label, index){
+    let btn = document.getElementById(id);
+    if (!btn){
+      btn = document.createElement('button');
+      btn.id = id; btn.type = 'button'; btn.textContent = label;
+      nav.insertBefore(btn, nav.children[index] || null);
+    }
+    return btn;
+  }
+  const bulkBtn  = ensureButton('scrollToBulk',  '一括', 1);
+  const indivBtn = ensureButton('scrollToIndiv', '個別', 2);
+
+  // ===== 微調整値（PC/SPで少し変える） =====
+  const mq = window.matchMedia('(max-width:700px)');
+  function getAdjust(){
+    const sp = mq.matches;
+    return {
+      bulk : sp ? 10 : 6,   // ← SS1 の“表ヘッダがちょうど出る”感じ
+      indiv: sp ? 18 : 14   // ← SS2 の“個別フォームの見出しが収まる”感じ
+    };
+  }
+
+    // ===== クリック挙動 =====
+  bulkBtn.addEventListener('click', () => {
+    const gridHead = document.querySelector('#bulkGrid thead') || document.getElementById('bulkGrid');
+    scrollToAnchor(gridHead, getAdjust().bulk);
+  });
+
+  indivBtn.addEventListener('click', () => {
+    // キャスト名フィールドを基準にスクロール
+    const castInput = document.getElementById('castName');
+    if (castInput) {
+      // オフセット計算を統一関数から取得
+      const offset = getBaseOffset() + 25;  // 上に少し余白を残して止まるよう調整
+      const y = castInput.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    } else {
+      // フォールバック（旧ロジック）
+      const firstIndiv = document.querySelector('#app2 .group, #app2 .bottle-form');
+      scrollToAnchor(firstIndiv, getAdjust().indiv);
+    }
+  });
+
+  // ===== 表示制御（App2かつ #bulkGrid が可視のときだけ） =====
+  function updateButtons(){
+    const isApp2 = document.body.getAttribute('data-active-app') === 'app2';
+    const grid   = document.getElementById('bulkGrid');
+    const show   = isApp2 && isVisible(grid);
+    bulkBtn.style.display  = show ? '' : 'none';
+    indivBtn.style.display = show ? '' : 'none';
+  }
+  updateButtons();
+
+  // 監視（タブ切替・表示切替・スタイル変更）
+  const mo = new MutationObserver(updateButtons);
+  mo.observe(document.body, {
+    childList: true, subtree: true, attributes: true,
+    attributeFilter: ['data-active-app','class','style']
+  });
+  mq.addEventListener?.('change', () => {}); // 端末幅で補正値が切替るが、スクロール時に都度取得するので処理は不要
+
+  window.addEventListener('resize', updateButtons);
+  document.addEventListener('click', (e)=>{
+    if (e.target.closest('#app2') && (e.target.matches('button,[role="button"]'))) {
+      requestAnimationFrame(updateButtons);
+    }
+  });
+})();
+
+//個別一括スクロール関数終了
 
 
 
@@ -6862,8 +7047,17 @@ function buildGrid(n){
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
       <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
     `;
-    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
-      .forEach(k => html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="0"></td>`);
+    const placeholders = {
+  f: 'F1', f2: 'F2',
+  jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
+  set40: '40', set20: '20', vip: 'VIP',
+  a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
+};
+['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+  .forEach(k => {
+    const ph = placeholders[k] || '';
+    html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="${ph}"></td>`;
+  });
     html += `
       <td class="btl-anchor">
         <div class="btl-toolbar">
@@ -7832,6 +8026,60 @@ function updateRowCheckState(mainRow){
   if (empty) cb.checked = false;       // 空行は強制で外す
   mainRow.classList.toggle('bulk-empty', empty); // 見た目用（任意CSSで淡色化可）
 }
+
+//一括入力グリッドで入力のあるフォームのみ色を変えるJS開始
+
+(function(){
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  // 入力があるか判定（0 は入力あり扱い）
+  function hasValue(el){
+    if (el.type === 'checkbox') return el.checked;
+    const v = (el.value ?? '').toString().trim();
+    return v !== '';
+  }
+
+  function updateFilledState(el){
+    const filled = hasValue(el);
+    el.classList.toggle('is-filled', filled);
+    const td = el.closest('td');
+    if (td) td.classList.toggle('cell-filled', filled);
+  }
+
+  function scanAll(){
+    grid.querySelectorAll('input, select, textarea').forEach(updateFilledState);
+  }
+
+  // 入力中の即時反映
+  grid.addEventListener('input', (e)=>{
+    if (e.target.matches('#bulkGrid input, #bulkGrid textarea')) updateFilledState(e.target);
+  });
+  grid.addEventListener('change', (e)=>{
+    if (e.target.matches('#bulkGrid select, #bulkGrid input[type="checkbox"]')) updateFilledState(e.target);
+  });
+
+  // 初期スキャン
+  scanAll();
+
+  // 行の追加/復元にも追従
+  const mo = new MutationObserver((mut)=>{
+    for (const m of mut){
+      m.addedNodes?.forEach(node=>{
+        if (node.nodeType === 1){
+          if (node.matches?.('input,select,textarea')) updateFilledState(node);
+          node.querySelectorAll?.('input,select,textarea').forEach(updateFilledState);
+        }
+      });
+    }
+  });
+  mo.observe(grid.tBodies[0] || grid, { childList: true, subtree: true });
+
+  // 外から呼べる再スキャン（履歴一括復元の完了後などに）
+  window.rescanBulkFilledState = scanAll;
+})();
+
+//一括入力グリッドで入力のあるフォームのみ色を変えるJS終了
 
 //app2一括入力JS終了
 
