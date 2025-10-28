@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.5.5</title>
+<title>IBASD  Ver. 7.5.6</title>
 <style>
 
   html, body {
@@ -8122,6 +8122,18 @@ function updateRowCheckState(mainRow){
   // 外から呼べる再スキャン（履歴一括復元の完了後などに）
   window.rescanBulkFilledState = scanAll;
 })();
+
+// === 入力フォームを選択した瞬間に中の文字を全選択する ===
+document.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+
+  // input, textarea のみ対象（select はユーザー操作の都合で除外）
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+    // 数値入力でもフォーカス直後に全選択
+    el.select?.();
+  }
+});
 
 //一括入力グリッドで入力のあるフォームのみ色を変えるJS終了
 //app2一括入力JS終了
