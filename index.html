@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.5.2</title>
+<title>IBASD  Ver. 7.5.3</title>
 <style>
 
   html, body {
@@ -1608,18 +1608,15 @@ body[data-active-app="app2"] #app2-sideNav{ display:block !important; }
 
 
 /* ==============================================================
-   APP2 一括入力フォーム（#bulkGrid）— 整理版（機能そのまま）
+   APP2 一括入力フォーム（#bulkGrid）— 整理版（機能そのまま・最終）
    ※ 必ずスタイルの一番最後に置くこと
 =================================================================*/
 
 /* ========== 変数（PC用ガター等） ========== */
 :root{
-  /* サイドナビ（PC）の実幅／右端との隙間／ナビ左と本体の“間” */
   --side-nav-w-pc: 100px;
   --side-nav-gap-pc: 18px;
   --side-nav-between-pc: 24px;
-
-  /* 一括入力フォーム展開時（PC）の左右ガター：18–40px 目安 */
   --bulk-wide-gutter-pc: clamp(18px, 2.5vw, 28px);
 }
 
@@ -1639,9 +1636,21 @@ body[data-active-app="app2"] #bulkGrid td{
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
+
+/* 入力系のベース（input/select） */
 body[data-active-app="app2"] #bulkGrid input,
-body[data-active-app="app2"] #bulkGrid select,
-body[data-active-app="app2"] #bulkGrid button{
+body[data-active-app="app2"] #bulkGrid select{
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 2px 3px !important;
+  height: 24px !important;
+  line-height: 22px !important;
+  font-size: 0.8em !important;
+}
+
+/* ボタンのベース（※ +/- は除外） */
+body[data-active-app="app2"] #bulkGrid button:not(.btl-plus):not(.btl-minus){
   width: 100% !important;
   box-sizing: border-box !important;
   margin: 0 !important;
@@ -1682,15 +1691,24 @@ body[data-active-app="app2"] #bulkGrid thead th:nth-child(23){ width: 9%;  }
   text-align: right !important;
 }
 #bulkGrid select.bottleDetails{ width: 100% !important; max-width: 140px !important; }
+
+/* ボトル +/- ボタン（汎用buttonの100%指定を除外済み） */
 body[data-active-app="app2"] #bulkGrid .btl-plus,
 body[data-active-app="app2"] #bulkGrid .btl-minus{
-  min-width: 26px !important; width: 48% !important;
-  display: inline-block !important;
-  padding: 1px 0 !important; margin: 0 1px !important;
-  text-align: center !important; line-height: 1.2em !important;
-  font-size: 11px !important; border-radius: 6px !important;
-  border: 1px solid #2f4a7a !important; background: #233255 !important; color: #eaf6ff !important;
+  width: calc(40% - 2px) !important;  /* 左右で半分ずつ */
+  min-width: 0 !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 2px 0 !important;
+  height: 24px !important;
+  line-height: 1.2 !important;
+  border: 1px solid #2f4a7a !important;
+  background: #233255 !important;
+  color: #eaf6ff !important;
+  border-radius: 6px !important;
 }
+body[data-active-app="app2"] #bulkGrid .btl-plus + .btl-minus{ margin-left: 4px !important; }
 
 /* ========== レイアウト補助（APP2フル幅の基本） ========== */
 body[data-active-app="app2"] #app2{
@@ -1704,36 +1722,27 @@ body[data-active-app="app2"] .bulk-grid-wrap{
 }
 
 /* ========== サイドナビ表示ルール ========== */
-/* 通常（PC/スマホ）：表示。特に指定なし＝既定表示 */
-/* 一括入力フォーム展開時だけ body.bulk-wide が付与される → PCは非表示 */
+/* 一括入力フォーム展開時だけ PCで非表示（スマホは維持） */
 body[data-active-app="app2"].bulk-wide #sideNav,
 body[data-active-app="app2"].bulk-wide .side-nav,
 body[data-active-app="app2"].bulk-wide [id*="sideNav"],
 body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+  display: none !important; visibility: hidden !important;
+  opacity: 0 !important; pointer-events: none !important;
 }
-/* ただしスマホ(≤768px)では展開中も表示を維持 */
 @media (max-width: 768px){
   body[data-active-app="app2"].bulk-wide #sideNav,
   body[data-active-app="app2"].bulk-wide .side-nav,
   body[data-active-app="app2"].bulk-wide [id*="sideNav"],
   body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
+    display: block !important; visibility: visible !important;
+    opacity: 1 !important; pointer-events: auto !important;
   }
 }
 
 /* ========== スマホ：氏名・体験・送迎のみ表示 ========== */
 @media (max-width: 768px){
-  body[data-active-app="app2"] #bulkGrid{
-    display: table !important;
-    font-size: 13px !important;
-  }
+  body[data-active-app="app2"] #bulkGrid{ display: table !important; font-size: 13px !important; }
   /* いったん全列非表示 */
   body[data-active-app="app2"] #bulkGrid thead th,
   body[data-active-app="app2"] #bulkGrid tbody td{ display: none !important; }
@@ -1757,39 +1766,29 @@ body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
 
 /* ========== PC：通常時の“サイドナビと本体の間”を広げる ========== */
 @media (min-width: 769px){
-  /* サイドナビ位置・幅（通常時のみ） */
   body[data-active-app="app2"]:not(.bulk-wide) #app2-sideNav{
-    display: block !important;
-    position: fixed !important;
+    display: block !important; position: fixed !important;
     top: calc(var(--tabs-h) + var(--subnav-h) + 12px) !important;
     right: var(--side-nav-gap-pc) !important;
-    width: var(--side-nav-w-pc) !important;
-    z-index: 1200;
+    width: var(--side-nav-w-pc) !important; z-index: 1200;
   }
-  /* 本体の右側に「ナビ幅＋右端余白＋ナビ左の間」を確保 */
   body[data-active-app="app2"]:not(.bulk-wide) #app2,
   body[data-active-app="app2"]:not(.bulk-wide) #app2.content{
     width: 100% !important; max-width: none !important;
-    padding-right: calc(
-      var(--side-nav-w-pc) + var(--side-nav-gap-pc) + var(--side-nav-between-pc)
-    ) !important;
-    box-sizing: border-box !important;
-    margin-right: 0 !important;
+    padding-right: calc(var(--side-nav-w-pc) + var(--side-nav-gap-pc) + var(--side-nav-between-pc)) !important;
+    box-sizing: border-box !important; margin-right: 0 !important;
   }
 }
 
-/* ========== PC：一括入力フォーム展開中（bulk-wide）の左右ガター統一 ========== */
+/* ========== PC：bulk-wide 時の左右ガター統一 ========== */
 @media (min-width: 769px){
-  /* PCでは bulk-wide 中にサイドナビを非表示にし、左右ガターを同値に */
   body[data-active-app="app2"].bulk-wide #app2-sideNav{ display: none !important; }
-
   body[data-active-app="app2"].bulk-wide #app2,
   body[data-active-app="app2"].bulk-wide #app2.content{
     padding-left:  var(--bulk-wide-gutter-pc) !important;
     padding-right: var(--bulk-wide-gutter-pc) !important;
     box-sizing: border-box !important;
   }
-  /* ラッパ／テーブルが端に張り付くのを防ぐ保険 */
   body[data-active-app="app2"].bulk-wide .bulk-grid-wrap{
     padding-left:  var(--bulk-wide-gutter-pc) !important;
     padding-right: var(--bulk-wide-gutter-pc) !important;
@@ -1800,129 +1799,56 @@ body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
 }
 
 /* ========== 保険：どこかで幅を上書きしていても守る ========== */
-body[data-active-app="app2"] #app2-sideNav{
-  width: var(--side-nav-w-pc) !important;
-}
+body[data-active-app="app2"] #app2-sideNav{ width: var(--side-nav-w-pc) !important; }
 body[data-active-app="app2"] #app2 table,
-body[data-active-app="app2"] #app2 .group{
-  max-width: 100% !important; overflow: visible;
-}
+body[data-active-app="app2"] #app2 .group{ max-width: 100% !important; overflow: visible; }
 
-/* 一括入力ツール行：幅いっぱいを使ってレイアウト */
+/* ========== 一括ツール行（統合版） ========== */
 .bulk-actions{
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr; /* 左 / 行数 / 中央 / 余白 / 右 */
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  position: relative;   /* 重なり対策の基準 */
-  z-index: 5;           /* テーブルより前面にしてクリック阻害を回避 */
+  display: grid; grid-template-columns: 1fr 1fr 1fr; /* 左 / 中央 / 右 */
+  align-items: center; gap: 12px; width: 100%;
+  position: relative; z-index: 5;  /* ボタン押下を優先 */
 }
-
-/* 一括入力ツール行：幅いっぱいを使ってレイアウト */
-.bulk-actions{
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr; /* 左 / 中央 / 右 */
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  position: relative;
-  z-index: 5; /* ボタン押下を優先 */
-}
-
-/* 3ボタンの配置（左・中央・右） */
 #bulkClear{ grid-column: 1; justify-self: start; }
 #bulkRegister{ grid-column: 2; justify-self: center; }  /* 中央 */
 #bulkImportFromHistory{ grid-column: 3; justify-self: end; }
 
-/* 行数ラベル（<label>…<select id="bulkRows">…）を右端に寄せる */
-#bulkRows {
-  position: absolute;
-  top: 0;
-  right: 0;              /* ← 左ではなく右端に固定 */
-  transform: translateY(-140%); /* 高さ調整（-120〜-150%で微調整） */
-  margin-right: 8px;     /* 端に貼りつかないよう余白 */
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: #12192b;
-  color: #00faff;
-  border: 1px solid #00a8e8;
-  box-shadow: 0 0 8px rgba(0,255,255,0.25);
+/* 行数セレクタを右上にフロート */
+#bulkRows{
+  position: absolute; top: 0; right: 0;
+  transform: translateY(-140%); margin-right: 8px;
+  padding: 4px 6px; border-radius: 6px;
+  background: #12192b; color: #00faff;
+  border: 1px solid #00a8e8; box-shadow: 0 0 8px rgba(0,255,255,0.25);
   cursor: pointer;
 }
-
-/* クリアボタンを赤に */
 #bulkClear{
   background: linear-gradient(90deg,#f73378 30%,#d80032 100%);
-  color:#fff;
-  border:1.5px solid #d80032;
-  box-shadow:0 0 12px rgba(255,0,98,.45);
+  color:#fff; border:1.5px solid #d80032; box-shadow:0 0 12px rgba(255,0,98,.45);
 }
-#bulkClear:hover{
-  background: linear-gradient(90deg,#ff3b6e 10%,#b00020 90%);
-  transform: translateY(-1px);
-}
+#bulkClear:hover{ background: linear-gradient(90deg,#ff3b6e 10%,#b00020 90%); transform: translateY(-1px); }
+@media (max-width:700px){ .bulk-actions{ gap:8px; } }
 
-/* モバイル微調整 */
-@media (max-width:700px){
-  .bulk-actions{ gap:8px; }
-  .bulk-actions > label:has(#bulkRows){
-    transform: translateY(-120%);
-  }
-}
-
-/* ==============================================================
-   APP2 一括入力フォーム（#bulkGrid）— サブナビの下で固定（完全版）
-   ============================================================= */
-
-/* transformの影響を完全に無効化 */
+/* ========== サブナビ直下固定（thead sticky） ========== */
 body[data-active-app="app2"] #app2,
 body[data-active-app="app2"] #app2.active,
-body[data-active-app="app2"] #app2.content {
-  transform: none !important;
-}
-
-/* bulk-grid-wrap の overflowを解除して sticky を有効化 */
-body[data-active-app="app2"].bulk-wide .bulk-grid-wrap {
-  overflow: visible !important;
-}
-
-/* ヘッダーをサブナビ直下で固定 */
-body[data-active-app="app2"].bulk-wide #bulkGrid thead {
+body[data-active-app="app2"] #app2.content{ transform: none !important; }
+body[data-active-app="app2"].bulk-wide .bulk-grid-wrap{ overflow: visible !important; }
+body[data-active-app="app2"].bulk-wide #bulkGrid thead{
   position: sticky !important;
-  top: calc(var(--tabs-h) + var(--subnav-h) + 2px) !important; /* ← +2px補正で潜らず下にピタッと */
-  z-index: 1890 !important; /* サブナビ(1900前後)より下、テーブルより上 */
-  background: #0f1625 !important;
+  top: calc(var(--tabs-h) + var(--subnav-h) + 2px) !important;
+  z-index: 1890 !important; background: #0f1625 !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.45);
 }
+body[data-active-app="app2"].bulk-wide #bulkGrid thead th{ position: static !important; background:#0f1625 !important; }
+body[data-active-app="app2"].bulk-wide #bulkGrid thead tr{ border-bottom: 1.5px solid rgba(0,255,255,0.25); }
+body[data-active-app="app2"].bulk-wide #bulkGrid{ position: relative !important; z-index: 100 !important; margin-top: 0 !important; }
 
-/* theadセルは通常配置 */
-body[data-active-app="app2"].bulk-wide #bulkGrid thead th {
-  position: static !important;
-  background: #0f1625 !important;     /* 透け防止 */
-}
-
-/* tbodyとの境界線 */
-body[data-active-app="app2"].bulk-wide #bulkGrid thead tr {
-  border-bottom: 1.5px solid rgba(0,255,255,0.25);
-}
-
-/* bulkGrid位置補正（親との境界影を綺麗に） */
-body[data-active-app="app2"].bulk-wide #bulkGrid {
-  position: relative !important;
-  z-index: 100 !important;
-  margin-top: 0 !important;
-}
-
-/* ===============================================================
-   一括入力グリッド：グループ仕切り線（最終版・指定位置に太線）
-   =============================================================== */
+/* ========== グループ仕切り線（右：太線） ========== */
 body[data-active-app="app2"] #bulkGrid th,
-body[data-active-app="app2"] #bulkGrid td{
-  border-right: 1px solid rgba(0,245,255,.18);
-}
+body[data-active-app="app2"] #bulkGrid td{ border-right: 1px solid rgba(0,245,255,.18); }
 
-/* ┃ 強調したい区切り（右側）→ 1 | 4 | 7 | 11 | 14 | 19 列の右に太線 */
+/* 右に太線 → 1 | 4 | 7 | 11 | 14 | 19 */
 body[data-active-app="app2"] #bulkGrid th:nth-child(1),
 body[data-active-app="app2"] #bulkGrid td:nth-child(1),
 body[data-active-app="app2"] #bulkGrid th:nth-child(4),
@@ -1938,8 +1864,6 @@ body[data-active-app="app2"] #bulkGrid td:nth-child(19){
   border-right: 2.4px solid #00f5ff !important;
   box-shadow: 1px 0 8px rgba(0,245,255,.7);
 }
-
-/* theadでも光が途切れないよう強めに */
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(1),
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(4),
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(7),
@@ -1949,33 +1873,50 @@ body[data-active-app="app2"] #bulkGrid thead th:nth-child(19){
   box-shadow: 1px 0 10px rgba(0,255,255,.8);
 }
 
-/* 以前つけた“左側”の強調をオフ（必要なら） */
-body[data-active-app="app2"] #bulkGrid th:nth-child(2),
-body[data-active-app="app2"] #bulkGrid td:nth-child(2),
-body[data-active-app="app2"] #bulkGrid th:nth-child(20),
-body[data-active-app="app2"] #bulkGrid td:nth-child(20){
-  border-left: none !important;
-  box-shadow: none !important;
+/* ========== 補助線（送迎/場内/HE/VIP の“左”に薄線） ========== */
+/* border-collapse の都合で「直前列の右線」で左線を表現 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(3),
+body[data-active-app="app2"] #bulkGrid td:nth-child(3),   /* 送迎(4)の左 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(6),
+body[data-active-app="app2"] #bulkGrid td:nth-child(6),   /* 場内(7)の左 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(10),
+body[data-active-app="app2"] #bulkGrid td:nth-child(10),  /* HE(11)の左 */
+body[data-active-app="app2"] #bulkGrid th:nth-child(13),
+body[data-active-app="app2"] #bulkGrid td:nth-child(13){  /* VIP(14)の左 */
+  border-right: 1px solid rgba(0,245,255,.35) !important;
+  box-shadow: 1px 0 4px rgba(0,245,255,.30);
 }
 
+/* ========== 行フォーカス：上下ライン強調（:focus-within） ========== */
+body[data-active-app="app2"] #bulkGrid tr:focus-within td{
+  border-top:    2.5px solid #00f5ff !important;
+  border-bottom: 2.5px solid #00f5ff !important;
+  box-shadow: inset 0 2px 10px rgba(0,245,255,.08),
+              inset 0 -2px 10px rgba(0,245,255,.08);
+  background: linear-gradient(180deg, rgba(0,245,255,.06), rgba(0,0,0,0)) !important;
+}
+body[data-active-app="app2"] #bulkGrid tr.btl-subrow:focus-within td{
+  border-top:    2.5px solid #00f5ff !important;
+  border-bottom: 2.5px solid #00f5ff !important;
+  box-shadow: inset 0 2px 10px rgba(0,245,255,.10),
+              inset 0 -2px 10px rgba(0,245,255,.10);
+}
 
-/*一括入力グリッドで入力のあるフォームのみ色を変えるCSS開始*/
-
-/* 入力ありのときだけ目立たせる（フォーム本体） */
+/* ========== 入力ありハイライト（JSで .is-filled / .cell-filled 付与） ========== */
 body[data-active-app="app2"] #bulkGrid input.is-filled,
 body[data-active-app="app2"] #bulkGrid select.is-filled,
-body[data-active-app="app2"] #bulkGrid textarea.is-filled {
+body[data-active-app="app2"] #bulkGrid textarea.is-filled{
   background: rgba(0,245,255,.12) !important;
   border-color: #00eaff !important;
   box-shadow: inset 0 0 10px #00eaff33 !important;
   color: #eaf6ff !important;
 }
-/* ついでにセル全体もほんのり */
-body[data-active-app="app2"] #bulkGrid td.cell-filled {
+body[data-active-app="app2"] #bulkGrid td.cell-filled{
   background: rgba(0,245,255,.06) !important;
 }
 
-/*一括入力グリッドで入力のあるフォームのみ色を変えるCSS終了*/
+
+
 
 
 
@@ -8192,78 +8133,156 @@ function updateRowCheckState(mainRow){
 //一括入力グリッドで入力のあるフォームのみ色を変えるJS終了
 //app2一括入力JS終了
 
+/* ============================================================
+   110万 Over ぷちゅん演出（target未定義対策・完全版）
+   - #totalAmount が出現するまで待機してから初期化
+   - 変数はローカルに閉じ込め、グローバル汚染を防止
+   ============================================================ */
 
-
-//110万Overでぷちゅん演出開始
+  window.CONGRATS_SFX_URL = './seven-flash.m4a?v=2';   // 同階層に保存
+  // 任意の予備（あれば）
+  // window.CONGRATS_SFX_FALLBACK = './seven-flash.mp3';
 
 (function(){
-  const THRESHOLD = 1100000;        // 閾値
-  const TARGET_ID = 'totalAmount';   // 監視対象
-  const IDLE_MS   = 1200;            // 入力が止まってから発火までの待機
-  const AUTO_CLOSE_MS = 4200;        // 自動クローズ
+  const THRESHOLD = 1100000,
+        TARGET_SEL = '#totalAmount',
+        IDLE_MS = 400,
+        AUTO_CLOSE_MS = 4200;
 
-  const target = document.getElementById(TARGET_ID);
-  if (!target) return;
+  /* ========= 設定（音源URL） ========= */
+  const SFX_URLS = [
+    window.CONGRATS_SFX_URL      || './seven-flash.m4a',
+    window.CONGRATS_SFX_FALLBACK || ''
+  ].filter(Boolean);
 
-  let fired = false;
-  let lastVal = 0;
-  let pendingTimer = null;
+  /* ========= オーディオ（WebAudio優先 / HTMLAudioフォールバック） ========= */
+  let interacted = false;
+  let audioCtx = null;     // WebAudio
+  let audioBuf = null;     // デコード済みバッファ
+  let htmlAudio = null;    // フォールバック
 
-  const parseAmount = (txt) => {
-    const n = parseInt((txt || '').toString().replace(/[^\d\-]/g,''),10);
-    return isNaN(n) ? 0 : n;
-  };
+  // 初回ユーザー操作で解錠 & WebAudio 準備
+  const userGestureGate = (() => {
+    let resolveOnce;
+    const p = new Promise(r => (resolveOnce = r));
 
-  // === スタイルをJS注入（CSS不要） ===
+    const unlock = async () => {
+      interacted = true;
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+      window.removeEventListener('touchstart', unlock, true);
+
+      try {
+        // WebAudio context
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+        // 事前デコード（先頭のURLで試行→失敗なら次）
+        for (const u of SFX_URLS) {
+          try {
+            const res = await fetch(cacheBust(u));
+            const buf = await res.arrayBuffer();
+            audioBuf = await audioCtx.decodeAudioData(buf);
+            console.info('[SFX] WebAudio decoded:', u);
+            break;
+          } catch (e) { /* 次の候補へ */ }
+        }
+      } catch (e) {
+        console.warn('[SFX] WebAudio init failed, fallback to <audio>', e?.message);
+      }
+
+      // 失敗していたら <audio> 準備
+      if (!audioBuf) {
+        htmlAudio = await prepareHtmlAudio(SFX_URLS);
+      }
+      resolveOnce();
+    };
+
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown',    unlock, true);
+    window.addEventListener('touchstart', unlock, true);
+    return () => p;
+  })();
+
+  const cacheBust = (u) => u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now();
+
+  async function prepareHtmlAudio(urls) {
+    for (const u of urls) {
+      try {
+        const el = new Audio();
+        el.preload = 'auto';
+        el.src = u;
+        await onceCanPlay(el, 3500);
+        el.id = 'congratsSfx';
+        el.style.display = 'none';
+        document.body.appendChild(el);
+        console.info('[SFX] HTMLAudio ready:', u);
+        return el;
+      } catch { /* 次の候補 */ }
+    }
+    console.warn('[SFX] no playable HTMLAudio source');
+    return null;
+  }
+
+  function onceCanPlay(el, timeout=3500){
+    return new Promise((res, rej) => {
+      const ok = () => { cleanup(); res(); };
+      const ng = () => { cleanup(); rej(new Error('load-failed')); };
+      const to = setTimeout(ng, timeout);
+      const cleanup = () => {
+        clearTimeout(to);
+        el.removeEventListener('canplaythrough', ok);
+        el.removeEventListener('canplay', ok);
+        el.removeEventListener('error', ng);
+      };
+      el.addEventListener('canplaythrough', ok, {once:true});
+      el.addEventListener('canplay', ok, {once:true});
+      el.addEventListener('error', ng, {once:true});
+      try { el.load(); } catch {}
+    });
+  }
+
+  // ★ T0で発音：overlayを見せる直前に呼ぶ
+  async function playSfxNow(){
+    // ユーザー操作待ち（ロック解除）
+    await userGestureGate();
+
+    try {
+      if (audioBuf && audioCtx) {
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuf;
+        src.connect(audioCtx.destination);
+        src.start(0); // ← ゼロ起動
+        return;
+      }
+      if (htmlAudio) {
+        htmlAudio.currentTime = 0;
+        await htmlAudio.play();
+        return;
+      }
+      // どちらも準備できてない場合の最後のあがき
+      htmlAudio = await prepareHtmlAudio(SFX_URLS);
+      await htmlAudio?.play();
+    } catch (e) {
+      console.warn('[SFX] play failed:', e?.message);
+    }
+  }
+
+  /* ========= スタイル（CRT消灯→滲み上がり） ========= */
   (function ensureStyle(){
     if (document.getElementById('crtCongratsStyle')) return;
-    const st = document.createElement('style');
-    st.id = 'crtCongratsStyle';
+    const st = document.createElement('style'); st.id='crtCongratsStyle';
     st.textContent = `
-#crtCongratsOverlay{
-  position:fixed; inset:0; z-index:999999; display:none;
-  align-items:center; justify-content:center; flex-direction:column;
-  background:#000; color:#fff; text-align:center;
-  font-family:'Orbitron',system-ui,ui-sans-serif,sans-serif;
-}
-#crtCongratsOverlay.show{ display:flex; }
-
-/* CRT消灯（白い水平線が点になって消える） */
-#crtCongratsOverlay .crt-line{
-  position:absolute; left:0; right:0; top:50%; height:2px; background:#fff;
-  box-shadow:0 0 20px #fff, 0 0 40px rgba(255,255,255,.6);
-  transform-origin:center center;
-  animation: tubeOff 900ms ease-in forwards;
-}
-@keyframes tubeOff{
-  0%   { transform: scaleY(1) scaleX(1);   opacity:1; }
-  60%  { transform: scaleY(.06) scaleX(1); opacity:1; }  /* 横一本線 */
-  100% { transform: scaleY(.06) scaleX(0); opacity:0; }  /* 点で消灯 */
-}
-
-/* 滲み上がるテキスト（ブラー→クリア） */
-#crtCongratsOverlay .msg{
-  position:relative; z-index:2; opacity:0; filter: blur(12px);
-  transform: translateY(8px);
-  animation: msgGlowIn 900ms cubic-bezier(.2,.65,.2,1) 950ms forwards;
-}
-#crtCongratsOverlay .msg .title{
-  font-size: clamp(28px, 6vw, 56px); letter-spacing:.06em; margin-bottom:.25em;
-  color:#bfffe9; text-shadow: 0 0 18px rgba(0,245,255,.35), 0 0 36px rgba(0,245,255,.2);
-}
-#crtCongratsOverlay .msg .sub{
-  font-size: clamp(16px, 3.5vw, 28px); letter-spacing:.04em; color:#eaffff;
-  text-shadow: 0 0 12px rgba(0,245,255,.25), 0 0 26px rgba(0,245,255,.18);
-}
-@keyframes msgGlowIn{
-  0%   { opacity:0; filter:blur(12px); transform:translateY(8px); }
-  60%  { opacity:1; filter:blur(5px);  transform:translateY(2px); }
-  100% { opacity:1; filter:blur(0);    transform:translateY(0); }
-}
-
-/* 閉じる時のフェード */
-#crtCongratsOverlay.hide{ animation: ovFade .3s ease-out forwards; }
-@keyframes ovFade{ to { opacity:0; } }
+#crtCongratsOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;flex-direction:column;background:#000;color:#fff;text-align:center;font-family:'Orbitron',system-ui,ui-sans-serif,sans-serif;}
+#crtCongratsOverlay.show{display:flex;}
+#crtCongratsOverlay .crt-line{position:absolute;left:0;right:0;top:50%;height:2px;background:#fff;box-shadow:0 0 20px #fff,0 0 40px rgba(255,255,255,.6);transform-origin:center center;animation:tubeOff .9s ease-in forwards;}
+@keyframes tubeOff{0%{transform:scaleY(1) scaleX(1);opacity:1}60%{transform:scaleY(.06) scaleX(1);opacity:1}100%{transform:scaleY(.06) scaleX(0);opacity:0}}
+#crtCongratsOverlay .msg{position:relative;z-index:2;opacity:0;filter:blur(12px);transform:translateY(8px);animation:msgGlowIn .9s cubic-bezier(.2,.65,.2,1) .95s forwards;}
+#crtCongratsOverlay .msg .title{font-size:clamp(28px,6vw,56px);letter-spacing:.06em;margin-bottom:.25em;color:#bfffe9;text-shadow:0 0 18px rgba(0,245,255,.35),0 0 36px rgba(0,245,255,.2);}
+#crtCongratsOverlay .msg .sub{font-size:clamp(16px,3.5vw,28px);letter-spacing:.04em;color:#eaffff;text-shadow:0 0 12px rgba(0,245,255,.25),0 0 26px rgba(0,245,255,.18);}
+@keyframes msgGlowIn{0%{opacity:0;filter:blur(12px);transform:translateY(8px)}60%{opacity:1;filter:blur(5px);transform:translateY(2px)}100%{opacity:1;filter:blur(0);transform:translateY(0)}}
+#crtCongratsOverlay.hide{animation:ovFade .3s ease-out forwards;}
+@keyframes ovFade{to{opacity:0}}
 `;
     document.head.appendChild(st);
   })();
@@ -8275,83 +8294,83 @@ function updateRowCheckState(mainRow){
     ov.id = 'crtCongratsOverlay';
     ov.innerHTML = `
       <div class="crt-line"></div>
-      <div class="msg">
-        <div class="title">Congratulations</div>
-        <div class="sub">1,100,000 yen Over</div>
-      </div>`;
-    ov.addEventListener('click', () => {
-      ov.classList.add('hide');
-      setTimeout(()=> ov.remove(), 320);
-    });
+      <div class="msg"><div class="title">Congratulations</div><div class="sub">1,100,000 yen Over</div></div>`;
+    ov.addEventListener('click', ()=>{ ov.classList.add('hide'); setTimeout(()=>ov.remove(),320); });
     document.body.appendChild(ov);
     return ov;
   }
 
-  function showOverlay(){
-    if (fired) return;
-    fired = true;
+  // ★ 音→overlay表示（同時スタート）
+  async function showOverlayT0(){
     const ov = ensureOverlay();
+    // 1) 先に音を鳴らす（ゼロ起動）
+    playSfxNow();
+    // 2) 見せる（CSSアニメ発火）
     ov.classList.remove('hide');
     ov.classList.add('show');
-    setTimeout(() => {
-      if (!ov.isConnected) return;
-      ov.classList.add('hide');
-      setTimeout(()=> ov.remove(), 320);
-    }, AUTO_CLOSE_MS);
+    // 3) 自動クローズ
+    setTimeout(()=>{ if(!ov.isConnected) return; ov.classList.add('hide'); setTimeout(()=>ov.remove(),320); }, AUTO_CLOSE_MS);
   }
 
-  // --- 入力が続いている間は発火を遅延（デバウンス） ---
-  function scheduleFire(){
-    if (fired) return;
-    if (pendingTimer) clearTimeout(pendingTimer);
+  /* ========= #totalAmount 監視（超えた“瞬間”＋入力アイドル待ち） ========= */
+  const parseAmount = (txt) => {
+    const n = parseInt((txt||'').toString().replace(/[^\d\-]/g,''),10);
+    return Number.isNaN(n) ? 0 : n;
+  };
 
-    // 入力中（フォーカスが input/textarea/select）なら落ち着くまで待つ
+  function initWith(amtEl){
+    let fired=false, lastVal=parseAmount(amtEl.textContent), timer=null;
+
     const isEditing = () => {
       const ae = document.activeElement;
       return ae && (/^(INPUT|TEXTAREA|SELECT)$/i.test(ae.tagName) || ae.isContentEditable);
     };
 
-    const resetIfTyping = () => {
-      // 直近の入力があればカウントをリセット
-      if (pendingTimer) {
-        clearTimeout(pendingTimer);
-        pendingTimer = setTimeout(tryFire, IDLE_MS);
-      }
-    };
-
+    const reset = () => { if(timer){ clearTimeout(timer); timer=setTimeout(tryFire, IDLE_MS); } };
     function tryFire(){
-      // 直前の編集中はさらに待つ
-      if (isEditing()) {
-        pendingTimer = setTimeout(tryFire, 250);
-        return;
-      }
-      showOverlay();
-      // 監視解除（以降は発火しない）
-      document.removeEventListener('input', resetIfTyping, true);
-      document.removeEventListener('keydown', resetIfTyping, true);
+      if (isEditing()){ timer = setTimeout(tryFire, 200); return; }
+      document.removeEventListener('input',  reset, true);
+      document.removeEventListener('keydown', reset, true);
+      fired = true;
+      showOverlayT0();   // ← ここで音とアニメ同時
+    }
+    function schedule(){
+      if (fired) return;
+      if (timer) clearTimeout(timer);
+      document.addEventListener('input',  reset, true);
+      document.addEventListener('keydown', reset, true);
+      timer = setTimeout(tryFire, IDLE_MS);
     }
 
-    // ページ全体の入力イベントで延期
-    document.addEventListener('input', resetIfTyping, true);
-    document.addEventListener('keydown', resetIfTyping, true);
+    const mo = new MutationObserver(() => {
+      const v = parseAmount(amtEl.textContent);
+      if (!fired && v > THRESHOLD && lastVal <= THRESHOLD) schedule();
+      lastVal = v;
+    });
+    mo.observe(amtEl, {childList:true, characterData:true, subtree:true});
 
-    pendingTimer = setTimeout(tryFire, IDLE_MS);
+    if (lastVal > THRESHOLD) setTimeout(schedule, 200);
   }
 
-  // --- #totalAmount を監視して閾値超えを検知（超えた“瞬間”のみ） ---
-  lastVal = parseAmount(target.textContent);
-  const mo = new MutationObserver(() => {
-    const v = parseAmount(target.textContent);
-    if (!fired && v > THRESHOLD && lastVal <= THRESHOLD) {
-      scheduleFire(); // すぐ出さず、入力が止まってから発火
-    }
-    lastVal = v;
-  });
-  mo.observe(target, { childList:true, characterData:true, subtree:true });
+  function waitForAmountEl(){
+    const el = document.querySelector(TARGET_SEL);
+    if (el){ initWith(el); return; }
+    const mo = new MutationObserver(()=>{
+      const x = document.querySelector(TARGET_SEL);
+      if (x){ mo.disconnect(); initWith(x); }
+    });
+    mo.observe(document.documentElement||document.body, {childList:true, subtree:true});
+    setTimeout(()=>mo.disconnect(), 10000);
+  }
 
-  // 初期表示時点で超えていたら少し遅らせて発火準備
-  if (lastVal > THRESHOLD) setTimeout(scheduleFire, 200);
+  // 起動
+  waitForAmountEl();
+
+  // デバッグ：手動同時発火（コンソールで）
+  window.__congratsTest = () => showOverlayT0();
 })();
+</script>
+
 
 //110万Overでぷちゅん演出終了
 
