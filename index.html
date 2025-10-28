@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.5.3</title>
+<title>IBASD  Ver. 7.5.4</title>
 <style>
 
   html, body {
@@ -2811,7 +2811,7 @@ function addRow() {
   renumberRows();
 }
 
-
+/*app1 Enterで次のフォーム移動ロジック開始*/
 
 // Enter → 次フィールド（現在アクティブなAPP内で、表示要素のみ）
 document.addEventListener('keydown', function (e) {
@@ -2843,6 +2843,8 @@ document.addEventListener('keydown', function (e) {
     if (typeof next.select === 'function') next.select();
   }
 });
+
+/*app1 Enterで次のフォーム移動ロジック終了*/
 
 
 function updateRowColor(select) {
@@ -6069,50 +6071,7 @@ document.addEventListener('DOMContentLoaded', () => {
   startApp2Realtime();    // 以後はリアルタイム反映
 });
 
-/* 入力済みHTMLとして保存 v2.1
-   - 値を属性に焼き込み（value/checked/selected）
-   - タブをアンカー式に変換（:target）
-   - JSなし・編集不可
-   - createElementは常に document.createElement を使用
-*/
-/* 入力済みHTMLとして保存 v2.2（JS不要で切替、値を焼き込み、編集不可）
-   - createElement は常に document.createElement を使用
-   - onclick から呼べるように window に公開
-*/
-/* 入力済みHTMLとして保存 v2.3
-   - id/nameマッチで“正しい相手”に値を焼き込み（index依存をやめる）
-   - input/textarea/select/checkbox/radio に加え、span/div/output/contenteditable も固定
-   - タブは<a href="#appX">+ :target でJS不要切替
-   - 生成物は編集不可（disabled/readonly）＋全script削除
-*/
-/* 入力済みHTMLとして保存 v2.4
-   - 値を属性へ“焼き込み”（value / checked / selected）
-   - span/div/output など表示用ノードも固定
-   - contenteditable も中身を固定して非編集化
-   - タブは <a href="#appX"> + :target で JS不要切替
-   - 生成物は編集不可（全フォーム無効化）＋全 <script> 削除
-   - createElement は必ず document.createElement を使用
-*/
-/* 入力済みHTMLとして保存 v2.5
-   - 現在値を属性へ焼き込み（value/checked/selected）
-   - span/div/output/contenteditable も固定
-   - タブ(.tabs .tab)は <a href="#appX"> に置換して :target で切替
-   - 保存物は編集不可（disabled/readonly）＋ <script> 全削除
-   - createElement は document.createElement、id参照は querySelector で統一
-*/
-/* 入力済みHTMLとして保存 v2.6（安定版）
-   - input/textarea/select の現在値だけ“焼き込み”（value/checked/selected）
-   - span/div/output 等のテキスト焼き込みは一旦やめて安全側へ
-   - 3つのAPP(#app1,#app2,#app3)は強制 display:block にして全て見えるようにする
-   - 保存物は編集不可（disabled/readonly）＋ <script> 全削除
-   - タブ切替のCSSは追加しない（見えなくなる事故防止）
-*/
-/* 入力済みHTMLとして保存 v2.7
-   - 値を焼き込み（value/checked/selected）
-   - タブ<div.tab data-target="appX">→ <a class="tab" href="#appX"> に変換
-   - :target で .content を切替（JS不要）。ハッシュ無し時は #app1 を表示
-   - 既存JSは削除、保存物は編集不可
-*/
+
 /* 入力済みHTMLとして保存 v2.9
    - 値焼き込み（id/name優先＋APP1は行×クラス、カテゴリ表チェックは出現順）
    - タブ <div.tab data-target="appX"> → <a class="tab" href="#appX">
@@ -7373,22 +7332,45 @@ document.addEventListener('change', e => {
   }
 });
 
-// Enterで“真下(同じ列)”に、Shift+Enterで“真上(同じ列)”に移動
+// Enterで“真下(同じ列)”、Shift+Enterで“真上(同じ列)”へ移動。
+// 直下がボトル用の空白行（btl-subrow など）や、対象セルが空/無効/非表示のときはスキップしてさらに進む。
 document.addEventListener('keydown', function (e) {
-  // IME変換中はスルー
   if (e.key !== 'Enter' || e.isComposing) return;
 
   const el = e.target;
   if (!(el instanceof HTMLElement)) return;
-  if (el.tagName !== 'INPUT' && el.tagName !== 'SELECT' && el.tagName !== 'TEXTAREA') return;
+  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
 
-  // 対象テーブル限定
   const grid = document.getElementById('bulkGrid');
   if (!grid || !grid.contains(el)) return;
 
   e.preventDefault();
 
-  // 現在の行・列インデックスを取得（行内の input/select/textarea の並び順を列とみなす）
+  // === ユーティリティ =========================================
+  const isInvisible = (node) => node.offsetParent === null; // display:none 等
+  const isEmpty = (node) => {
+    if (!node) return true;
+    const t = node.tagName;
+    if (t === 'SELECT') return (node.value ?? '') === '';
+    if (t === 'INPUT' || t === 'TEXTAREA') return (node.value ?? '') === '';
+    return true;
+  };
+  const isDisabledLike = (node) => node.disabled || node.readOnly || isInvisible(node);
+
+  // 行全体が“実質空白”か？（ボトル用空白行を丸ごと飛ばす用）
+  const isRowEffectivelyEmpty = (tr) => {
+    // 入力系を全部見て、どれも編集可能かつ値ありのものが無ければ空白
+    const inputs = tr.querySelectorAll('input, select, textarea');
+    if (!inputs.length) return true;
+    for (const n of inputs) {
+      if (!isDisabledLike(n) && !isEmpty(n)) return false;
+    }
+    return true;
+  };
+
+  // ============================================================
+
+  // 現在位置（行・列インデックス）
   const currentRow = el.closest('tr');
   if (!currentRow) return;
 
@@ -7396,45 +7378,47 @@ document.addEventListener('keydown', function (e) {
   const colIdx = rowInputs.indexOf(el);
   if (colIdx === -1) return;
 
-  // 次に見る方向
-  const dir = e.shiftKey ? -1 : 1;
-
-  // tbody 内のすべての行（上から順）
+  const dir = e.shiftKey ? -1 : 1; // 下=+1 / 上=-1
   const allRows = Array.from(grid.querySelectorAll('tbody tr'));
-
-  // 現在行のインデックス
   let r = allRows.indexOf(currentRow);
 
-  // 1行ずつ上下に探索して、同じ“列インデックス”に要素がある行を探す
+  // 同じ“列”で、有効かつ（可能なら）値入りのセルへフォーカス。
   while (true) {
     r += dir;
-    if (r < 0 || r >= allRows.length) break; // 端まで来た
+    if (r < 0 || r >= allRows.length) break;
 
-    const candidateRow = allRows[r];
-    const candInputs = Array.from(candidateRow.querySelectorAll('input, select, textarea'));
+    const tr = allRows[r];
 
-    // その行に十分な数の入力があり、同じ列位置の要素が存在すればそこへ
-    if (colIdx < candInputs.length) {
-      const target = candInputs[colIdx];
-      if (target) {
-        target.focus();
-        target.select?.();
-        return;
-      }
+    // ボトル用の空白サブ行（例: class="btl-subrow"）や、入力が全て空なら行ごとスキップ
+    if (tr.classList.contains('btl-subrow') || isRowEffectivelyEmpty(tr)) {
+      continue;
     }
 
-    // 同じ列が無い（例：サブ行は左側の列に入力無しなど）→さらに次の行を探す
+    const candInputs = Array.from(tr.querySelectorAll('input, select, textarea'));
+
+    // 同じ列位置の要素がなければ次の行へ
+    if (colIdx >= candInputs.length) continue;
+
+    const target = candInputs[colIdx];
+
+    // 対象セルが無効/非表示なら次の行へ
+    if (isDisabledLike(target)) continue;
+
+    // 対象セルが“空”ならその行はスキップ（= さらに下へ）
+    if (isEmpty(target)) continue;
+
+    // 条件を満たしたら移動
+    target.focus();
+    target.select?.();
+    return;
   }
 
-  // 見つからなかったときのフォールバック：
-  // 通常の「次の行の先頭」または「前の行の先頭」に移動
-  const fallbackRow = allRows[r - dir] || currentRow;
+  // 何も見つからなければ、近い方の行の先頭へフォールバック
+  const fallbackRow = allRows[Math.max(0, Math.min(allRows.length - 1, r - dir))] || currentRow;
   const first = fallbackRow.querySelector('input, select, textarea');
-  if (first) {
-    first.focus();
-    first.select?.();
-  }
+  if (first) { first.focus(); first.select?.(); }
 });
+
 
 
 // === スマホ表示：氏名・体/貸・送迎 だけ表示（一本化） ==================
@@ -8371,8 +8355,7 @@ function updateRowCheckState(mainRow){
 })();
 </script>
 
-
-//110万Overでぷちゅん演出終了
+  //110万Overでぷちゅん演出終了
 
 </script>
 
