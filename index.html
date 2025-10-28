@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.3.2</title>
+<title>IBASD  Ver. 7.4.2</title>
 <style>
 
   html, body {
@@ -1976,6 +1976,8 @@ body[data-active-app="app2"] #bulkGrid td.cell-filled {
 }
 
 /*一括入力グリッドで入力のあるフォームのみ色を変えるCSS終了*/
+
+
 
 </style>
 
@@ -7543,160 +7545,268 @@ document.addEventListener('keydown', function (e) {
   window.addEventListener('resize', applyApp2MobileView);
 })();
 
+
 // =====================================================
 // 履歴 → 一括入力へ一括復元（ボトル含む）
+//  - くるくるオーバーレイ＋進捗%/件数バッジ付き
 // =====================================================
 document.addEventListener('click', async (e) => {
   if (!e.target || e.target.id !== 'bulkImportFromHistory') return;
 
-  // ★ 復元中フラグON（合成change対策）
-  window.BULK_RESTORING = true;
+  // ---------- 1) 表示部品の用意：中央HUD & 小バッジ ----------
+  const ensureHUD = () => {
+    let hud = document.getElementById('bulkHUD');
+    if (!hud) {
+      hud = document.createElement('div');
+      hud.id = 'bulkHUD';
+      hud.innerHTML = `
+        <div class="bulkHUD-inner">
+          <div class="bulkHUD-spinner"></div>
+          <div class="bulkHUD-title">復元中...</div>
+          <div class="bulkHUD-count" id="bulkHUDCount">0/0（0%）</div>
+          <div class="bulkHUD-bar">
+            <div class="bulkHUD-bar-fill" id="bulkHUDBar"></div>
+          </div>
+        </div>`;
+      document.body.appendChild(hud);
 
-  // ===== 設定 =====
-  // 古い→新しいの順で行1から詰めたい: true（1,2,3...）
-  // 新しい→古いの順で行1から詰めたい: false（5,4,3...）
-  const FILL_OLD_TO_NEW = true;
-  const RESTORE_WAIT_MS = 700; // 復元→フォーム反映の待機
+      // HUDのスタイルをインラインで注入（CSS未読でも出る）
+      const s = document.createElement('style');
+      s.textContent = `
+#bulkHUD{
+  position:fixed; inset:0; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,.60); z-index:999999;
+}
+#bulkHUD.show{ display:flex; animation:bulkHUDfade .15s ease-out; }
+@keyframes bulkHUDfade{ from{opacity:0} to{opacity:1} }
 
-  // 通常フォーム → グリッドへ流し込む数値系ID
-  const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help',
-                     'set40','set20','vip','a','b','c','d','e'];
+#bulkHUD .bulkHUD-inner{
+  min-width: min(640px, 86vw);
+  max-width: 90vw;
+  padding: 28px 26px 24px;
+  border-radius: 16px;
+  background: linear-gradient(180deg,#0b1a2a,#132a3f 60%,#0d1830);
+  box-shadow: 0 10px 36px rgba(0,0,0,.45), 0 0 30px rgba(0,245,255,.20) inset;
+  border: 1.5px solid rgba(0,245,255,.35);
+  color: #d7faff;
+  text-align: center;
+  font-family: 'Orbitron',system-ui,sans-serif;
+}
 
-  // ===== ユーティリティ =====
-  const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
-  const setVal = (el, v, kind='input') => { if(!el) return; el.value = v ?? ''; el.dispatchEvent(new Event(kind,{bubbles:true})); };
+#bulkHUD .bulkHUD-title{
+  font-size: clamp(18px, 2.2vw, 22px);
+  letter-spacing:.08em;
+  color:#9ee9ff; margin-top:8px; margin-bottom:6px;
+  text-shadow: 0 0 10px rgba(0,245,255,.35);
+}
 
-  // 指定行にぶら下がる既存サブ行（.btl-subrow）を全削除
-  const clearSubrows = (mainRow) => {
-    while (mainRow.nextElementSibling && mainRow.nextElementSibling.classList.contains('btl-subrow')) {
-      mainRow.nextElementSibling.remove();
+#bulkHUD .bulkHUD-count{
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight:700; letter-spacing:.04em;
+  margin-bottom: 14px; color:#fff;
+}
+
+#bulkHUD .bulkHUD-bar{
+  width: 100%; height: 18px; border-radius: 999px;
+  background: rgba(0,245,255,.15);
+  border: 1px solid rgba(0,245,255,.35);
+  box-shadow: inset 0 0 10px rgba(0,245,255,.28);
+  overflow: hidden;
+}
+#bulkHUD .bulkHUD-bar-fill{
+  width:0%; height:100%;
+  background: linear-gradient(90deg,#00f5ff,#62ffd0 70%);
+  box-shadow: 0 0 18px rgba(0,245,255,.65);
+  transition: width .12s ease;
+}
+
+#bulkHUD .bulkHUD-spinner{
+  margin: 4px auto 10px;
+  width: clamp(56px, 8vw, 72px); height: clamp(56px, 8vw, 72px);
+  border: 4px solid rgba(0,245,255,.22);
+  border-top-color:#00f5ff; border-radius:50%;
+  animation: bulkSpin 1s linear infinite;
+}
+@keyframes bulkSpin { to { transform: rotate(360deg); } }
+
+#bulkHUD.done .bulkHUD-title{ color:#b6ffd8; }
+#bulkHUD.done .bulkHUD-count{ color:#b6ffd8; text-shadow:0 0 8px rgba(0,255,160,.35); }
+#bulkHUD.done .bulkHUD-bar-fill{
+  background: linear-gradient(90deg,#20ffb8,#c7ffd7);
+  box-shadow: 0 0 18px rgba(32,255,184,.65);
+}
+      `;
+      document.head.appendChild(s);
     }
+    return hud;
   };
 
-  // ✅ ヘッダー列数から動的にパディングを計算して“正しい位置”にサブ行を追加
-  const addAndGetSubrow = (mainRow) => {
-    const grid = document.getElementById('bulkGrid');
-    const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0; // 総列数
-    const pads = Math.max(0, cols - 4);                       // 末尾4列（品名/割/数量/金額）以外の数
-
-    const tr = document.createElement('tr');
-    tr.className = 'btl-subrow';
-
-    // パディング列を動的に生成
-    for (let i = 0; i < pads; i++) {
-      const td = document.createElement('td');
-      td.className = 'btl-pad';
-      tr.appendChild(td);
+  const ensureBadge = (btn) => {
+    let badge = document.getElementById('bulkRestoreProgress');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'bulkRestoreProgress';
+      Object.assign(badge.style, {
+        marginLeft:'8px', padding:'2px 8px', borderRadius:'999px',
+        fontSize:'12px', background:'rgba(0,245,255,.15)',
+        border:'1px solid rgba(0,245,255,.45)',
+        boxShadow:'0 0 8px rgba(0,245,255,.35) inset', color:'#cfefff'
+      });
+      btn.insertAdjacentElement('afterend', badge);
     }
-
-    // 末尾4列
-    const tdDetail = document.createElement('td');
-    tdDetail.className = 'btl-detail';
-    tdDetail.innerHTML = `
-      <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
-      <input class="bottleFreeText" type="text" style="display:none;">
-    `;
-    const tdSplit  = document.createElement('td'); tdSplit.innerHTML  = `<input class="splitCount" inputmode="numeric">`;
-    const tdQty    = document.createElement('td'); tdQty.innerHTML    = `<input class="bottleQuantity" inputmode="numeric">`;
-    const tdAmount = document.createElement('td'); tdAmount.innerHTML = `<input class="bottleAmount" inputmode="numeric">`;
-
-    tr.appendChild(tdDetail);
-    tr.appendChild(tdSplit);
-    tr.appendChild(tdQty);
-    tr.appendChild(tdAmount);
-
-    // mainRow直後（既存サブ行があれば最後尾）へ差し込み
-    let anchor = mainRow;
-    while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
-      anchor = anchor.nextElementSibling;
-    }
-    anchor.insertAdjacentElement('afterend', tr);
-
-    return tr;
+    return badge;
   };
 
-  // ===== 1) 履歴ノード取得 =====
-  let items = document.querySelectorAll('#app2-historySection .history-item');
-  if (!items.length) {
-    const list = document.getElementById('historyList');
-    if (list) items = list.querySelectorAll('li');
-  }
-  items = Array.from(items);
-  if (!items.length) return alert('復元できる履歴がありません。');
+  const hud   = ensureHUD();
+  const badge = ensureBadge(e.target);
 
-  if (FILL_OLD_TO_NEW) items.reverse();
+  // HUD表示（描画機会を与えてから重処理へ）
+  hud.classList.remove('done'); hud.classList.add('show');
+  hud.style.display = 'flex';
+  await new Promise(r => setTimeout(r, 50)); // ← 描画確定のためのワンショット
 
-  // ===== 2) 行数を合わせる =====
-  const need = items.length;
-  const rowsSel = document.getElementById('bulkRows');
-  if (rowsSel) rowsSel.value = String(Math.max(need, parseInt(rowsSel.value||'0',10)||0));
-  if (typeof buildGrid === 'function') buildGrid(need);
+  try {
+    window.BULK_RESTORING = true;
 
-  const tbody = document.querySelector('#bulkGrid tbody');
-  if (!tbody) return alert('一括入力テーブルが見つかりません。');
+    // ===== 設定 =====
+    const FILL_OLD_TO_NEW = true;
+    const RESTORE_WAIT_MS = 700;
 
-  // ===== 3) 履歴→フォーム復元→一括グリッドへ流し込み =====
-  let rowIndex = 0;
-  for (const it of items) {
-    const row = tbody.querySelectorAll('tr.bulk-mainrow')[rowIndex];
-    if (!row) break;
+    // ===== ユーティリティ =====
+    const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+    const setVal = (el, v, kind='input') => { if(!el) return; el.value = v ?? ''; el.dispatchEvent(new Event(kind,{bubbles:true})); };
+    const clearSubrows = (mainRow) => {
+      while (mainRow.nextElementSibling && mainRow.nextElementSibling.classList.contains('btl-subrow')) {
+        mainRow.nextElementSibling.remove();
+      }
+    };
+    const addAndGetSubrow = (mainRow) => {
+      const grid = document.getElementById('bulkGrid');
+      const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
+      const pads = Math.max(0, cols - 4);
+      const tr = document.createElement('tr');
+      tr.className = 'btl-subrow';
+      for (let i=0;i<pads;i++){ const td=document.createElement('td'); td.className='btl-pad'; tr.appendChild(td); }
+      tr.insertAdjacentHTML('beforeend', `
+        <td class="btl-detail">
+          <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
+          <input class="bottleFreeText" type="text" style="display:none;">
+        </td>
+        <td><input class="splitCount"    inputmode="numeric"></td>
+        <td><input class="bottleQuantity" inputmode="numeric"></td>
+        <td><input class="bottleAmount"   inputmode="numeric"></td>
+      `);
+      let anchor = mainRow;
+      while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
+        anchor = anchor.nextElementSibling;
+      }
+      anchor.insertAdjacentElement('afterend', tr);
+      return tr;
+    };
 
-    const restoreBtn = Array.from(it.querySelectorAll('button')).find(b => b.textContent.includes('復元'));
-    if (!restoreBtn) { rowIndex++; continue; }
+    // ===== 1) 履歴ノード =====
+    let items = document.querySelectorAll('#app2-historySection .history-item');
+    if (!items.length) {
+      const list = document.getElementById('historyList');
+      if (list) items = list.querySelectorAll('li');
+    }
+    items = Array.from(items);
+    if (!items.length) throw new Error('復元できる履歴がありません。');
+    if (FILL_OLD_TO_NEW) items.reverse();
 
-    restoreBtn.click();
-    await sleep(RESTORE_WAIT_MS); // 復元反映待ち
+    const total = items.length; let done = 0;
+    const hudCount = document.getElementById('bulkHUDCount');
+    const hudBar   = document.getElementById('bulkHUDBar');
+    const updateProgress = () => {
+      const pct = total ? Math.floor((done/total)*100) : 0;
+      const label = `復元中...｜${done}/${total}（${pct}%）`;
+      if (hudCount) hudCount.textContent = `${done}/${total}（${pct}%）`;
+      if (hudBar)   hudBar.style.width = pct + '%';
+      if (badge)    badge.textContent  = label;
+    };
+    updateProgress();
 
-    // （A）通常フィールド
-    setVal(row.querySelector('.bulk-name'), document.getElementById('castName')?.value, 'input');
+    // ===== 2) 行数合わせ =====
+    const need = items.length;
+    const rowsSel = document.getElementById('bulkRows');
+    if (rowsSel) rowsSel.value = String(Math.max(need, parseInt(rowsSel.value||'0',10)||0));
+    if (typeof buildGrid === 'function') buildGrid(need);
+    const tbody = document.querySelector('#bulkGrid tbody');
+    if (!tbody) throw new Error('一括入力テーブルが見つかりません。');
 
-    const exp = row.querySelector('.bulk-exp');
-    if (exp) { exp.checked = !!document.getElementById('experienceAndRental')?.checked; exp.dispatchEvent(new Event('change', {bubbles:true})); }
+    // ===== 3) 復元ループ =====
+    const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
+    let rowIndex = 0;
+    for (const it of items) {
+      const row = tbody.querySelectorAll('tr.bulk-mainrow')[rowIndex];
+      if (!row) break;
 
-    setVal(row.querySelector('.bulk-send'), document.getElementById('sendoffAmount')?.value, 'input');
+      const restoreBtn = Array.from(it.querySelectorAll('button')).find(b => b.textContent.includes('復元'));
+      if (!restoreBtn) { rowIndex++; continue; }
 
-    QUANT_IDS.forEach(id => {
-      const v = document.getElementById(id)?.value || '';
-      const input = row.querySelector(`[data-k="${id}"]`);
-      if (input) setVal(input, v, 'input');
-    });
+      restoreBtn.click();
+      await sleep(RESTORE_WAIT_MS);
 
-    // （B）ボトル：既存サブ行クリア → 1本ずつ追加して値セット
-    clearSubrows(row);
+      setVal(row.querySelector('.bulk-name'), document.getElementById('castName')?.value, 'input');
+      const exp = row.querySelector('.bulk-exp');
+      if (exp) { exp.checked = !!document.getElementById('experienceAndRental')?.checked; exp.dispatchEvent(new Event('change', {bubbles:true})); }
+      setVal(row.querySelector('.bulk-send'), document.getElementById('sendoffAmount')?.value, 'input');
+      QUANT_IDS.forEach(id => { const v = document.getElementById(id)?.value || ''; const input = row.querySelector(`[data-k="${id}"]`); if (input) setVal(input, v, 'input'); });
 
-    const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
-    for (const f of forms) {
-      const d = f.querySelector('.bottleDetails')?.value || '';
-      const s = f.querySelector('.splitCount')?.value  || '';
-      const q = f.querySelector('.bottleQuantity')?.value || '';
-      const a = f.querySelector('.bottleAmount')?.value || '';
-      if (!d && !s && !q && !a) continue;
+      clearSubrows(row);
+      const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
+      for (const f of forms) {
+        const d = f.querySelector('.bottleDetails')?.value || '';
+        const s = f.querySelector('.splitCount')?.value  || '';
+        const q = f.querySelector('.bottleQuantity')?.value || '';
+        const a = f.querySelector('.bottleAmount')?.value || '';
+        if (!d && !s && !q && !a) continue;
+        const sub = addAndGetSubrow(row); if (!sub) continue;
+        const sel = sub.querySelector('.bottleDetails'); if (sel) sel.value = d;
+        setVal(sub.querySelector('.splitCount'), s, 'input');
+        setVal(sub.querySelector('.bottleQuantity'), q, 'input');
+        setVal(sub.querySelector('.bottleAmount'), a, 'input');
+        if (typeof updateBottleAmountForRow === 'function') updateBottleAmountForRow(sub);
+      }
 
-      const sub = addAndGetSubrow(row);
-      if (!sub) continue;
-
-      const sel = sub.querySelector('.bottleDetails');
-      // ★ change を投げない。値だけ入れる（上書き防止）
-      if (sel) sel.value = d;
-      setVal(sub.querySelector('.splitCount'),    s, 'input');
-      setVal(sub.querySelector('.bottleQuantity'), q, 'input');
-      setVal(sub.querySelector('.bottleAmount'),   a, 'input');
-
-      if (typeof updateBottleAmountForRow === 'function') updateBottleAmountForRow(sub);
+      rowIndex++; done++;
+      updateProgress();
+      await new Promise(r => requestAnimationFrame(r)); // ← 描画更新を保証
     }
 
-    rowIndex++;
+    // 仕上げ
+    document.querySelectorAll('#bulkGrid input')
+      .forEach(el => el.dispatchEvent(new Event('input', { bubbles:true })));
+
+    // 完了演出
+    hud.classList.add('done');
+    if (hudCount) hudCount.textContent = `${done}/${total}（100%）`;
+    if (badge) {
+      badge.textContent = `復元完了｜${done}/${total}（100%）`;
+      badge.style.background = 'rgba(0,255,160,.18)';
+      badge.style.borderColor = 'rgba(0,255,160,.5)';
+      badge.style.boxShadow = '0 0 10px rgba(0,255,160,.35) inset';
+      setTimeout(()=>badge.remove(), 2500);
+    }
+  } catch (err) {
+    console.error(err);
+    if (badge) {
+      badge.textContent = '復元エラー';
+      badge.style.background = 'rgba(255,80,80,.18)';
+      badge.style.borderColor = 'rgba(255,80,80,.5)';
+      badge.style.boxShadow = '0 0 10px rgba(255,80,80,.35) inset';
+    }
+  } finally {
+    // HUDは少し残してからフェードアウト
+    setTimeout(()=>{
+      const hud = document.getElementById('bulkHUD');
+      if (hud) hud.style.display = 'none';
+      window.BULK_RESTORING = false;
+    }, 600);
   }
-
-  // ★ 仕上げ：input のみ再発火（selectは触らない）
-  document.querySelectorAll('#bulkGrid input')
-    .forEach(el => el.dispatchEvent(new Event('input', { bubbles:true })));
-
-  alert('履歴を一括入力フォームに復元しました。');
-
-  // ★ フラグOFF
-  window.BULK_RESTORING = false;
 });
+
 
 (function () {
   const grid = document.getElementById('bulkGrid');
@@ -8084,8 +8194,6 @@ function updateRowCheckState(mainRow){
 //app2一括入力JS終了
 
 </script>
-
-
 
 </body>
 </html>
