@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.4.2</title>
+<title>IBASD  Ver. 7.5.2</title>
 <style>
 
   html, body {
@@ -8190,8 +8190,170 @@ function updateRowCheckState(mainRow){
 })();
 
 //一括入力グリッドで入力のあるフォームのみ色を変えるJS終了
-
 //app2一括入力JS終了
+
+
+
+//110万Overでぷちゅん演出開始
+
+(function(){
+  const THRESHOLD = 1100000;        // 閾値
+  const TARGET_ID = 'totalAmount';   // 監視対象
+  const IDLE_MS   = 1200;            // 入力が止まってから発火までの待機
+  const AUTO_CLOSE_MS = 4200;        // 自動クローズ
+
+  const target = document.getElementById(TARGET_ID);
+  if (!target) return;
+
+  let fired = false;
+  let lastVal = 0;
+  let pendingTimer = null;
+
+  const parseAmount = (txt) => {
+    const n = parseInt((txt || '').toString().replace(/[^\d\-]/g,''),10);
+    return isNaN(n) ? 0 : n;
+  };
+
+  // === スタイルをJS注入（CSS不要） ===
+  (function ensureStyle(){
+    if (document.getElementById('crtCongratsStyle')) return;
+    const st = document.createElement('style');
+    st.id = 'crtCongratsStyle';
+    st.textContent = `
+#crtCongratsOverlay{
+  position:fixed; inset:0; z-index:999999; display:none;
+  align-items:center; justify-content:center; flex-direction:column;
+  background:#000; color:#fff; text-align:center;
+  font-family:'Orbitron',system-ui,ui-sans-serif,sans-serif;
+}
+#crtCongratsOverlay.show{ display:flex; }
+
+/* CRT消灯（白い水平線が点になって消える） */
+#crtCongratsOverlay .crt-line{
+  position:absolute; left:0; right:0; top:50%; height:2px; background:#fff;
+  box-shadow:0 0 20px #fff, 0 0 40px rgba(255,255,255,.6);
+  transform-origin:center center;
+  animation: tubeOff 900ms ease-in forwards;
+}
+@keyframes tubeOff{
+  0%   { transform: scaleY(1) scaleX(1);   opacity:1; }
+  60%  { transform: scaleY(.06) scaleX(1); opacity:1; }  /* 横一本線 */
+  100% { transform: scaleY(.06) scaleX(0); opacity:0; }  /* 点で消灯 */
+}
+
+/* 滲み上がるテキスト（ブラー→クリア） */
+#crtCongratsOverlay .msg{
+  position:relative; z-index:2; opacity:0; filter: blur(12px);
+  transform: translateY(8px);
+  animation: msgGlowIn 900ms cubic-bezier(.2,.65,.2,1) 950ms forwards;
+}
+#crtCongratsOverlay .msg .title{
+  font-size: clamp(28px, 6vw, 56px); letter-spacing:.06em; margin-bottom:.25em;
+  color:#bfffe9; text-shadow: 0 0 18px rgba(0,245,255,.35), 0 0 36px rgba(0,245,255,.2);
+}
+#crtCongratsOverlay .msg .sub{
+  font-size: clamp(16px, 3.5vw, 28px); letter-spacing:.04em; color:#eaffff;
+  text-shadow: 0 0 12px rgba(0,245,255,.25), 0 0 26px rgba(0,245,255,.18);
+}
+@keyframes msgGlowIn{
+  0%   { opacity:0; filter:blur(12px); transform:translateY(8px); }
+  60%  { opacity:1; filter:blur(5px);  transform:translateY(2px); }
+  100% { opacity:1; filter:blur(0);    transform:translateY(0); }
+}
+
+/* 閉じる時のフェード */
+#crtCongratsOverlay.hide{ animation: ovFade .3s ease-out forwards; }
+@keyframes ovFade{ to { opacity:0; } }
+`;
+    document.head.appendChild(st);
+  })();
+
+  function ensureOverlay(){
+    let ov = document.getElementById('crtCongratsOverlay');
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.id = 'crtCongratsOverlay';
+    ov.innerHTML = `
+      <div class="crt-line"></div>
+      <div class="msg">
+        <div class="title">Congratulations</div>
+        <div class="sub">1,100,000 yen Over</div>
+      </div>`;
+    ov.addEventListener('click', () => {
+      ov.classList.add('hide');
+      setTimeout(()=> ov.remove(), 320);
+    });
+    document.body.appendChild(ov);
+    return ov;
+  }
+
+  function showOverlay(){
+    if (fired) return;
+    fired = true;
+    const ov = ensureOverlay();
+    ov.classList.remove('hide');
+    ov.classList.add('show');
+    setTimeout(() => {
+      if (!ov.isConnected) return;
+      ov.classList.add('hide');
+      setTimeout(()=> ov.remove(), 320);
+    }, AUTO_CLOSE_MS);
+  }
+
+  // --- 入力が続いている間は発火を遅延（デバウンス） ---
+  function scheduleFire(){
+    if (fired) return;
+    if (pendingTimer) clearTimeout(pendingTimer);
+
+    // 入力中（フォーカスが input/textarea/select）なら落ち着くまで待つ
+    const isEditing = () => {
+      const ae = document.activeElement;
+      return ae && (/^(INPUT|TEXTAREA|SELECT)$/i.test(ae.tagName) || ae.isContentEditable);
+    };
+
+    const resetIfTyping = () => {
+      // 直近の入力があればカウントをリセット
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        pendingTimer = setTimeout(tryFire, IDLE_MS);
+      }
+    };
+
+    function tryFire(){
+      // 直前の編集中はさらに待つ
+      if (isEditing()) {
+        pendingTimer = setTimeout(tryFire, 250);
+        return;
+      }
+      showOverlay();
+      // 監視解除（以降は発火しない）
+      document.removeEventListener('input', resetIfTyping, true);
+      document.removeEventListener('keydown', resetIfTyping, true);
+    }
+
+    // ページ全体の入力イベントで延期
+    document.addEventListener('input', resetIfTyping, true);
+    document.addEventListener('keydown', resetIfTyping, true);
+
+    pendingTimer = setTimeout(tryFire, IDLE_MS);
+  }
+
+  // --- #totalAmount を監視して閾値超えを検知（超えた“瞬間”のみ） ---
+  lastVal = parseAmount(target.textContent);
+  const mo = new MutationObserver(() => {
+    const v = parseAmount(target.textContent);
+    if (!fired && v > THRESHOLD && lastVal <= THRESHOLD) {
+      scheduleFire(); // すぐ出さず、入力が止まってから発火
+    }
+    lastVal = v;
+  });
+  mo.observe(target, { childList:true, characterData:true, subtree:true });
+
+  // 初期表示時点で超えていたら少し遅らせて発火準備
+  if (lastVal > THRESHOLD) setTimeout(scheduleFire, 200);
+})();
+
+//110万Overでぷちゅん演出終了
 
 </script>
 
