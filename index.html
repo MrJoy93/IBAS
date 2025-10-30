@@ -4710,15 +4710,11 @@ document.getElementById("totalBackAmount").textContent = "0";
 // =========================
 function resetApp2(full) {
   // === 通常フォームのクリア =========================================
-  // テキスト/数値
   document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
-  // 体験/貸出
   const exp = document.getElementById('experienceAndRental');
   if (exp) exp.checked = false;
-  // 計算結果
   const result = document.getElementById('result');
   if (result) result.innerHTML = '';
-  // 通常ボトルフォーム
   const bottleForms = document.getElementById('bottleFormsContainer');
   if (bottleForms) bottleForms.innerHTML = '';
 
@@ -4727,15 +4723,9 @@ function resetApp2(full) {
     const grid = document.getElementById('bulkGrid');
     if (!grid) return;
 
-    // 名前/送迎/数値欄クリア
     grid.querySelectorAll('.bulk-name, .bulk-send, .bulk-num').forEach(el => el.value = '');
-    // 体/貸 チェック解除
     grid.querySelectorAll('.bulk-exp').forEach(el => (el.checked = false));
-
-    // 追加されたボトルサブ行を全削除
     grid.querySelectorAll('.btl-subrow').forEach(tr => tr.remove());
-
-    // 各メイン行の「－」ボタンは無効化、bottleCountを0に戻す
     grid.querySelectorAll('tr.bulk-mainrow').forEach(row => {
       row.dataset.bottleCount = '0';
       const minusBtn = row.querySelector('.btl-minus');
@@ -4748,16 +4738,22 @@ function resetApp2(full) {
     const historyList = document.getElementById('historyList');
     if (historyList) historyList.innerHTML = '';
 
-    // ローカル保存クリア（通常フォーム関係）
+    // 通常フォーム関連ローカルデータ削除
     localStorage.removeItem('inputs');
     localStorage.removeItem('historyList');
     localStorage.removeItem('result');
     localStorage.removeItem('bottleForms');
 
-    // 集計の再計算/再描画
+    // ✅ 一括入力グリッド関連も削除
+    localStorage.removeItem('app2_bulkGridData');
+    localStorage.removeItem('app2_bulkPanelVisible');
+
+    // グリッド本体もクリア
+    const grid = document.getElementById('bulkGrid');
+    if (grid) grid.querySelector('tbody')?.replaceChildren();
+
     if (typeof updateSummary === 'function') updateSummary();
 
-    // 履歴インデックス人数を0人にして再生成
     const countEl = document.getElementById('historyIndexCount');
     if (countEl) countEl.textContent = '0人';
     if (typeof window.createHistoryIndex === 'function') window.createHistoryIndex();
@@ -4777,8 +4773,15 @@ function resetApp3(full) {
   if (full) {
     localStorage.removeItem('app3_inputs');
     localStorage.removeItem('app3_result');
-  }
 
+    // ✅ 一括入力グリッド関連も完全に消去
+    localStorage.removeItem('app2_bulkGridData');
+    localStorage.removeItem('app2_bulkPanelVisible');
+
+    // グリッド本体も空にする
+    const grid = document.getElementById('bulkGrid');
+    if (grid) grid.querySelector('tbody')?.replaceChildren();
+  }
 
   attachCommaFormatApp1and3();
 }
