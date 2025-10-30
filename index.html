@@ -1982,6 +1982,15 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
 }
 
 
+/* === app2: 個別入力フォーム本体と結果だけ非表示 === */
+body[data-active-app="app2"] #app2-inputSection form,
+body[data-active-app="app2"] #result {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 
 
 </style>
