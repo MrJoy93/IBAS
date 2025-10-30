@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.5.6</title>
+<title>IBASD  Ver. 7.6.6</title>
 <style>
 
   html, body {
@@ -1669,7 +1669,7 @@ body[data-active-app="app2"] #bulkGrid thead th:nth-child(4){ width: 5%;  } /* �
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(n+5):nth-child(-n+19){ width: 3%; }
 
 /* VIP列（14列目）だけ広めに */
-body[data-active-app="app2"] #bulkGrid thead th:nth-child(14){ width: 4.2%;}
+body[data-active-app="app2"] #bulkGrid thead th:nth-child(14){ width: 4.5%;}
 
 /* 品名・割・数量・金額（20〜23列目） */
 body[data-active-app="app2"] #bulkGrid thead th:nth-child(20){ width: 11%; }
@@ -6863,9 +6863,12 @@ function getBottleSubrows(mainTr){
 }
 
 function addBottleSubrow(mainTr) {
-  const grid  = document.getElementById('bulkGrid');
-  const cols  = grid?.tHead?.rows?.[0]?.cells?.length || 0;
-  const start = cols - 4;
+  const grid = document.getElementById('bulkGrid');
+  const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
+
+  // 「退」列がまだ存在しない場合でも位置がズレないように補正
+  const hasLeaveCol = !!grid.querySelector('.bulk-leave-head');
+  const start = cols - (hasLeaveCol ? 5 : 4);  // ← ← ← 修正版
 
   const tr = document.createElement('tr');
   tr.className = 'btl-subrow';
@@ -6882,55 +6885,38 @@ function addBottleSubrow(mainTr) {
     <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
   `;
   tr.innerHTML = html;
-
-  // ✅ 未選択状態にリセット
-  const sel = tr.querySelector('.bottleDetails');
-  if (sel) {
-    sel.selectedIndex = -1; // ←「選択してください」も選ばれない完全未選択
-  }
-
-  // 既存行の下に挿入
-  const subs = getBottleSubrows(mainTr);
-  const anchor = subs.length ? subs[subs.length - 1] : mainTr;
-  anchor.insertAdjacentElement('afterend', tr);
-
-  // 金額再計算イベント付与
-  const split = tr.querySelector('.splitCount');
-  const qty   = tr.querySelector('.bottleQuantity');
-  [split, qty].forEach(el => el.addEventListener('input', () => {
-    if (typeof updateBottleAmountForRow === 'function') {
-      updateBottleAmountForRow(tr);
-    }
-  }));
-
-  // ボトル詳細変更時に自動入力
-  sel?.addEventListener('change', e => applySelectRule(e.target));
-
-  // 行数更新とマイナスボタン活性化
-  const count = (parseInt(mainTr.dataset.bottleCount || '0', 10) || 0) + 1;
-  mainTr.dataset.bottleCount = String(count);
-  const minusBtn = mainTr.querySelector('.btl-minus');
-  if (minusBtn) minusBtn.removeAttribute('disabled');
-
-  if (window.matchMedia('(max-width: 768px)').matches) {
-    tr.style.display = 'none';
-  }
+  mainTr.insertAdjacentElement('afterend', tr);
 }
 
-function removeBottleSubrow(mainTr) {
-  const subs = getBottleSubrows(mainTr);
+
+// === サブ行削除を行う共通関数 ===
+function removeBottleSubrow(mainTr, targetSub = null) {
+  const tbody = mainTr.parentElement;
+  if (!tbody) return;
+
+  // サブ行をすべて取得
+  const subs = [];
+  let cur = mainTr.nextElementSibling;
+  while (cur && cur.classList.toString().includes('btl-subrow')) {
+    subs.push(cur);
+    cur = cur.nextElementSibling;
+  }
+
   if (subs.length === 0) return;
 
-  subs[subs.length - 1].remove();
+  // targetSubがあればそれを、なければ最後を削除
+  const target = targetSub && subs.includes(targetSub) ? targetSub : subs.at(-1);
+  if (target) target.remove();
 
+  // カウント更新とマイナスボタン制御
   const remain = subs.length - 1;
   mainTr.dataset.bottleCount = String(Math.max(remain, 0));
-  if (remain === 0) {
-    const minusBtn = mainTr.querySelector('.btl-minus');
-    if (minusBtn) minusBtn.setAttribute('disabled', 'true');
+  const minusBtn = mainTr.querySelector('.btl-minus');
+  if (minusBtn) {
+    if (remain <= 0) minusBtn.disabled = true;
+    else minusBtn.disabled = false;
   }
 }
-
 // === テーブル構築 ===========================================================
 function buildGrid(n){
   const grid  = document.getElementById('bulkGrid');
@@ -6981,7 +6967,7 @@ function buildGrid(n){
       <td class="btl-anchor">
         <div class="btl-toolbar">
           <button type="button" class="btl-plus mini-btn">＋</button>
-          <button type="button" class="btl-minus mini-btn" disabled>－</button>
+          <button type="button" class="btl-minus mini-btn">－</button>
         </div>
       </td>
       <td></td><td></td><td></td>
@@ -7049,8 +7035,10 @@ function setChecked(id,v){
   if(el){ el.checked=!!v; el.dispatchEvent(new Event('change',{bubbles:true})); }
 }
 
+
 // === 初期化 ================================================================
 document.addEventListener('DOMContentLoaded',()=>{
+
   const panel=document.getElementById('bulkPanel');
   const toggle=document.getElementById('toggleBulkInput');
   const sel=document.getElementById('bulkRows');
@@ -7078,30 +7066,168 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.bulk-exp').forEach(e=>e.checked=false);
     document.querySelectorAll('.btl-subrow').forEach(e=>e.remove());
   });
+
   regBt?.addEventListener('click',bulkRegister);
 
   grid?.addEventListener('click', e => {
-    let r = e.target.closest('tr.bulk-mainrow');
-    if (!r) {
+  console.log('grid click detected', e.target);
+    let main = e.target.closest('tr.bulk-mainrow');
+    if (!main) {
       const sub = e.target.closest('tr.btl-subrow');
       if (sub) {
         let prev = sub.previousElementSibling;
-        while (prev && !prev.classList.contains('bulk-mainrow')) {
-          prev = prev.previousElementSibling;
-        }
-        r = prev;
+        while (prev && !prev.classList.contains('bulk-mainrow')) prev = prev.previousElementSibling;
+        main = prev;
       }
     }
-    if (!r) return;
-    if (e.target.closest('.btl-plus'))  addBottleSubrow(r);
-    if (e.target.closest('.btl-minus')) removeBottleSubrow(r);
+    if (!main) return;
+
+    // ＋ボタン → 追加
+    if (e.target.closest('.btl-plus')) {
+      addBottleSubrow(main);
+      return;
+    }
+
+    // −ボタン → クリックした行を優先して削除
+    if (e.target.closest('.btl-minus')) {
+  console.log('--- Minus clicked ---');
+  const sub = e.target.closest('tr.btl-subrow');
+  console.log('sub:', sub);
+  let mainTr = e.target.closest('tr.bulk-mainrow');
+  console.log('mainTr initial:', mainTr);
+
+  if (!mainTr && sub) {
+    let prev = sub.previousElementSibling;
+    while (prev && !prev.classList.contains('bulk-mainrow')) prev = prev.previousElementSibling;
+    mainTr = prev;
+  }
+  console.log('mainTr resolved:', mainTr);
+
+  if (mainTr) {
+    console.log('Call removeBottleSubrow', mainTr, sub);
+    removeBottleSubrow(mainTr, sub);
+  } else {
+    console.warn('mainTr not found');
+  }
+  return;
+}
+
+  }); // ← grid click をここで閉じる
+
+  window.addEventListener('resize', applyApp2MobileView);
+}); // ← DOMContentLoaded を閉じる
+
+/* ==========================================================
+   一括入力パネル：表示状態・内容の保持（完全版）
+========================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+
+  const PANEL_KEY = 'app2_bulkPanelVisible';
+  const GRID_KEY  = 'app2_bulkGridData';
+  const panel = document.getElementById('bulkPanel');
+  const toggle = document.getElementById('toggleBulkInput');
+  const grid = document.getElementById('bulkGrid');
+  const sel = document.getElementById('bulkRows');
+
+  if (!panel || !grid || !toggle) return;
+
+  /* --- 一括入力グリッドの内容保存 --- */
+  function saveBulkGridState() {
+    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+    const rows = mains.map(tr => {
+      const row = {
+        name: tr.querySelector('.bulk-name')?.value || '',
+        exp: tr.querySelector('.bulk-exp')?.checked || false,
+        send: tr.querySelector('.bulk-send')?.value || '',
+        nums: {},
+        bottles: []
+      };
+      tr.querySelectorAll('[data-k]').forEach(el => {
+        row.nums[el.dataset.k] = el.value || '';
+      });
+      // サブ行（ボトル）
+      let n = tr.nextElementSibling;
+      while (n && n.classList.contains('btl-subrow')) {
+        row.bottles.push({
+          detail: n.querySelector('.bottleDetails')?.value || '',
+          split: n.querySelector('.splitCount')?.value || '',
+          qty: n.querySelector('.bottleQuantity')?.value || '',
+          amount: n.querySelector('.bottleAmount')?.value || ''
+        });
+        n = n.nextElementSibling;
+      }
+      return row;
+    });
+    localStorage.setItem(GRID_KEY, JSON.stringify(rows));
+  }
+
+  /* --- 一括入力グリッドの復元 --- */
+  function restoreBulkGridState() {
+    const data = JSON.parse(localStorage.getItem(GRID_KEY) || '[]');
+    if (!data.length) return;
+    buildGrid(data.length);
+    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+    data.forEach((r, i) => {
+      const tr = mains[i];
+      if (!tr) return;
+      tr.querySelector('.bulk-name').value = r.name || '';
+      tr.querySelector('.bulk-exp').checked = !!r.exp;
+      tr.querySelector('.bulk-send').value = r.send || '';
+      for (const k in r.nums) {
+        const el = tr.querySelector(`[data-k="${k}"]`);
+        if (el) el.value = r.nums[k] || '';
+      }
+      if (r.bottles?.length) {
+        r.bottles.forEach(b => {
+          addBottleSubrow(tr);
+          const last = tr.nextElementSibling;
+          if (last?.classList.contains('btl-subrow')) {
+            last.querySelector('.bottleDetails').value = b.detail || '';
+            last.querySelector('.splitCount').value = b.split || '';
+            last.querySelector('.bottleQuantity').value = b.qty || '';
+            last.querySelector('.bottleAmount').value = b.amount || '';
+          }
+        });
+      }
+    });
+  }
+
+  /* --- 表示状態保存 --- */
+  function savePanelState(visible) {
+    localStorage.setItem(PANEL_KEY, visible ? '1' : '0');
+  }
+
+  /* --- 開閉ボタン押下時 --- */
+  toggle.addEventListener('click', () => {
+    const nowHidden = panel.hidden;
+    savePanelState(!nowHidden);
+    if (!nowHidden) {
+      // 展開時に復元
+      restoreBulkGridState();
+    } else {
+      // 格納時に保存
+      saveBulkGridState();
+    }
   });
 
-   window.addEventListener('resize', applyApp2MobileView);
+  /* --- 入力変化で自動保存 --- */
+  grid.addEventListener('input', e => {
+    if (e.target.closest('.bulk-mainrow, .btl-subrow')) saveBulkGridState();
+  });
+
+  /* --- ページ再開時の復元 --- */
+  const show = localStorage.getItem(PANEL_KEY) === '1';
+  if (show) {
+    panel.hidden = false;
+    document.body.classList.add('bulk-wide');
+    restoreBulkGridState();
+  }
 
 });
 
-})(); 
+
+})(); // ← IIFE を閉じる
+
 
 
 // 一括入力用のフォールバック選択肢（通常フォームが無くても出る）
@@ -7620,28 +7746,40 @@ document.addEventListener('click', async (e) => {
       }
     };
     const addAndGetSubrow = (mainRow) => {
-      const grid = document.getElementById('bulkGrid');
-      const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
-      const pads = Math.max(0, cols - 4);
-      const tr = document.createElement('tr');
-      tr.className = 'btl-subrow';
-      for (let i=0;i<pads;i++){ const td=document.createElement('td'); td.className='btl-pad'; tr.appendChild(td); }
-      tr.insertAdjacentHTML('beforeend', `
-        <td class="btl-detail">
-          <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
-          <input class="bottleFreeText" type="text" style="display:none;">
-        </td>
-        <td><input class="splitCount"    inputmode="numeric"></td>
-        <td><input class="bottleQuantity" inputmode="numeric"></td>
-        <td><input class="bottleAmount"   inputmode="numeric"></td>
-      `);
-      let anchor = mainRow;
-      while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
-        anchor = anchor.nextElementSibling;
-      }
-      anchor.insertAdjacentElement('afterend', tr);
-      return tr;
-    };
+  const grid = document.getElementById('bulkGrid');
+  const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
+
+  // ★ 修正点：「退」列を考慮した調整
+  // 新規追加と同じく cols - 5 に統一
+  const pads = Math.max(0, cols - 5);
+
+  const tr = document.createElement('tr');
+  tr.className = 'btl-subrow';
+
+  for (let i = 0; i < pads; i++) {
+    const td = document.createElement('td');
+    td.className = 'btl-pad';
+    tr.appendChild(td);
+  }
+
+  tr.insertAdjacentHTML('beforeend', `
+    <td class="btl-detail">
+      <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
+      <input class="bottleFreeText" type="text" style="display:none;">
+    </td>
+    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
+    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
+    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+  `);
+
+  let anchor = mainRow;
+  while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
+    anchor = anchor.nextElementSibling;
+  }
+  anchor.insertAdjacentElement('afterend', tr);
+  return tr;
+};
+
 
     // ===== 1) 履歴ノード =====
     let items = document.querySelectorAll('#app2-historySection .history-item');
@@ -8140,7 +8278,149 @@ document.addEventListener('focusin', (e) => {
 });
 
 //一括入力グリッドで入力のあるフォームのみ色を変えるJS終了
+
+
+/* ============================================================
+   APP2 一括入力：右端に「退」チェック列を追加
+   - 行の退勤フラグ（.bulk-leave）を導入
+   - 退勤行はグレーアウト＆選択不可（印刷対象から除外）
+   - 一括登録で「氏名→退勤フラグ」をlocalStorageへ保存
+   - 一括復元時に退勤フラグを復元
+   貼り付け位置：既存JSの一番最後（他関数を上書きしない）
+============================================================ */
+
+/* ==== 1) 見た目（CSS）をJSで挿入 ==== */
+(function injectBulkLeaveStyles(){
+  if (document.getElementById('bulk-leave-styles')) return;
+  const css = `
+    #bulkGrid thead th.bulk-leave-head { width:3.2em;text-align:center; }
+    #bulkGrid tbody td.bulk-leave-cell { text-align:center; }
+    #bulkGrid input.bulk-leave { transform:scale(1.05);cursor:pointer; }
+
+    /* グレーアウト見た目 */
+    #bulkGrid tr.bulk-mainrow.is-leave td,
+    #bulkGrid tr.btl-subrow.is-leave td{
+      opacity:.45!important;
+      filter:grayscale(0.9);
+    }
+
+    /* 全体を操作不可 */
+    #bulkGrid tr.is-leave input,
+    #bulkGrid tr.is-leave select,
+    #bulkGrid tr.is-leave button{
+      pointer-events:none!important;
+    }
+
+    /* ★例外：退チェック＆マイナスボタンは常に操作可 */
+    #bulkGrid tr.is-leave input.bulk-leave,
+    #bulkGrid tr.bulk-mainrow.is-leave .btl-minus,
+    #bulkGrid tr.btl-subrow.is-leave   .btl-minus{
+      pointer-events:auto!important;
+    }
+  `.trim();
+  const s=document.createElement('style');
+  s.id='bulk-leave-styles';
+  s.textContent=css;
+  document.head.appendChild(s);
+})();
+
+/* ==== 退勤列セットアップ ==== */
+(function setupBulkLeaveColumn(){
+  const grid=document.getElementById('bulkGrid');
+  if(!grid) return;
+
+  function ensureLeaveHead(){
+    const thRow=grid.tHead?.rows?.[0];
+    if(!thRow||thRow.querySelector('.bulk-leave-head'))return;
+    const th=document.createElement('th');
+    th.className='bulk-leave-head';
+    th.textContent='退';
+    th.style.width = '3%';
+    thRow.appendChild(th);
+  }
+
+  function getSubrows(mainTr){
+    const subs=[];
+    let cur=mainTr.nextElementSibling;
+    while(cur&&cur.classList.contains('btl-subrow')){
+      subs.push(cur);
+      cur=cur.nextElementSibling;
+    }
+    return subs;
+  }
+
+  /* ✅修正版：退勤ON/OFFでボタンのdisableを厳密制御 */
+  function applyRowLeaveState(mainTr, isLeave) {
+  const subs = getSubrows(mainTr);
+  const all = [mainTr, ...subs];
+  all.forEach(tr => tr.classList.toggle('is-leave', !!isLeave));
+
+  // 退勤チェック自身の制御
+  const sel = mainTr.querySelector('.bulk-check');
+  if (sel) {
+    if (isLeave) { sel.checked = false; sel.disabled = true; }
+    else { sel.disabled = false; }
+  }
+
+  // ★ 修正版：.btl-minus は disable しない
+  const allEls = [
+    ...mainTr.querySelectorAll('input,select,button'),
+    ...subs.flatMap(s => Array.from(s.querySelectorAll('input,select,button')))
+  ];
+
+  allEls.forEach(el => {
+  const isMinus = el.classList.contains('btl-minus');
+  const isAlwaysActive = el.classList.contains('bulk-leave');
+
+  // 退勤中は、btl-minus も含めすべて無効（except bulk-leave 自身）
+  if (isLeave && !isAlwaysActive) {
+    el.disabled = true;
+  } else {
+    el.disabled = false;
+  }
+});
+}
+
+  function ensureLeaveCell(mainTr){
+    if(mainTr.querySelector('td.bulk-leave-cell'))return;
+    const td=document.createElement('td');
+    td.className='bulk-leave-cell';
+    td.innerHTML=`<input type="checkbox" class="bulk-leave" aria-label="退勤行">`;
+    mainTr.appendChild(td);
+  }
+
+  const tbody=grid.tBodies?.[0];
+  if(!tbody)return;
+  ensureLeaveHead();
+
+  const process=()=>{ ensureLeaveHead(); tbody.querySelectorAll('tr.bulk-mainrow').forEach(r=>ensureLeaveCell(r)); };
+  process();
+  new MutationObserver(process).observe(tbody,{childList:true,subtree:false});
+
+  document.addEventListener('change',e=>{
+    if(!e.target?.classList?.contains('bulk-leave'))return;
+    const tr=e.target.closest('tr.bulk-mainrow');
+    if(!tr)return;
+    applyRowLeaveState(tr,e.target.checked);
+  });
+
+  window._bulkLeave={applyRowLeaveState,getSubrows,isLeave:tr=>!!tr?.classList?.contains('is-leave')};
+})();
+
+
+
 //app2一括入力JS終了
+
+
+
+
+
+
+
+
+
+
+
 
 /* ============================================================
    110万 Over ぷちゅん演出（target未定義対策・完全版）
