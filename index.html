@@ -1932,6 +1932,21 @@ body[data-active-app="app2"] #bulkGrid thead th.hl-col{
   background: rgba(0,245,255,.15) !important;
 }
 
+/* === APP2だけに限定（他画面のselectに影響しない） === */
+body[data-active-app="app2"] select.bottleDetails {
+  background-color: var(--form-bg, #0b0e13) !important;
+  color: var(--form-fg, #eaf6ff) !important;
+  border: 1px solid var(--form-border, #00f5ff55) !important;
+  -webkit-text-fill-color: var(--form-fg, #eaf6ff) !important;
+}
+
+/* 開いた候補リスト側（効くブラウザのみ） */
+body[data-active-app="app2"] select.bottleDetails option,
+body[data-active-app="app2"] select.bottleDetails optgroup {
+  background-color: var(--form-bg, #0b0e13) !important;
+  color: var(--form-fg, #eaf6ff) !important;
+}
+
 
 
 
