@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.6.6</title>
+<title>IBASD  Ver. 7.7.6</title>
 <style>
 
   html, body {
@@ -1949,6 +1949,38 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
 
 
 
+/* ===== app2：個別入力フォーム＆結果セクションを非表示 ===== */
+
+/* 個別入力（キャスト名・フリーバック・指名・ドリンクなど）をまとめて非表示 */
+
+#app2-inputSection .group-basic,
+#app2-inputSection .group-shimei,
+#app2-inputSection .group-set,
+#app2-inputSection .group-option {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* 結果セクションも非表示 */
+#app2-resultSection {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* （任意）ナビの「結果」ボタンも隠す */
+#app2-nav [data-target="app2-resultSection"],
+#app2-sideNav [data-target="app2-resultSection"] {
+  display: none !important;
+}
+
 
 
 
@@ -2140,29 +2172,27 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
   <section id="app2-inputSection">
 
 <!-- ▼ 履歴インデックス（テーブル版） -->
-<table id="historyIndexTable" class="history-index-table">
-<thead>
-  <tr>
-    <th>
-      <div class="history-index-head">
-        <span class="history-index-title">履歴</span>
-        <span id="historyIndexCount" class="history-index-count">0人</span>
-      </div>
-    </th>
-  </tr>
-</thead>
+      <table id="historyIndexTable" class="history-index-table">
+        <thead>
+          <tr>
+            <th>
+              <div class="history-index-head">
+                <span class="history-index-title">履歴</span>
+                <span id="historyIndexCount" class="history-index-count">0人</span>
+              </div>
+          </th>
+        </tr>
+      </thead>
   <tbody id="historyIndexBody">
     <!-- JSでボタン行が入ります -->
   </tbody>
 </table>
+
 <!-- ▲ 履歴インデックス -->
-
-    <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
-
-      <div class="group" style="background:#2e2e2e">
-      <button type="button" id="toggleBulkInput" class="mini-btn" style="margin-left:8px;">一括入力</button>
+<button type="button" id="toggleBulkInput" class="mini-btn" style="margin-left:8px;">一括入力</button>
 
 <!-- ▼ 一括入力パネル（通常は非表示） -->
+ <div class="group group-bulk" style="background:#2e2e2e">
 <div id="bulkPanel" class="bulk-panel" hidden>
   <div class="bulk-toolbar">
     <div class="bulk-actions">
@@ -2192,8 +2222,12 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
       <tbody><!-- JSで行を生成 --></tbody>
     </table>
   </div>
-  <div class="bulk-note">Enter/Tab/矢印キーで移動可。</div>
 </div>
+</div>
+
+    <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
+
+      <div class="group group-freeback">
         <label>キャスト名:
          <input type="text" id="castName"
           autocomplete="off" autocapitalize="off" spellcheck="false"
