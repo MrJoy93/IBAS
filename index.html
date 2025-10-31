@@ -7538,6 +7538,27 @@ function updateBottleAmountForRow(tr) {
   amtEl.value = total ? total.toLocaleString() : '';
 }
 
+// === 割・数量の変更で金額を自動再計算（グリッド版） ===
+document.addEventListener('input', e => {
+  if (!e.target || !e.target.closest('#bulkGrid')) return;
+  if (e.target.classList.contains('splitCount') ||
+      e.target.classList.contains('bottleQuantity')) {
+    const tr = e.target.closest('.btl-subrow');
+    if (tr) updateBottleAmountForRow(tr);
+  }
+});
+
+// 予備：セレクト変更でも確実に再計算（既存と重複しても無害）
+document.addEventListener('change', e => {
+  if (!e.target || !e.target.closest('#bulkGrid')) return;
+  if (e.target.classList.contains('splitCount') ||
+      e.target.classList.contains('bottleQuantity')) {
+    const tr = e.target.closest('.btl-subrow');
+    if (tr) updateBottleAmountForRow(tr);
+  }
+});
+
+
 // === ボトル選択時に自動入力 + 金額自動計算 ===============================
 document.addEventListener('change', e => {
   if (e.target.classList.contains('bottleDetails')) {
