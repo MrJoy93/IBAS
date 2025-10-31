@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.7.6</title>
+<title>IBASD  Ver. 7.7.8</title>
 <style>
 
   html, body {
@@ -1985,6 +1985,14 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
 /* === app2: 個別入力フォーム本体と結果だけ非表示 === */
 body[data-active-app="app2"] #app2-inputSection form,
 body[data-active-app="app2"] #result {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* === app2: サブナビ「個別」ボタンを非表示 === */
+#scrollToIndiv {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -5644,18 +5652,22 @@ function openPrintApp2(innerHTML, opts = {}) {
   </body></html>`;
 
   try {
-    let w = window.open('', 'PRINT_APP2', 'width=480,height=800');
-    if (w && w.document) {
-      w.document.open(); w.document.write(printHTML); w.document.close();
-      return;
-    }
-  } catch(_) {}
-  try {
-    const blob = new Blob([printHTML], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    window.open(url,'_blank');
-    return;
-  } catch(_) {}
+  let w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+  if (w && w.document) {
+    w.document.open(); 
+    w.document.write(printHTML); 
+    w.document.close();
+    return w; // ← return に修正！
+  }
+} catch(_) {}
+
+try {
+  const blob = new Blob([printHTML], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url,'_blank');
+  return w; // ← こちらもreturn w
+} catch(_) {}
+
 }
 
 
@@ -8119,57 +8131,61 @@ function addAndGetSubrow(mainRow){
   }
 
   // 4) まとめて出力（選択行を順に通常フォームへ流し→既存の出力ボタンをClick）
-  async function printSelectedRows() {
+
+async function printSelectedRows() {
   const grid = document.getElementById('bulkGrid');
   if (!grid) return alert('一括入力テーブルが見つかりません。');
 
   const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
     .filter(tr => {
-    // チェック済み かつ 非空行のみ
-    const on = tr.querySelector('.bulk-check')?.checked;
-    return on && !isBulkRowEmpty(tr);
-  });
+      const on = tr.querySelector('.bulk-check')?.checked;
+      return on && !isBulkRowEmpty(tr);
+    });
+
   if (!selected.length) return alert('出力する行をチェックしてください。');
 
-  // ←★あなたの出力ボタンの実セレクタに変更（例）
-  const APP2_PRINT_SELECTOR = '#app2 #outputButtonApp2';
-  const WAIT_BETWEEN_PRINT_MS = 500;
+  const WAIT_BETWEEN_PRINT_MS = 400; // ウィンドウ閉後の安全マージン
 
   for (const row of selected) {
     // 1) グリッド → 通常フォームへ反映
     pushBulkRowToNormalForm(row);
 
-    // 2) まずは（あれば）APP2の印刷関数を直接呼ぶ
-    let printed = false;
+    // 2) 印刷ウィンドウを開く（preparePrintApp2 → openPrintApp2がwindow.openを返すように改修済み前提）
+    let win = null;
     try {
-    if (typeof window.preparePrintApp2 === 'function') {
-     await window.preparePrintApp2(); // ← 直接呼ぶ
-     printed = true;
-    }
-    } catch (e) {
-    // 失敗時はボタンにフォールバック
-    }
-
-    // 3) 関数が無ければ APP2 の出力ボタンをクリック
-    if (!printed) {
-      const btn = document.querySelector(APP2_PRINT_SELECTOR);
-      if (!btn) {
-        alert('APP2の出力ボタンが見つかりません。\nAPP2_PRINT_SELECTOR を正しいセレクタに直してください。');
-        return;
+      if (typeof window.preparePrintApp2 === 'function') {
+        // preparePrintApp2が内部でopenPrintApp2を呼び出しwindowを返すよう改修済みとする
+        win = await window.preparePrintApp2();
       }
-      // 必要なら APP2 をアクティブ化
-      document.body.dataset.activeApp = 'app2';
-      // 無効なら解除
-      if (btn.disabled) btn.disabled = false;
-      // クリック実行
-      btn.click();
-      printed = true;
+    } catch (e) {
+      console.error('印刷呼び出しエラー:', e);
     }
 
-    // 4) 次の行に進む前に少し待機（印刷/生成のため）
+    // 3) ウィンドウが閉じるまで待つ
+    await waitForWindowClose(win);
+
+    // 4) 少し間を空けて次へ
     await new Promise(r => setTimeout(r, WAIT_BETWEEN_PRINT_MS));
   }
+
+  alert('すべての印刷が完了しました。');
 }
+
+/**
+ * 印刷ウィンドウが閉じられるまで待つPromise
+ */
+function waitForWindowClose(win) {
+  return new Promise(resolve => {
+    if (!win || win.closed) return resolve();
+    const timer = setInterval(() => {
+      if (win.closed) {
+        clearInterval(timer);
+        resolve();
+      }
+    }, 300);
+  });
+}
+
 
   // 5) イベント束ね
   function bindEvents(){
