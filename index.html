@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.7.8</title>
+<title>IBASD  Ver. 7.8.8</title>
 <style>
 
   html, body {
@@ -7559,72 +7559,42 @@ document.addEventListener('change', e => {
     tr?.classList?.contains('btl-subrow') || tr?.dataset?.rowType === 'bottle-subrow';
 
   function onGridNav(e){
-    const key = e.key;
-    if (!['Enter','Tab'].includes(key) || e.isComposing) return;
+  const key = e.key;
+  if (e.isComposing) return;
+  // ← Enter は新ナビが処理するので素通り
+  if (key === 'Enter') return;
+  // ここからは Tab 専用
+  if (key !== 'Tab') return;
 
-    const el = e.target;
-    if (!(el instanceof HTMLElement)) return;
-    if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  if (!grid.contains(el)) return;
 
-    if (!grid.contains(el)) return;
+  // 同一行の左右（Tab/Shift+Tab）のみ面倒を見る
+  const currentRow = el.closest('tr');
+  if (!currentRow) return;
 
-    // ここで既定動作と以降の伝播を止める（必要に応じて復帰させる）
-    e.preventDefault();
+  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
+  const colIdx = rowInputs.indexOf(el);
+  if (colIdx === -1) return;
 
-    const currentRow = el.closest('tr');
-    if (!currentRow) { e.stopImmediatePropagation(); return; }
+  e.preventDefault(); // ここでだけ既定の Tab を止める
 
-    const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
-    const colIdx = rowInputs.indexOf(el);
-    if (colIdx === -1) { e.stopImmediatePropagation(); return; }
+  const delta = e.shiftKey ? -1 : 1;
+  const nextInRow = rowInputs[colIdx + delta];
 
-    // ───────── Enter：縦（直下/直上のみ）─────────
-    if (key === 'Enter'){
-      const allRows = Array.from(grid.querySelectorAll('tbody tr'));
-      const r0 = allRows.indexOf(currentRow);
-      let r = r0 + (e.shiftKey ? -1 : 1);
-
-      // 範囲外 → 完全停止
-      if (r < 0 || r >= allRows.length){ e.stopImmediatePropagation(); return; }
-
-      // 直後が btl-subrow なら連続スキップ（ここだけ許可）
-      while (r >= 0 && r < allRows.length && isBottleSpacerRow(allRows[r])) {
-        r += (e.shiftKey ? -1 : 1);
-      }
-      if (r < 0 || r >= allRows.length){ e.stopImmediatePropagation(); return; }
-
-      const tr = allRows[r];
-      const candInputs = Array.from(tr.querySelectorAll('input, select, textarea'));
-
-      // 同じ列スロットが無い → 完全停止
-      if (colIdx >= candInputs.length){ e.stopImmediatePropagation(); return; }
-
-      const target = candInputs[colIdx];
-
-      // 非表示/無効 → 完全停止（未記入はOKで止まらずフォーカス移動）
-      if (isDisabledLike(target)){ e.stopImmediatePropagation(); return; }
-
-      // ここでだけ移動
-      target.focus();
-      target.select?.();
-      e.stopImmediatePropagation();
-      return;
-    }
-
-    // ───────── Tab：横（同じ行のみ）─────────
-    if (key === 'Tab'){
-      const delta = e.shiftKey ? -1 : 1;
-      const nextInRow = rowInputs[colIdx + delta];
-
-      if (nextInRow && !isDisabledLike(nextInRow)){
-        nextInRow.focus();
-        nextInRow.select?.();
-      }
-      // 見つからなければ完全停止
-      e.stopImmediatePropagation();
-      return;
-    }
+  // 非表示/無効はスキップせず“何もしない”＝他ハンドラを止めない
+  if (nextInRow && !nextInRow.disabled && nextInRow.offsetParent !== null) {
+    nextInRow.focus();
+    nextInRow.select?.();
+    // ここはフォーカス済みなので他へ流さないでOK
+    return;
   }
+
+  // 見つからない/フォーカスできない場合は何もしない（他ハンドラに譲る）
+  return;
+}
 
   // capture=true で最優先捕捉し、他ハンドラより先に制御
   document.addEventListener('keydown', onGridNav, true);
@@ -8374,18 +8344,20 @@ document.addEventListener('focusin', (e) => {
     #bulkGrid tbody td.bulk-leave-cell { text-align:center; }
     #bulkGrid input.bulk-leave { transform:scale(1.05);cursor:pointer; }
 
-    /* グレーアウト見た目 */
+    /* グレーアウト見た目（操作可・変更不可） */
     #bulkGrid tr.bulk-mainrow.is-leave td,
-    #bulkGrid tr.btl-subrow.is-leave td{
-      opacity:.45!important;
-      filter:grayscale(0.9);
+    #bulkGrid tr.btl-subrow.is-leave td {
+    opacity: .45 !important;
+    filter: grayscale(0.9);
     }
 
-    /* 全体を操作不可 */
-    #bulkGrid tr.is-leave input,
-    #bulkGrid tr.is-leave select,
-    #bulkGrid tr.is-leave button{
-      pointer-events:none!important;
+
+    /* 読み取り専用スタイル */
+    #bulkGrid input[readonly],
+    #bulkGrid select[data-readonly="1"] {
+    background: rgba(100, 100, 100, 0.2) !important;
+    color: #ccc !important;
+    cursor: not-allowed !important;
     }
 
     /* ★例外：退チェック＆マイナスボタンは常に操作可 */
@@ -8426,8 +8398,9 @@ document.addEventListener('focusin', (e) => {
     return subs;
   }
 
-  /* ✅修正版：退勤ON/OFFでボタンのdisableを厳密制御 */
-  function applyRowLeaveState(mainTr, isLeave) {
+
+  /* ✅改修版：退勤ON/OFFで「選択可・変更不可」制御 */
+function applyRowLeaveState(mainTr, isLeave) {
   const subs = getSubrows(mainTr);
   const all = [mainTr, ...subs];
   all.forEach(tr => tr.classList.toggle('is-leave', !!isLeave));
@@ -8439,24 +8412,44 @@ document.addEventListener('focusin', (e) => {
     else { sel.disabled = false; }
   }
 
-  // ★ 修正版：.btl-minus は disable しない
+  // 各入力要素の制御
   const allEls = [
-    ...mainTr.querySelectorAll('input,select,button'),
-    ...subs.flatMap(s => Array.from(s.querySelectorAll('input,select,button')))
+    ...mainTr.querySelectorAll('input, select, button'),
+    ...subs.flatMap(s => Array.from(s.querySelectorAll('input, select, button')))
   ];
 
   allEls.forEach(el => {
-  const isMinus = el.classList.contains('btl-minus');
-  const isAlwaysActive = el.classList.contains('bulk-leave');
+    const isMinus = el.classList.contains('btl-minus');
+    const isLeaveCheck = el.classList.contains('bulk-leave');
 
-  // 退勤中は、btl-minus も含めすべて無効（except bulk-leave 自身）
-  if (isLeave && !isAlwaysActive) {
-    el.disabled = true;
-  } else {
-    el.disabled = false;
-  }
-});
+    if (isLeave) {
+      // --- 退勤中 ---
+      if (el.tagName === 'INPUT' && !isLeaveCheck) {
+        el.readOnly = true;        // ← 入力禁止だがフォーカス可
+      } else if (el.tagName === 'SELECT') {
+        el.dataset.readonly = '1'; // ← セレクト専用フラグ
+        el.addEventListener('mousedown', preventSelectChange, { once: true });
+      } else if (!isLeaveCheck && !isMinus) {
+        el.disabled = true;        // ボタン類などは無効化
+      }
+    } else {
+      // --- 通常 ---
+      if (el.tagName === 'INPUT') el.readOnly = false;
+      if (el.tagName === 'SELECT') delete el.dataset.readonly;
+      el.disabled = false;
+    }
+  });
 }
+
+/* セレクト変更抑止 */
+function preventSelectChange(e) {
+  if (e.currentTarget.dataset.readonly === '1') {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return false;
+  }
+}
+
 
   function ensureLeaveCell(mainTr){
     if(mainTr.querySelector('td.bulk-leave-cell'))return;
@@ -8484,6 +8477,182 @@ document.addEventListener('focusin', (e) => {
   window._bulkLeave={applyRowLeaveState,getSubrows,isLeave:tr=>!!tr?.classList?.contains('is-leave')};
 })();
 
+// 退行などで data-readonly="1" の <select> はキー操作でも値を変えさせない
+document.addEventListener('keydown', (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+  if (el.tagName !== 'SELECT') return;
+  if (el.dataset.readonly !== '1') return;
+
+  // 値が変わり得るキーをブロック（上下/左右/確定など）
+  const k = e.key;
+  const block = [
+    'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+    'PageUp','PageDown','Home','End','Enter',' '
+  ];
+  if (block.includes(k)) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+
+
+/* ============================================================
+   共通：app2ナビゲーション（Enter / 矢印キー 両対応）
+   - 退勤行・操作禁止セルを自動スキップ
+============================================================ */
+
+/* 有効フィールド取得関数 */
+function getApp2ActiveFields(current) {
+  const app2  = document.getElementById('app2');
+  const grid  = document.getElementById('bulkGrid');
+  if (!app2) return [];
+
+  const inGrid = !!(current && grid && grid.contains(current));
+  const scope  = inGrid ? grid : app2;
+
+  const all = Array.from(scope.querySelectorAll('input, select, textarea'));
+  return all.filter(el => {
+    if (!el.offsetParent) return false;        // 非表示は除外
+    if (el.disabled) return false;             // disabled は除外（退行で一部ボタン等）
+    // ※ readonly / data-readonly は “フォーカスOK” にするため除外しない
+    return true;
+  });
+}
+
+// === 幾何学ベースの次候補探索（列ズレに強い） ===
+// 幾何学ベース（左右 or 通常フォーム用／グリッド外）
+// ※ 上下でもグリッド外ではこれを使う
+function findNextByGeometry(fields, current, dir) {
+  const rect = current.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top  + rect.height/ 2;
+
+  let best = null, bestScore = Infinity;
+  const vertical = (dir === 'down' || dir === 'up');
+  const sign     = (dir === 'down') ? +1 : -1;
+
+  for (const el of fields) {
+    if (el === current) continue;
+    const r  = el.getBoundingClientRect();
+    const ex = r.left + r.width / 2;
+    const ey = r.top  + r.height/ 2;
+
+    if (vertical) {
+      const dy = ey - cy;
+      if (sign * dy <= 0) continue;     // 進行方向のみ
+      const dx = Math.abs(ex - cx);
+      const score = dy * 1000 + dx;     // 縦優先
+      if (score < bestScore) { best = el; bestScore = score; }
+    } else {
+      // 左右は同じ行近傍のみ
+      const dy = Math.abs(ey - cy);
+      if (dy > 8) continue;
+      const dx = ex - cx;
+      if ((dir === 'right' && dx <= 0) || (dir === 'left' && dx >= 0)) continue;
+      const score = Math.abs(dx);
+      if (score < bestScore) { best = el; bestScore = score; }
+    }
+  }
+  return best;
+}
+
+// 移動の入口：現在地に応じて探索範囲と手法を切り替え
+function moveFocus(dir, current) {
+  const grid = document.getElementById('bulkGrid');
+  const inGrid = !!(grid && current && grid.contains(current));
+
+  if (inGrid && (dir === 'down' || dir === 'up')) {
+    // ← グリッド内の上下は “同列維持” アルゴリズムを必ず使用
+    moveFocusGridVertical(current, dir);
+    return;
+  }
+
+  // それ以外は近傍幾何学
+  const fields = getApp2ActiveFields(current);
+  const next = findNextByGeometry(fields, current, dir);
+  if (next) {
+    next.focus();
+    next.select?.();
+  }
+}
+
+
+// === 共通移動 ===
+// グリッド行→次の「メイン行」へ（btl-subrow と退行を自動スキップ）
+function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  const curTr  = current.closest('tr');
+  if (!curTr) return;
+
+  // 現行行の列スロットを決める
+  const rowSlots = Array.from(curTr.querySelectorAll('input, select, textarea'));
+  const colIdx   = rowSlots.indexOf(current);
+  if (colIdx < 0) return;
+
+  // メイン行のみを縦走査対象にする（←ここは据え置き）
+  const allRows = Array.from(grid.tBodies?.[0]?.rows || [])
+    .filter(tr => tr.classList.contains('bulk-mainrow'));
+
+  const r0 = allRows.indexOf(curTr);
+  if (r0 < 0) return;
+
+  const step = (dir === 'up') ? -1 : +1;
+  let r = r0 + step;
+
+  while (r >= 0 && r < allRows.length) {
+    const tr = allRows[r];
+
+    // ★退行でもフォーカス可能にするため “スキップしない”
+    const cand = Array.from(tr.querySelectorAll('input, select, textarea'))[colIdx];
+
+    // フォーカス可能なら移動（readonly/data-readonlyでもOK）
+    if (cand && cand.offsetParent && !cand.disabled) {
+      cand.focus();
+      cand.select?.();
+      return;
+    }
+    r += step;
+  }
+}
+
+
+
+// === イベント統合（capture=true で最優先） ===
+(function attachGridNavOnce(){
+  if (window.__app2NavInstalled) return;
+  window.__app2NavInstalled = true;
+
+  document.addEventListener('keydown', (e) => {
+    // app2 以外・対象外要素は無視
+    const app2 = document.getElementById('app2');
+    if (!app2 || !app2.classList.contains('active')) return;
+    const target = e.target;
+    if (!target || !target.closest('#app2')) return;
+    if (!['INPUT','SELECT','TEXTAREA'].includes(target.tagName)) return;
+
+    // Enter は常に “下へ” ＋ submit を完全阻止
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      moveFocus('down', target);
+      return;
+    }
+
+    // 矢印
+    let dir = null;
+    if (e.key === 'ArrowDown') dir = 'down';
+    else if (e.key === 'ArrowUp') dir = 'up';
+    else if (e.key === 'ArrowLeft') dir = 'left';
+    else if (e.key === 'ArrowRight') dir = 'right';
+    if (!dir) return;
+
+    e.preventDefault();
+    moveFocus(dir, target);
+  }, true);
+})();
 
 
 //app2一括入力JS終了
@@ -8735,7 +8904,6 @@ document.addEventListener('focusin', (e) => {
   // デバッグ：手動同時発火（コンソールで）
   window.__congratsTest = () => showOverlayT0();
 })();
-</script>
 
   //110万Overでぷちゅん演出終了
 
