@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.0.0</title>
+<title>IBASD  Ver. 8.0.1</title>
 <style>
 
   html, body {
@@ -4710,7 +4710,7 @@ function updateCalculations() {
   const femaleTaxEl0 = document.getElementById('femaleTax');
   if (femaleTaxEl0) femaleTaxEl0.value = summaryTaxValue;
 
-  // totalBackAmount → catchBack へ（要素未存在ガード）
+  // totalBackAmount → catchBack へ
   const totalBackAmountText =
     document.getElementById("totalBackAmount")?.textContent?.replace(/,/g, "") || "0";
   const totalBackAmount = parseInt(totalBackAmountText, 10) || 0;
@@ -4723,19 +4723,31 @@ function updateCalculations() {
   const cashSalesEl = document.getElementById('cashSales');
   if (cashSalesEl) cashSalesEl.value = formatNumber(cash);
 
-  
-
   const tax = get('femaleTax') + get('maleTax');
   const totalTaxEl = document.getElementById('totalTax');
   if (totalTaxEl) totalTaxEl.value = formatNumber(tax);
 
-  const receiptTotal = get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
+  const receiptTotal =
+    get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
   const r6 = document.getElementById('receipt6');
   if (r6) r6.value = formatNumber(receiptTotal);
 
   const expenses = get('alcohol') + receiptTotal;
   const totalExpEl = document.getElementById('totalExpenses');
   if (totalExpEl) totalExpEl.value = formatNumber(expenses);
+
+  // === ここから追加：人件費合計 ===
+  const labor =
+    get('femaleSalary') +
+    get('maleSalary') +
+    get('catchBack') +
+    get('scoutBack') +
+    get('adviserFee') +
+    get('driverFee');
+
+  const totalLaborEl = document.getElementById('totalLaborCosts');
+  if (totalLaborEl) totalLaborEl.value = formatNumber(labor);
+  // ===============================
 
   const gross = total - labor - tax - expenses;
   const grossEl = document.getElementById('grossProfit');
@@ -4747,13 +4759,12 @@ function updateCalculations() {
 
   const startCash = get('startCash');
   const finalCash = get('finalCash');
-  // 新（extraSafeCashを加算）
-  const extraSafeCash = get('extraSafeCash'); // ← 追加項目
+  const extraSafeCash = get('extraSafeCash');
   const difference = (finalCash - remaining - tax) - (startCash + extraSafeCash);
   const diffEl = document.getElementById('cashDifference');
   if (diffEl) diffEl.value = formatNumber(difference);
 
-  // adviserFee を自動計算して反映（元のままでOKだが要素チェックは維持）
+  // adviserFee 自動計算
   const adviserCountEl = document.getElementById('totalCountValue');
   const adviserFeeInput = document.getElementById('adviserFee');
   if (adviserCountEl && adviserFeeInput) {
@@ -4761,14 +4772,12 @@ function updateCalculations() {
     adviserFeeInput.value = (count * 1000).toLocaleString();
   }
 
-  // 見た目用のフォーマット（要素がある時だけ）
+  // 見た目用フォーマット
   const femaleSalaryEl = document.getElementById('femaleSalary');
   if (femaleSalaryEl) femaleSalaryEl.value = formatNumber(get('femaleSalary'));
-
   const femaleTaxEl = document.getElementById('femaleTax');
   if (femaleTaxEl) femaleTaxEl.value = formatNumber(get('femaleTax'));
 
-  // 色付け（内部で要素チェックする版にしておくと安全）
   updateNegativeColor('grossProfit');
   updateNegativeColor('remainingCash');
   updateNegativeColor('cashDifference');
@@ -4776,30 +4785,25 @@ function updateCalculations() {
   updateExtraGroupFields();
   attachCommaFormatApp3();
 
+  // ドライバー代
   (function(){
-  const el = document.getElementById('driverExtra1');
-  if (el) {
-    const storeTotal = getTotalStoreBurden();             // ← ここで履歴から合計を取る
-    el.value = Number.isNaN(storeTotal) ? '' : storeTotal.toLocaleString('ja-JP');
-  }
-})();
+    const el = document.getElementById('driverExtra1');
+    if (el) {
+      const storeTotal = getTotalStoreBurden();
+      el.value = Number.isNaN(storeTotal) ? '' : storeTotal.toLocaleString('ja-JP');
+    }
+  })();
 
-// === ドライバー代 合計 ===========================================
-(function(){
-  const extra1 = parseInt(document.getElementById('driverExtra1')?.value.replace(/[^0-9\-]/g, '') || 0, 10);
-  const extra2 = parseInt(document.getElementById('driverExtra2')?.value.replace(/[^0-9\-]/g, '') || 0, 10);
-  const sum = extra1 + extra2;
-  const feeEl = document.getElementById('driverFee');
-  if (feeEl) feeEl.value = Number.isNaN(sum) ? '' : sum.toLocaleString('ja-JP');
-})();
+  (function(){
+    const extra1 = parseInt(document.getElementById('driverExtra1')?.value.replace(/[^0-9\-]/g, '') || 0, 10);
+    const extra2 = parseInt(document.getElementById('driverExtra2')?.value.replace(/[^0-9\-]/g, '') || 0, 10);
+    const sum = extra1 + extra2;
+    const feeEl = document.getElementById('driverFee');
+    if (feeEl) feeEl.value = Number.isNaN(sum) ? '' : sum.toLocaleString('ja-JP');
+  })();
 
   saveToLocal();
 }
-
-const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
-  const totalLaborEl = document.getElementById('totalLaborCosts');
-  if (totalLaborEl) totalLaborEl.value = formatNumber(labor);
-
 
 function updateExtraGroupFields() {
   // それぞれの値を取得（必要に応じて変数は他から渡してください）
