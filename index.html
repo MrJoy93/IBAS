@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 7.8.8</title>
+<title>IBASD  Ver. 7.9.8</title>
 <style>
 
   html, body {
@@ -1949,10 +1949,15 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
 
 
 
-/* ===== app2：個別入力フォーム＆結果セクションを非表示 ===== */
 
-/* 個別入力（キャスト名・フリーバック・指名・ドリンクなど）をまとめて非表示 */
 
+
+
+/* =========================================================
+   APP2：個別入力フォームと結果セクションを非表示
+========================================================= */
+
+/* 個別入力フォーム群を非表示 */
 #app2-inputSection .group-basic,
 #app2-inputSection .group-shimei,
 #app2-inputSection .group-set,
@@ -1965,7 +1970,7 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
   overflow: hidden !important;
 }
 
-/* 結果セクションも非表示 */
+/* 結果セクションを非表示 */
 #app2-resultSection {
   display: none !important;
   visibility: hidden !important;
@@ -1975,14 +1980,17 @@ body[data-active-app="app2"] select.bottleDetails optgroup {
   overflow: hidden !important;
 }
 
-/* （任意）ナビの「結果」ボタンも隠す */
+/* ナビ・サブナビの「結果」「個別」ボタンも非表示 */
 #app2-nav [data-target="app2-resultSection"],
-#app2-sideNav [data-target="app2-resultSection"] {
+#app2-sideNav [data-target="app2-resultSection"],
+#scrollToIndiv {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-
-/* === app2: 個別入力フォーム本体と結果だけ非表示 === */
+/* 個別入力フォーム本体と結果を非表示 */
 body[data-active-app="app2"] #app2-inputSection form,
 body[data-active-app="app2"] #result {
   display: none !important;
@@ -1991,14 +1999,151 @@ body[data-active-app="app2"] #result {
   pointer-events: none !important;
 }
 
-/* === app2: サブナビ「個別」ボタンを非表示 === */
-#scrollToIndiv {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+
+/* =========================================================
+   APP3：ドライバー代フォームのレイアウト整理
+========================================================= */
+
+/* ドライバー代フォーム行を横並び＋右寄せ整列 */
+#app3 #laborGroup label:has(#driverFee) {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px !important;
 }
 
+/* ラベル部分（左側） */
+#app3 #laborGroup label:has(#driverFee) > span {
+  flex: 0 0 120px;
+  text-align: left;
+  margin-right: auto;
+}
+
+/* 入力欄：基本統一 */
+#app3 #laborGroup label:has(#driverFee) input {
+  width: 130px !important;
+  margin: 0 !important;
+  text-align: right;
+  border-radius: 6px;
+}
+
+/* Safari対応：フォーム間のマージン除去 */
+#app3 #laborGroup label:has(#driverFee) input + input {
+  margin-left: 2px !important;
+}
+
+
+/* =========================================================
+   APP3：スマホ時（～700px）ドライバー代フォーム幅指定
+========================================================= */
+@media (max-width:700px){
+
+  /* driverExtra1 / driverExtra2 を細く */
+  body[data-active-app="app3"] #driverExtra1,
+  body[data-active-app="app3"] #driverExtra2 {
+    width: 30px !important;
+    max-width: 65px !important;
+    min-width: 65px !important;
+    flex: 0 0 65px !important;
+    padding-inline: 3px !important;
+    font-size: 14px !important;
+    text-align: right !important;
+  }
+
+  /* driverFee は幅を維持 */
+  body[data-active-app="app3"] #driverFee {
+    width: 130px !important;
+    max-width: 130px !important;
+    min-width: 130px !important;
+    flex: 0 0 130px !important;
+    font-size: 15px !important;
+    text-align: right !important;
+  }
+}
+
+
+/* =========================================================
+   APP3：共通フォーム右端揃え（PC/スマホ共通）
+========================================================= */
+
+/* 基準幅（SP時は自動切替） */
+:root{
+  --app3-input-w-pc: 240px;
+  --app3-input-w-sp: 115px;
+}
+@media (max-width:700px){
+  :root{ --app3-input-w-pc: var(--app3-input-w-sp); }
+}
+
+/* 各入力欄を右端ラインに合わせる */
+body[data-active-app="app3"] #app3 .group label input,
+body[data-active-app="app3"] #app3 .group label select,
+body[data-active-app="app3"] #app3 .group label button {
+  width: var(--app3-input-w-pc) !important;
+  max-width: var(--app3-input-w-pc) !important;
+  min-width: var(--app3-input-w-pc) !important;
+  flex: 0 0 var(--app3-input-w-pc) !important;
+  margin-left: auto !important;
+  text-align: right !important;
+}
+
+/* =========================================================
+   APP3：スマホ時 driverExtra1 / driverExtra2 の幅を強制的に狭くする最終指定
+   （既存指定の上書き用）
+========================================================= */
+@media (max-width:700px){
+  body[data-active-app="app3"] #laborGroup #driverExtra1,
+  body[data-active-app="app3"] #laborGroup #driverExtra2 {
+    width: 60px !important;
+    max-width: 60px !important;
+    min-width: 60px !important;
+    flex: 0 0 60px !important;
+    padding-inline: 2px !important;
+    font-size: 14px !important;
+    text-align: right !important;
+  }
+
+  /* 合計欄（driverFee）は幅を維持 */
+  body[data-active-app="app3"] #laborGroup #driverFee {
+    width: 115px !important;
+    max-width: 115px !important;
+    min-width: 115px !important;
+    flex: 0 0 115px !important;
+    text-align: right !important;
+  }
+
+  /* ===== APP3 ラベル（左側ヘッダー）文字サイズ調整 ===== */
+body[data-active-app="app3"] #app3 .group label span,
+body[data-active-app="app3"] #app3 .group label strong,
+body[data-active-app="app3"] #app3 .group label b {
+  font-size: 11px !important;
+  min-width: 55px !important;
+  max-width: 110px !important;
+  line-height: 1.15 !important;
+  flex-shrink: 1 !important;
+  white-space: nowrap;
+}
+
+/* --- スマホ専用でもう少し小さくする --- */
+@media (max-width:700px){
+  body[data-active-app="app3"] #app3 .group label span,
+  body[data-active-app="app3"] #app3 .group label strong,
+  body[data-active-app="app3"] #app3 .group label b {
+    font-size: 10px !important;
+    min-width: 50px !important;
+    line-height: 1.1 !important;
+  }
+}
+
+/* === スマホ時のみプレースホルダー文字を小さく === */
+@media (max-width:700px) {
+  #driverExtra2::placeholder {
+    font-size: 9px !important;
+    opacity: 0.9; /* お好みで少し薄く */
+  }
+}
+
+}
 
 
 </style>
@@ -2463,7 +2608,12 @@ body[data-active-app="app2"] #result {
         <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="updateCalculations()">
         </label>
         <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
-        <label><span>ドライバー代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="driverFee" oninput="updateCalculations()">
+        <label>
+        <span>ドライバー代:</span>
+        <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
+        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="updateCalculations()">
+        <input type="text" id="driverFee" disabled placeholder="合計">
+        </label>
         </label>
         <label><span>人件費合計:</span> <input type="text" id="totalLaborCosts" disabled>
         </label>
@@ -3651,6 +3801,7 @@ function renumberHistory() {
   });
 }
 
+
 function calculate() {
    const historyList = document.getElementById('historyList');
   // 「体験及び貸出」のチェックボックスの状態を取得
@@ -3721,9 +3872,14 @@ function calculate() {
   // 最終合計
   let finalAmount = totalAmount - adjustedSendoff;
 
+
+
   // 店舗負担・本人負担の計算
   const castCoveredAmount = adjustedSendoff;
   const storeCoveredAmount = sendoffAmount - adjustedSendoff;
+
+  // 店舗負担合計をグローバルで加算（リセットしない）
+  window.totalStoreCovered = (window.totalStoreCovered || 0) + Math.max(storeCoveredAmount, 0);
 
   let sendoffText = `送迎: ¥${sendoffAmount.toLocaleString()}(本人負担: ¥${castCoveredAmount.toLocaleString()}`;
   if (storeCoveredAmount > 0) {
@@ -3900,6 +4056,9 @@ if (resultElem) {
 }
 }
 
+  // === 全キャスト共通 店舗負担合計 =================================
+  window.totalStoreCovered = 0;
+
 function confirmAndCalculate(e){
 
   let subtotal = 0;
@@ -3943,6 +4102,10 @@ function confirmAndCalculate(e){
 
   // 実計算（あなたの既存の calculate が #result を更新します）
   calculate();
+
+  if (typeof updateCalculations === 'function') {
+  updateCalculations();
+}
 
   // 描画が反映された次のフレームで結果へスクロール
   requestAnimationFrame(()=> navScrollTo('app2-resultSection','smooth'));
@@ -4445,6 +4608,37 @@ function get(id) {
   return isNaN(n) ? 0 : n;
 }
 
+// ============================================================
+// 履歴(#historyList)から店舗負担分の合計を算出
+// 事前に LI に data-store-covered を付けていなくても、
+// テキスト "店舗負担: ¥xxxx" からフォールバックで拾います。
+// ============================================================
+function getTotalStoreBurden() {
+  try {
+    const items = document.querySelectorAll('#historyList > li');
+    let total = 0;
+    items.forEach(li => {
+      // 1) data属性があれば最優先
+      const attr = li.getAttribute('data-store-covered');
+      if (attr !== null && attr !== '') {
+        const v = parseInt(attr, 10);
+        if (!Number.isNaN(v)) { total += v; return; }
+      }
+      // 2) sendoff 行のテキストから拾う
+      const txt = li.querySelector('.sendoff')?.textContent || '';
+      const m = txt.match(/店舗負担:\s*¥?\s*([\d,]+)/);
+      if (m) {
+        const v = parseInt(m[1].replace(/,/g, ''), 10);
+        if (!Number.isNaN(v)) total += v;
+      }
+    });
+    return total;
+  } catch (e) {
+    console.warn('店舗負担合計の取得に失敗', e);
+    return 0;
+  }
+}
+
 function updateCalculations() {
   const cardTotalText = document.getElementById('cardTotal')?.textContent || '0';
   const cardTotal = parseInt(cardTotalText.replace(/,/g, ''), 10) || 0;
@@ -4470,9 +4664,7 @@ function updateCalculations() {
   const cashSalesEl = document.getElementById('cashSales');
   if (cashSalesEl) cashSalesEl.value = formatNumber(cash);
 
-  const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
-  const totalLaborEl = document.getElementById('totalLaborCosts');
-  if (totalLaborEl) totalLaborEl.value = formatNumber(labor);
+  
 
   const tax = get('femaleTax') + get('maleTax');
   const totalTaxEl = document.getElementById('totalTax');
@@ -4525,8 +4717,29 @@ function updateCalculations() {
   updateExtraGroupFields();
   attachCommaFormatApp3();
 
+  (function(){
+  const el = document.getElementById('driverExtra1');
+  if (el) {
+    const storeTotal = getTotalStoreBurden();             // ← ここで履歴から合計を取る
+    el.value = Number.isNaN(storeTotal) ? '' : storeTotal.toLocaleString('ja-JP');
+  }
+})();
+
+// === ドライバー代 合計 ===========================================
+(function(){
+  const extra1 = parseInt(document.getElementById('driverExtra1')?.value.replace(/[^0-9\-]/g, '') || 0, 10);
+  const extra2 = parseInt(document.getElementById('driverExtra2')?.value.replace(/[^0-9\-]/g, '') || 0, 10);
+  const sum = extra1 + extra2;
+  const feeEl = document.getElementById('driverFee');
+  if (feeEl) feeEl.value = Number.isNaN(sum) ? '' : sum.toLocaleString('ja-JP');
+})();
+
   saveToLocal();
 }
+
+const labor = get('femaleSalary') + get('maleSalary') + get('catchBack') + get('scoutBack') + get('adviserFee') + get('driverFee');
+  const totalLaborEl = document.getElementById('totalLaborCosts');
+  if (totalLaborEl) totalLaborEl.value = formatNumber(labor);
 
 
 function updateExtraGroupFields() {
