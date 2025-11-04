@@ -1999,6 +1999,53 @@ body[data-active-app="app2"] #result {
   pointer-events: none !important;
 }
 
+/* =========================================================
+   スマホ時のみ APP2 通常フォームと結果を再表示
+========================================================= */
+@media screen and (max-width:700px){
+
+  /* 個別入力フォーム群を再表示 */
+  #app2-inputSection .group-basic,
+  #app2-inputSection .group-shimei,
+  #app2-inputSection .group-set,
+  #app2-inputSection .group-option {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    margin: revert !important;
+    padding: revert !important;
+    overflow: visible !important;
+  }
+
+  /* 結果セクションを再表示 */
+  #app2-resultSection {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    margin: revert !important;
+    padding: revert !important;
+    overflow: visible !important;
+  }
+
+  /* 個別入力フォーム本体と結果を再表示 */
+  body[data-active-app="app2"] #app2-inputSection form,
+  body[data-active-app="app2"] #result {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* 「結果」「個別」ボタンも再表示 */
+  #app2-nav [data-target="app2-resultSection"],
+  #app2-sideNav [data-target="app2-resultSection"],
+  #scrollToIndiv {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
 
 /* =========================================================
    APP3：ドライバー代フォームのレイアウト整理
