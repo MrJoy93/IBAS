@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.0.3</title>
+<title>IBASD  Ver. 8.0.4</title>
 <style>
 
   html, body {
@@ -3015,6 +3015,96 @@ document.getElementById('side-scroll-history')?.addEventListener('click', (e) =>
 
 //<app1 script---------------------------------------------------------------------------------------------------------------->
 //伝票検索機能
+
+/* =====================================================
+   APP1：伝票テーブル内 十字キー移動
+   ↑↓→←キーでセル間移動
+===================================================== */
+function enableArrowNavigationApp1(){
+  const table = document.querySelector('#app1 #formRows');
+  if (!table) return;
+
+  const selector = 'input, select, textarea';
+  const getInputs = () => Array.from(table.querySelectorAll(selector));
+
+  table.addEventListener('keydown', (e)=>{
+    const key = e.key;
+    if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) return;
+
+    const inputs = getInputs();
+    const current = e.target;
+    if (!inputs.includes(current)) return;
+
+    e.preventDefault();
+
+    // 現在位置を特定
+    const index = inputs.indexOf(current);
+    const td = current.closest('td');
+    const tr = current.closest('tr');
+    if (!td || !tr) return;
+
+    const rowIndex = Array.from(table.querySelectorAll('tr.row')).indexOf(tr);
+    const cellIndex = Array.from(tr.children).indexOf(td);
+
+    let next;
+    switch(key){
+      case 'ArrowLeft':
+        // 左：同じ行内で前のinput
+        for(let i=index-1;i>=0;i--){
+          const el = inputs[i];
+          if (el.closest('tr')===tr) { next=el; break; }
+        }
+        break;
+
+      case 'ArrowRight':
+        // 右：同じ行内で次のinput
+        for(let i=index+1;i<inputs.length;i++){
+          const el = inputs[i];
+          if (el.closest('tr')===tr) { next=el; break; }
+        }
+        break;
+
+      case 'ArrowUp':
+        {
+          // 上：同じ列の上の行
+          const rows = Array.from(table.querySelectorAll('tr.row'));
+          if (rowIndex>0){
+            const prevRow = rows[rowIndex-1];
+            const cells = prevRow.querySelectorAll('td');
+            if (cells[cellIndex]){
+              next = cells[cellIndex].querySelector(selector);
+            }
+          }
+        }
+        break;
+
+      case 'ArrowDown':
+        {
+          // 下：同じ列の下の行
+          const rows = Array.from(table.querySelectorAll('tr.row'));
+          if (rowIndex<rows.length-1){
+            const nextRow = rows[rowIndex+1];
+            const cells = nextRow.querySelectorAll('td');
+            if (cells[cellIndex]){
+              next = cells[cellIndex].querySelector(selector);
+            }
+          }
+        }
+        break;
+    }
+
+    if (next){
+      next.focus();
+      // 数値フィールドは選択状態に
+      if (next.select) next.select();
+    }
+  });
+}
+
+// ページロード時に有効化
+window.addEventListener('DOMContentLoaded', enableArrowNavigationApp1);
+
+
 function searchByAmount() {
   const input = document.getElementById('searchAmount').value.replace(/,/g, '').trim();
   const rows = document.querySelectorAll('#formRows tr');
