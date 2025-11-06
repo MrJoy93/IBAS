@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.0.2</title>
+<title>IBASD  Ver. 8.0.3</title>
 <style>
 
   html, body {
@@ -5602,55 +5602,79 @@ function getApp3StyleDate() {
     }
 
     // 個別カテゴリ
-    const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
-    const rows = arr.map(d =>
-      `<div class="print-detail-row"><span>${d.unit}</span><span>×</span><span>${d.count}</span></div>`
-    ).join('');
+    // 個別カテゴリ
+// --- 個別カテゴリ ---
+const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
+const lineTexts = [];
+let total = 0;
+arr.forEach(d => {
+  const unit  = Number(String(d.unit || 0).replace(/[,￥¥]/g,''));
+  const count = Number(String(d.count|| 0).replace(/,/g,''));
+  if (unit && count) {
+    lineTexts.push(`${unit.toLocaleString()}×${count}`);
+    total += count;
+  }
+});
 
-    const total = arr.reduce((s,d)=> s + Number(d.count||0), 0);
-    const amountText = (document.getElementById(category + 'total')?.textContent || '0').trim();
+// ✅ 合計金額を画面上の <span id="UKtotal"> の値から取得
+const totalSpan = document.getElementById(`${category}total`);
+const amountText = totalSpan ? totalSpan.textContent.trim() : "0";
 
-    const innerCat = `
-      <div class="envelope">
-        <div class="print-date">${dateStr}</div>
-        <div class="print-title">${category}</div>
-        <div style="text-align:center; font-size:22pt; margin:5mm 0 6mm;">￥${amountText}</div>
-        ${rows || '<div style="text-align:center;">0</div>'}
-        <div style="text-align:center; font-size:12pt; margin-top:4mm;">Total ${total}</div>
-      </div>`;
+// <br> で改行
+const rowsHtml = lineTexts.length ? lineTexts.join('<br>') : '0';
 
-    openPrintApp1(innerCat, { rotateOnMobile:true });
-  };
+// 出力HTML
+const innerCat = `
+  <div class="envelope" style="font-size:11pt;line-height:1.35;">
+    <div class="print-date">${dateStr}</div>
+    <div class="print-title">${category}</div>
+    <div class="detail-list" style="margin:3mm 0 4mm 0;">
+      ${rowsHtml}
+    </div>
+    <div style="text-align:center; font-size:12pt; margin-top:2mm;">
+      Total ${total}本
+    </div>
+    <div style="text-align:center; font-size:22pt; margin:3mm 0 0;">
+      ￥${amountText}
+    </div>
+  </div>`;
+
+openPrintApp1(innerCat, { rotateOnMobile:true, noRebuild:true });
+  }
 
   // コア：印刷ウィンドウ生成・整形・復帰制御
   function openPrintApp1(innerHTML, opts = { rotateOnMobile:true }) {
     // ---- 行テキスト化して3行パターンを再構成 ----
-    const tmpEl = document.createElement('div');
-    tmpEl.innerHTML = innerHTML;
-    const lines = (tmpEl.innerText.trim().split(/\r?\n/)).map(s => s.trim());
+    // ---- 行テキスト化して3行パターンを再構成 ----
+let rebuilt = innerHTML;
+if (!opts?.noRebuild) {
+  const tmpEl = document.createElement('div');
+  tmpEl.innerHTML = innerHTML;
+  const lines = (tmpEl.innerText.trim().split(/\r?\n/)).map(s => s.trim());
 
-    let rebuilt = "";
-    for (let i = 0; i < lines.length; i++) {
-      const a = lines[i] || "";
-      const b = lines[i + 1] || "";
-      const c = lines[i + 2] || "";
+  rebuilt = "";
+  for (let i = 0; i < lines.length; i++) {
+    const a = lines[i] || "";
+    const b = lines[i + 1] || "";
+    const c = lines[i + 2] || "";
 
-      if (/^[A-Z]{1,6}$/.test(a) &&
-          (/^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$|^\d+$/.test(b)) &&
-          c.includes("計")) {
-        rebuilt += `
-          <div class="cat-line">
-            <span class="cat">${a}</span>
-            <span class="val">${b}</span>
-            <span class="cnt">${c}</span>
-          </div>`;
-        i += 2;
-      } else if (a === "") {
-        rebuilt += `<div class="group-sep"></div>`;
-      } else {
-        rebuilt += `<div class="misc">${a}</div>`;
-      }
+    if (/^[A-Z]{1,6}$/.test(a) &&
+        (/^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$|^\d+$/.test(b)) &&
+        c.includes("計")) {
+      rebuilt += `
+        <div class="cat-line">
+          <span class="cat">${a}</span>
+          <span class="val">${b}</span>
+          <span class="cnt">${c}</span>
+        </div>`;
+      i += 2;
+    } else if (a === "") {
+      rebuilt += `<div class="group-sep"></div>`;
+    } else {
+      rebuilt += `<div class="misc">${a}</div>`;
     }
+  }
+}
 
     // ---- 子ウィンドウ生成（毎回ユニーク名）----
     const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
