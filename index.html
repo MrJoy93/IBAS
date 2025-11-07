@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.0.4</title>
+<title>IBASD  Ver. 8.0.5</title>
 <style>
 
   html, body {
@@ -5657,7 +5657,7 @@ function getApp3StyleDate() {
     if (category === 'ALL') {
       if (!confirm('伝票の記入はすべて完了していますか？')) return;
 
-      const CATS = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB','X'];
+      const CATS = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB'];
 
       const perCat = CATS.map(key => {
         const arr = (window.catchbackDetails && window.catchbackDetails[key]) || [];
@@ -7940,11 +7940,15 @@ function applySelectRule(selectEl) {
     const baseName = opt.dataset.base || val;
     if (splitEl) splitEl.value = opt.dataset.split ?? '';
     if (qtyEl)   qtyEl.value   = opt.dataset.qty   ?? '';
-    const savedAmt = parseInt(opt.dataset.amt || '0', 10) || 0;
 
-    if (savedAmt) {
-      amtEl.value = savedAmt ? savedAmt.toLocaleString() : '';
+    // --- ★ 修正版ここから ---
+    const savedAmt = opt.dataset.amt;
+    if (savedAmt !== undefined && savedAmt !== null && savedAmt !== '') {
+      // dataset.amt が存在すればそのまま使う
+      const num = parseInt(savedAmt, 10);
+      amtEl.value = Number.isFinite(num) ? num.toLocaleString() : '';
     } else {
+      // dataset.amt が空なら rule から再計算
       const base = bottleRules[baseName]?.amt ?? 0;
       const s = Math.max(1, parseInt(splitEl.value || '1', 10) || 1);
       const q = Math.max(1, parseInt(qtyEl.value   || '1', 10) || 1);
@@ -7952,13 +7956,16 @@ function applySelectRule(selectEl) {
       const total = per * q;
       amtEl.value = total ? total.toLocaleString() : '';
     }
+    // --- ★ 修正版ここまで ---
 
   } else if (rule) {
     // 2) 通常オプション
     if (splitEl && splitEl.value === '') splitEl.value = rule.split ?? '';
     if (qtyEl   && qtyEl.value   === '') qtyEl.value   = rule.qty   ?? '';
-    if (amtEl)  { const v = Math.floor(rule.amt ?? 0).toLocaleString();
-              if (amtEl.value === '') amtEl.value = v; }
+    if (amtEl)  {
+      const v = Math.floor(rule.amt ?? 0).toLocaleString();
+      if (amtEl.value === '') amtEl.value = v;
+    }
 
   } else {
     // 3) その他
@@ -7972,6 +7979,7 @@ function applySelectRule(selectEl) {
   qtyEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
   amtEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
 }
+
 
 // === 一括入力フォーム用：金額再計算 ======================================
 function updateBottleAmountForRow(tr) {
