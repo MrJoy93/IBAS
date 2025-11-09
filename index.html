@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.1.5</title>
+<title>IBASD  Ver. 8.1.6</title>
 <style>
 
   html, body {
@@ -4255,28 +4255,31 @@ if (resultElem) {
   // === 全キャスト共通 店舗負担合計 =================================
   window.totalStoreCovered = 0;
 
-function confirmAndCalculate(e){
-
+function confirmAndCalculate(e) {
   let subtotal = 0;
-  let totalAmount = 0;   // ← 追加：定義漏れ修正
-  let finalAmount = 0;   // ← 追加：定義漏れ修正
+  let totalAmount = 0;
+  let finalAmount = 0;
 
-  // 送信を止める（Enter送信等も統一）
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
   const castName   = document.getElementById('castName').value || '（名前なし）';
   const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
   const sendoff    = document.getElementById('sendoffAmount').value || '0';
-  const labels = { f:'F', f2:'F2', jounai:'場内', honshiri:'本指', douhan:'同伴', eda:'枝', help:'HELP',
-                   set40:'SET40', set20:'SET20', vip:'VIP', a:'A', b:'B', c:'C', d:'D', e:'E' };
+
+  const labels = {
+    f:'F', f2:'F2', jounai:'場内', honshiri:'本指', douhan:'同伴',
+    eda:'枝', help:'HELP', set40:'SET40', set20:'SET20',
+    vip:'VIP', a:'A', b:'B', c:'C', d:'D', e:'E'
+  };
+
   const mainItems = [];
-  Object.keys(labels).forEach(key=>{
+  Object.keys(labels).forEach(key => {
     const val = document.getElementById(key)?.value;
     if (parseInt(val)) mainItems.push(`${labels[key]} ×${val}`);
   });
 
   const bottles = [];
-  document.querySelectorAll('.bottle-form').forEach(form=>{
+  document.querySelectorAll('.bottle-form').forEach(form => {
     const sel = form.querySelector('.bottleDetails');
     const opt = sel?.selectedOptions?.[0];
     const det = (opt?.dataset?.base) || (sel?.value) || '';
@@ -4285,28 +4288,25 @@ function confirmAndCalculate(e){
     const amtNum = parseInt((form.querySelector('.bottleAmount')?.value || '').replace(/,/g,''),10) || 0;
     if (det || spl || qty || amtNum) {
       const amt = amtNum.toLocaleString();
-      bottles.push(`¥${amt}（${det}${spl!==''?'/割:'+spl:''}${qty!==''?'/数量:'+qty:''}）`);
+      bottles.push(`${det}|${spl}|${qty}|${amt}`); // 構造的に保存
     }
   });
 
-  let msg = `内容を確認してください。\n\n`
-          + `キャスト名:${castName}\n体験及び貸出:${experience}\n送迎金額:¥${sendoff}\n`
-          + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
-          + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
+  // === 手動登録時のみ確認ダイアログを表示 ===
+  if (e) {
+    let msg = `内容を確認してください。\n\n`
+            + `キャスト名:${castName}\n体験及び貸出:${experience}\n送迎金額:¥${sendoff}\n`
+            + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
+            + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
+    if (!window.confirm(msg)) return false;
+  }
 
-  if (!window.confirm(msg)) return false;
+  // --- 計算処理 ---
+  if (typeof calculate === 'function') calculate();
+  if (typeof updateCalculations === 'function') updateCalculations();
+  requestAnimationFrame(() => navScrollTo('app2-resultSection', 'smooth'));
 
-  // 実計算（あなたの既存の calculate が #result を更新します）
-  calculate();
-
-  if (typeof updateCalculations === 'function') {
-  updateCalculations();
-}
-
-  // 描画が反映された次のフレームで結果へスクロール
-  requestAnimationFrame(()=> navScrollTo('app2-resultSection','smooth'));
-
-  // 合計・最終金額を #result から抽出
+  // #result から合計金額を抽出
   const resultText = document.querySelector('#result')?.innerText || '';
   const match = resultText.match(/合計[^\d]*(\d[\d,]*)/);
   if (match) {
@@ -4314,27 +4314,40 @@ function confirmAndCalculate(e){
     finalAmount = totalAmount;
   }
 
-  // 結果オブジェクト
-  const entry = {
-    time: new Date().toISOString(),
-    cast: castName,
-    subtotal: subtotal,
-    total: totalAmount,
-    final: finalAmount,
-    payload: {
-      f: document.getElementById('f')?.value || '',
-      f2: document.getElementById('f2')?.value || '',
-      // ...必要分
+  // === ✅ 手動登録時のみ履歴リスト追加 ===
+  if (e) {
+    const historyEl = document.getElementById('historyList');
+    if (historyEl) {
+      const li = document.createElement('li');
+      const bottleText = bottles.length
+        ? bottles.map(b=>{
+            const [det,spl,qty,amt]=b.split('|');
+            return `¥${amt}（${det}${spl?'/割:'+spl:''}${qty?'/数量:'+qty:''}）`;
+          }).join('・')
+        : 'ボトルなし';
+      li.textContent = `${castName}｜合計¥${finalAmount.toLocaleString()}｜${bottleText}`;
+      historyEl.prepend(li);
     }
-  };
+  }
 
-  // 🔴 以下3行を削除（app2Historyに依存しているため）
-  // app2History.unshift(entry);
-  // renderApp2History();
-  // persistApp2History();
+  // === 🔵 ボトル履歴保存（手動・一括どちらでも） ===
+  try {
+    if (bottles.length > 0) {
+      const bottleHistory = JSON.parse(localStorage.getItem('BOTTLE_HISTORY') || '[]');
+      bottles.forEach(b => bottleHistory.unshift(b));
+      localStorage.setItem('BOTTLE_HISTORY', JSON.stringify(bottleHistory));
+    }
+    if (typeof refreshBottleDropdownsFromHistory === 'function') {
+      refreshBottleDropdownsFromHistory();
+    }
+  } catch (err) {
+    console.warn('ボトル履歴更新時エラー:', err);
+  }
 
-  return false; // 送信は常に抑止
+  return false;
 }
+
+
 
 
 
@@ -7553,7 +7566,14 @@ async function bulkRegister(){
         cont.appendChild(f);
       });
     }
-    if(typeof calculate==='function') calculate();
+        // 旧: if(typeof calculate==='function') calculate();
+    if (typeof confirmAndCalculate === 'function') {
+      // イベント無しで呼ぶ（＝内部処理用）
+      confirmAndCalculate();
+    } else if (typeof calculate === 'function') {
+      // 念のため既存の calculate があればフォールバック
+      calculate();
+    }
   }
   alert('一括登録完了');
 }
