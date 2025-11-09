@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.0.5</title>
+<title>IBASD  Ver. 8.1.5</title>
 <style>
 
   html, body {
@@ -7383,7 +7383,7 @@ function addBottleSubrow(mainTr) {
 
   // 「退」列がまだ存在しない場合でも位置がズレないように補正
   const hasLeaveCol = !!grid.querySelector('.bulk-leave-head');
-  const start = cols - (hasLeaveCol ? 5 : 4);  // ← ← ← 修正版
+  const start = cols - (hasLeaveCol ? 5 : 4);
 
   const tr = document.createElement('tr');
   tr.className = 'btl-subrow';
@@ -7402,13 +7402,22 @@ function addBottleSubrow(mainTr) {
   tr.innerHTML = html;
   mainTr.insertAdjacentElement('afterend', tr);
 
-  // ★ ここを追加（自動選択防止）
   const selectEl = tr.querySelector('.bottleDetails');
   if (selectEl) {
-    selectEl.selectedIndex = 0; // 先頭の「選択してください」に戻す
-    selectEl.value = "";        // 念のため空値に固定
+    // 初期状態を空に
+    selectEl.selectedIndex = 0;
+    selectEl.value = "";
+
+    // ✅ イベント登録を追加（ここが抜けていた）
+    selectEl.addEventListener('change', () => {
+      // 共通ルール適用＋金額反映
+      applySelectRule(selectEl);
+      const row = selectEl.closest('.btl-subrow');
+      if (row) updateBottleAmountForRow(row);
+    });
   }
 }
+
 
 
 
@@ -7987,14 +7996,30 @@ function updateBottleAmountForRow(tr) {
   const split = intSafe(tr.querySelector('.splitCount')?.value || 1, 1);
   const qty   = intSafe(tr.querySelector('.bottleQuantity')?.value || 1, 1);
   const amtEl = tr.querySelector('.bottleAmount');
+  if (!sel || !amtEl) return;
 
-  const val = sel?.value || '';
-  const base = bottleRules[val]?.amt ?? 0;
-  const perPerson = floor100(base / Math.max(1, split));
-  const total = perPerson * Math.max(1, qty);
+  // ---- 品名の決定（履歴対応版） ----
+  let val = sel.value || '';
+  let baseName = sel.selectedOptions?.[0]?.dataset?.base || val;
+
+  try {
+    if (val.startsWith('__HIST__')) {
+      const decoded = decodeURIComponent(val.split('|')[0].replace('__HIST__', ''));
+      if (decoded) baseName = decoded;
+    }
+  } catch (e) {}
+  baseName = baseName.trim();
+
+  const base = bottleRules[baseName]?.amt ?? 0;
+
+  // ★ 割ったあと 100 円未満切り捨て
+  const perRaw     = base / Math.max(1, split);
+  const perPerson  = floor100(perRaw);                // ←ここで 100 円未満切り捨て
+  const total      = perPerson * Math.max(1, qty);    // 本数分掛ける
 
   amtEl.value = total ? total.toLocaleString() : '';
 }
+
 
 // === 割・数量の変更で金額を自動再計算（グリッド版） ===
 document.addEventListener('input', e => {
