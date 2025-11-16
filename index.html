@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.1.6</title>
+<title>IBASD  Ver. 8.2.6</title>
 <style>
 
   html, body {
@@ -2233,7 +2233,7 @@ body[data-active-app="app3"] #maleAttendance {
 
 
 
-
+<script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
 
 </head>
 <body>
@@ -2780,12 +2780,20 @@ body[data-active-app="app3"] #maleAttendance {
   </div>
 
   <button type="button" onclick="resetApp('app3')" class="red-btn">リセット</button>
-  <button type="button" onclick="resetAllApps()" class="red-btn">完全リセット</button>
-  <div style="text-align: center; margin-top: 20px;">
+<button type="button" onclick="resetAllApps()" class="red-btn">完全リセット</button>
+
+<div style="text-align: center; margin-top: 20px;">
   <button onclick="exportAsFilledHTML()">入力済みHTMLとして保存</button>
-  <button id="exportExcelApp3" type="button" class="export-btn">Excelにエクスポート</button>
-  <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
-  </div>
+
+  <!-- ★★★ 新エクセルエクスポートボタン ★★★ -->
+  <button id="exportExcelApp3" type="button" class="export-btn"
+          onclick="exportApp3MonthlyWrite_xpop()">
+      Excelにエクスポート
+  </button>
+</div>
+
+<div style="text-align: center; margin-top: 40px; font-size: 12px; color: #888;">
+</div>
 
 </div> <!-- app3を閉じる -->
 
@@ -9432,64 +9440,9 @@ function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
 
 
 
-//EXCELエクスポート関連コード開始-------------------------------------------------------------------------
+//EXCELエクスポート関連コード開始-------------------------------------------------------------
 
-// ==== 0) SheetJS(XLSX) ローダー（1回だけ） ===========================
-async function ensureXlsxReady(){
-  if (window.XLSX) return;
-  const srcs = ["./xlsx.full.min.js","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"];
-  for (const src of srcs){
-    try{
-      await new Promise((res,rej)=>{
-        const s=document.createElement('script'); s.src=src;
-        s.onload=res; s.onerror=()=>rej(); document.head.appendChild(s);
-      });
-      if (window.XLSX) return;
-    }catch{}
-  }
-  throw new Error("XLSXを読み込めませんでした。");
-}
-
-// ==== 1) APP3 → 各店月計.xlsx 列マッピング ==========================
-// ← これに置き換え
-const COLMAP = {
-  totalCustomers: "B",   // 入客
-  historyIndexCount: "C",// 女
-  maleAttendance: "D",   // 男子出勤人数
-  cashSales: "E",        // 現金
-  cardSales: "F",        // カード
-  totalSales: "G",       // 総売上
-  femaleSalary: "H",     // 女子給
-  maleSalary: "I",       // 男子給
-  catchBack: "J",         // キャッチバック
-  scoutBack: "K",        // スカウトバック
-  adviserFee: "L",       // 顧問
-  driverFee: "M",        // Driver
-  totalLaborCosts: "N",  // 人件費合計
-  femaleTax: "O",        // 女子源泉費
-  maleTax: "P",          // 男子源泉費
-  totalTax: "Q",         // 源泉費合計
-  alcohol: "R",          // 酒代
-  receipt6: "S",          // 領収書
-  totalExpenses: "Y",   // 経費合計
-  grossProfit: "U",     // 純/粗利（表記に合わせて）
-  remainingCash: "V"    // 現残
-};
-
-
-// ==== 2) 探索ディレクトリ（http/Live Server時のみ有効） ============
-const SEARCH_DIRS = ["./","./excel/"];
-
-// ==== 3) ファイル選択（フォールバック用） ==========================
-function pickXlsxFile() {
-  return new Promise((resolve) => {
-    const input = document.createElement("input");
-    input.type = "file"; input.accept = ".xlsx";
-    input.onchange = () => resolve(input.files?.[0] || null);
-    input.click();
-  });
-}
-
+// APPの日付読み取り（既存処理）
 function readWorkDate(){
   const el =
     document.getElementById('workDate') ||
@@ -9497,7 +9450,6 @@ function readWorkDate(){
     document.querySelector('#dateGroup input[type="date"]');
   if (!el) return '';
 
-  // type="date"に最適
   if ('valueAsDate' in el && el.valueAsDate instanceof Date && !isNaN(el.valueAsDate)) {
     const d = el.valueAsDate;
     const y = d.getFullYear();
@@ -9506,10 +9458,9 @@ function readWorkDate(){
     return `${y}-${m}-${dd}`;
   }
 
-  // 文字でも拾う
   let v = (el.value || el.getAttribute('value') || el.textContent || '').trim();
   if (!v) return '';
-  v = v.replace(/\./g,'/').replace(/-/g,'/'); // 区切り統一
+  v = v.replace(/\./g,'/').replace(/-/g,'/');
   const m = v.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
   if (!m) return '';
   const y = m[1];
@@ -9519,212 +9470,194 @@ function readWorkDate(){
 }
 
 
-// ==== 4) 月次ブック取得：fetchで見つかれば使用 / ダメなら選択 ====
-// File System Access API対応：選んだファイルは本当の上書き保存も可能(HTTPS/localhost/対応ブラウザ)
-async function ensureWorkbook(yyyy, mm){
-  await ensureXlsxReady();
+// ---------------------------------------------------------
+// 日計シート列マッピング（PA）
+// ---------------------------------------------------------
+const COLMAP_PA = {
+  totalCustomers:  "B",
+  historyIndexCount: "C",
+  maleAttendance: "D",
+  cashSales: "E",
+  cardSales: "F",
+  totalSales: "G",
+  femaleSalary: "H",
+  maleSalary: "I",
+  catchBack: "J",
+  scoutBack: "K",
+  adviserFee: "L",
+  driverFee: "M",
+  totalLaborCosts: "N",
+  femaleTax: "O",
+  maleTax: "P",
+  totalTax: "Q",
+  alcohol: "R",
+  receipt6: "S",
+  totalExpenses: "T",
+  grossProfit: "U",
+  remainingCash:"V"
+};
 
-  const isFile = location.protocol === 'file:';
-  const candidates = [`${yyyy}年${mm}月PA月計.xlsx`, `${Number(mm)}月PA月計.xlsx`];
 
-  // (A) http(s)で動かしている場合は、既定パスから自動探索
-  if (!isFile) {
-    for (const dir of SEARCH_DIRS) {
-      for (const base of candidates) {
-        try {
-          const resp = await fetch(dir + base);
-          if (resp.ok) {
-            const buf = await resp.arrayBuffer();
-            return { wb: XLSX.read(buf, {type:"array"}), pickedName: base, fileHandle: null };
-          }
-        } catch {}
-      }
-    }
-  }
+// ---------------------------------------------------------
+// CBシート列マッピング（本数）★修正版
+// ---------------------------------------------------------
+const COLMAP_CB = {
+  UKcount:   "B",
+  Kcount:    "C",
+  ABcount:   "D",
+  LAcount:   "E",
+  PAcount:   "F",
+  BBcount:   "G",
+  MScount:   "H",
+  GMcount:   "I",
+  Bcount:    "J",
+  JOEcount:  "K",
+  KOSEcount: "L",
+  HEcount:   "M",
+  PBcount:   "N"
+};
 
-  // (B) 見つからない or file:// → ユーザーに選んでもらう
-  // 可能なら File System Access API を使用（上書き保存可）
-  if ('showOpenFilePicker' in window && window.isSecureContext) {
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx'] } }],
-        excludeAcceptAllOption: false, multiple: false
-      });
-      const file = await handle.getFile();
-      const buf = await file.arrayBuffer();
-      return { wb: XLSX.read(buf, {type:"array"}), pickedName: file.name, fileHandle: handle };
-    } catch {
-      return {}; // キャンセル
-    }
-  } else {
-    // 非対応 or 非セキュア環境(file://) → input=file フォールバック（保存はダウンロード）
-    const file = await pickXlsxFile();
-    if (!file) return {};
-    const buf = await file.arrayBuffer();
-    return { wb: XLSX.read(buf, {type:"array"}), pickedName: file.name, fileHandle: null };
-  }
-}
 
-// ==== 5) メイン：A列「日」に合わせて上書き/末尾追記 ================
-async function exportApp3MonthlyWrite(){
-  const $ = (id)=>document.getElementById(id);
-  const workDate = readWorkDate();  // ← 強化版で取得
+// ---------------------------------------------------------
+// 式行（上書き禁止）
+// ---------------------------------------------------------
+const FORMULA_ROWS = [17, 34, 35];
+
+
+// ---------------------------------------------------------
+// ★★★ メイン処理：日計 + CB に同時書き込み ★★★
+// ---------------------------------------------------------
+async function exportApp3MonthlyWrite_xpop(){
+
+  const workDate = readWorkDate();
   if (!workDate){
     alert("対象日付を入力してください。");
-    console.debug('debug workDate elements:',
-      document.getElementById('workDate'),
-      document.querySelector('input[name="workDate"]'),
-      document.querySelector('#dateGroup input[type="date"]'));
     return;
-    }
+  }
 
-  // 日付正規化
   const d = new Date(workDate.replace(/\./g,"/").replace(/-/g,"/"));
   if (isNaN(d)) { alert("日付形式が不正です。"); return; }
+
   const yyyy = d.getFullYear();
   const mm   = String(d.getMonth()+1).padStart(2,"0");
   const dd   = d.getDate();
 
-  // ブック取得
-  const { wb, pickedName, fileHandle } = await ensureWorkbook(yyyy, mm);
-  if (!wb) return;
 
-  // シート取得（先頭シート。固定名があれば変更OK）
-  const wsName = wb.SheetNames[0];
-  const ws = wb.Sheets[wsName];
-  if (!ws["!ref"]) ws["!ref"] = "A1:A1";
+  // (1) ファイル選択
+  let fileHandle, file;
+  try{
+    [fileHandle] = await showOpenFilePicker({
+      types: [{
+        description: 'Excel',
+        accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] }
+      }],
+      excludeAcceptAllOption: false,
+      multiple: false
+    });
+    file = await fileHandle.getFile();
+  }catch{
+    alert("Excelファイルが選択されませんでした。");
+    return;
+  }
 
-  // A列スキャン：1..31 / 文字日付 / シリアル を同一日扱いで照合
-  const range = XLSX.utils.decode_range(ws["!ref"]);
+  const buffer = await file.arrayBuffer();
+
+
+  // (2) ブック読み込み
+  const workbook = await XlsxPopulate.fromDataAsync(buffer);
+
+  // シート名は「日計」「CB」
+  const sheetPA = workbook.sheet("日計");
+  const sheetCB = workbook.sheet("CB");
+
+  if (!sheetPA){
+    alert("Excel内に『日計』シートがありません。");
+    return;
+  }
+  if (!sheetCB){
+    alert("Excel内に『CB』シートがありません。");
+    return;
+  }
+
+
+  // (3) A列で dd に一致する行を探す（1行目は表題なので2行目以降）
   let targetRow = null;
+  for (let r = 2; r <= 40; r++) {
+    const v = sheetPA.cell("A" + r).value();
 
-  for (let r = 1; r <= range.e.r; r++) { // 1行目は見出し → 2行目から
-    const ref = "A" + (r + 1);
-    const cell = ws[ref];
-    if (!cell || cell.v == null) continue;
-
-    let Y, M, D;
-    if (typeof cell.v === "number" && cell.v < 32) {       // 日だけ(数値)
-      Y = yyyy; M = Number(mm); D = cell.v;
-    } else if (typeof cell.v === "string" && /^\d{1,2}$/.test(cell.v.trim())) { // 日だけ(文字)
-      Y = yyyy; M = Number(mm); D = parseInt(cell.v.trim(),10);
-    } else if (typeof cell.v === "string") {               // "2025/11/02" "2025-11-02"
-      const c = new Date(String(cell.v).replace(/\./g,"/").replace(/-/g,"/"));
-      if (!isNaN(c)) { Y=c.getFullYear(); M=c.getMonth()+1; D=c.getDate(); }
-    } else if (typeof cell.v === "number") {               // Excelシリアル
-      const excelEpoch = new Date(1899,11,30);
-      const dt = new Date(excelEpoch.getTime() + cell.v*86400000);
-      Y=dt.getFullYear(); M=dt.getMonth()+1; D=dt.getDate();
+    if (typeof v === "number" && v === dd){
+      targetRow = r;
+      break;
     }
-
-    if (Y===yyyy && M===Number(mm) && D===dd) { targetRow = r + 1; break; }
+    if (typeof v === "string"){
+      const n = parseInt(v,10);
+      if (!Number.isNaN(n) && n === dd){
+        targetRow = r;
+        break;
+      }
+    }
   }
 
-  // 見つからなければ末尾に追加（A列は「日」数値を書き込む）
-  if (!targetRow) {
-    targetRow = range.e.r + 2;  // 末尾+1（見出しが1行目のため+2）
-    ws["A" + targetRow] = { v: dd, t: "n" };
-    ws["!ref"] = XLSX.utils.encode_range({ s:{c:0, r:0}, e:{c:28, r:targetRow-1} });
+  if (!targetRow){
+    alert(`${dd}日 に対応する行が A列に見つかりません。`);
+    return;
   }
 
-  // 値転記（"1人" や "¥1,234" でもOK：数値だけ抽出）
-  for (const [id, col] of Object.entries(COLMAP)) {
+  if (FORMULA_ROWS.includes(targetRow)) {
+    alert(`${dd}日は合計行（式行）のため上書きできません。`);
+    return;
+  }
+
+
+  const $ = (id)=>document.getElementById(id);
+
+  // (4) 日計シートへ書き込み
+  for (const [id, col] of Object.entries(COLMAP_PA)) {
     const el = $(id);
     if (!el) continue;
-    const raw = (el.value ?? el.textContent ?? "0").toString().replace(/[^\d.-]/g,"");
-    const num = parseFloat(raw) || 0;
-    ws[col + targetRow] = { v: num, t: "n" };
+
+    const raw = (el.value ?? el.textContent ?? "0").toString();
+    const num = parseFloat(raw.replace(/[^\d.-]/g,"")) || 0;
+
+    sheetPA.cell(`${col}${targetRow}`).value(num);
   }
 
-  // 保存：File System Access API なら本当に上書き。非対応はダウンロード保存。
-  const outName = pickedName || `${yyyy}年${mm}月PA月計.xlsx`;
-  try {
-    if (fileHandle && 'createWritable' in fileHandle) {
-      const writable = await fileHandle.createWritable();
-      const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
-      await writable.write(wbout);
-      await writable.close();
-      alert(`上書き保存しました：${outName}`);
-    } else {
-      XLSX.writeFile(wb, outName); // 新規DL保存
-      // alert(`Excelを書き出しました：${outName}`);
-    }
-  } catch (e) {
+  // (5) CBシートへ書き込み（本数）
+  for (const [id, col] of Object.entries(COLMAP_CB)) {
+    const el = $(id);
+    if (!el) continue;
+
+    const raw = (el.value ?? el.textContent ?? "0").toString();
+    const num = parseFloat(raw.replace(/[^\d.-]/g,"")) || 0;
+
+    sheetCB.cell(`${col}${targetRow}`).value(num);
+  }
+
+
+  // (6) 上書き保存
+  try{
+    const outBuffer = await workbook.outputAsync();
+    const writable = await fileHandle.createWritable();
+    await writable.write(outBuffer);
+    await writable.close();
+
+    alert(`Excelに書き込みました：\n${dd}日 → ${targetRow}行目（『日計』『CB』両方）`);
+  }catch(e){
     console.error(e);
-    alert('Excelの書き出しに失敗しました。コンソールを確認してください。');
+    alert("Excel書き出しに失敗しました。");
   }
 }
 
-// ==== 6) ボタンクリック紐付け（重複防止） ==========================
-document.addEventListener('DOMContentLoaded', ()=>{
+
+// ボタン紐付け
+document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('exportExcelApp3');
-  if (btn && !btn.dataset.bound) {
-    btn.addEventListener('click', exportApp3MonthlyWrite);
-    btn.dataset.bound = "1";
-  }
+  if (btn) btn.addEventListener('click', exportApp3MonthlyWrite_xpop);
 });
 
-// === APP3 追加フォーム連動（完全隔離・衝突防止版） ===
-(function(){
-  // ローカルユーティリティ（他と名前が被らない）
-  function debounce_loc(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-  function toInt_loc(v){ const n=parseInt(String(v).replace(/[^\d-]/g,''),10); return isNaN(n)?0:n; }
-  const saveNow_loc = ()=>{ 
-    if (typeof window.autosave === 'function') window.autosave();
-    if (typeof window.saveRemote === 'function') window.saveRemote();
-  };
-  const saveLater_loc = debounce_loc(saveNow_loc, 300);
-
-  function initMaleAttendance(){
-    const el = document.getElementById('maleAttendance');
-    if (!el) return;
-    if (window.state) window.state.maleAttendance = toInt_loc(el.value);
-    const onChange = () => {
-      const val = toInt_loc(el.value);
-      if (window.state) window.state.maleAttendance = val;
-      if (typeof window.updateCalculations === 'function') window.updateCalculations();
-      saveLater_loc();
-    };
-    el.addEventListener('input', onChange);
-    el.addEventListener('change', onChange);
-  }
-
-  function bindSpanToInput(spanId, inputId, stateKey){
-  const sp = document.getElementById(spanId);
-  const ip = document.getElementById(inputId);
-  if (!sp || !ip) return;
-
-  const read = () => parseInt((sp.textContent||'').replace(/[^\d]/g,''),10) || 0;
-  const apply = () => {
-    const v = read();
-    ip.value = v;
-    if (window.state && stateKey) window.state[stateKey] = v;
-    if (typeof window.updateCalculations === 'function') window.updateCalculations();
-    // ←★ ここを追加して、すぐ保存（ローカル or Firestore）を確定
-    if (typeof saveLater_loc === 'function') saveLater_loc();
-  };
-
-  // 初期反映＋監視
-  apply();
-  const mo = new MutationObserver(apply);
-  mo.observe(sp, { childList:true, characterData:true, subtree:true, attributes:true });
-}
+//EXCELエクスポート関連コード終了-------------------------------------------------------------
 
 
-  // DOM準備後に初期化（DOMContentLoadedが過ぎていても即実行）
-  const start = () => {
-    initMaleAttendance();
-    bindSpanToInput('totalCustomers', 'customersCount', 'customersCount');
-    bindSpanToInput('historyIndexCount', 'femaleAttendance', 'femaleAttendance');
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once:true });
-  } else {
-    start();
-  }
-})();
-
-//EXCELエクスポート関連コード終了-------------------------------------------------------------------------
 
 
 </script>
