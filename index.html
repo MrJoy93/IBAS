@@ -4857,6 +4857,26 @@ function getTotalStoreBurden() {
   }
 }
 
+// ★追加：総客数・女子出勤数ミニフォームを自動反映
+function updateAttendanceMiniForm() {
+  // 総客数 → customersCount
+  const totalSpan = document.getElementById('totalCustomers');
+  const customersInput = document.getElementById('customersCount');
+  if (totalSpan && customersInput) {
+    const num = parseInt(totalSpan.textContent.replace(/[^0-9\-]/g, ''), 10);
+    customersInput.value = Number.isNaN(num) ? '' : num;
+  }
+
+  // 履歴インデックス人数（「○人」）→ femaleAttendance
+  const historyCountSpan = document.getElementById('historyIndexCount');
+  const femaleInput = document.getElementById('femaleAttendance');
+  if (historyCountSpan && femaleInput) {
+    const m = historyCountSpan.textContent.match(/(\d+)/);
+    const num2 = m ? parseInt(m[1], 10) : NaN;
+    femaleInput.value = Number.isNaN(num2) ? '' : num2;
+  }
+}
+
 function updateCalculations(){
 
   // --- ① driverFee を最初に再計算 ---
@@ -4957,6 +4977,7 @@ function updateCalculations(){
 
 
   // --- ⑨ 表示更新・保存 ---
+  updateAttendanceMiniForm();
   updateNegativeColor('grossProfit');
   updateNegativeColor('remainingCash');
   updateNegativeColor('cashDifference');
