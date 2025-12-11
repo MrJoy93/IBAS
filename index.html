@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.3.0</title>
+<title>IBASD  Ver. 8.3.1</title>
 <style>
 
   html, body {
@@ -6291,53 +6291,62 @@ function _showSaving(){ ensureIndicator(); const el=document.getElementById("syn
 function _saved(){ const el=document.getElementById("syncIndicator"); if(!el) return; el.textContent="保存済み"; setTimeout(()=>{el.style.display="none"}, 900); }
 
 /*** ==== 収集＆復元（あなたのUIに合わせ済み） ==== ***/
-/* app1（伝票）：#formRows の動的行を保存/復元 */
-function collectApp1State(){
-  const rows = [...document.querySelectorAll('#formRows tr.row')].map(tr => ({
-    table:  tr.querySelector('.table-number')?.value ?? "",
-    honshi: tr.querySelector('.honshi')?.value ?? "",
-    c:      tr.querySelector('.c')?.value ?? "",
-    amount: tr.querySelector('.amount')?.value ?? "",
-    num:    tr.querySelector('.num')?.value ?? "",
-    detail: tr.querySelector('.detail')?.value ?? "",
-    card:   tr.querySelector('.card')?.value ?? "",
-    total:  tr.querySelector('.total')?.value ?? ""
+/* app1（伝票）：行とカテゴリチェックを保存 */
+function collectApp1State() {
+  const tbody = document.getElementById('formRows');
+  if (!tbody) return { rows: [], catChecks: {} };
+
+  // 伝票行をすべて拾う（rowNumber も含める）
+  const rows = [...tbody.querySelectorAll('tr.row')].map(tr => ({
+    no:      (tr.querySelector('.rowNumber')?.textContent ?? "").trim(), // ← ここで番号を保存
+    table:   tr.querySelector('.table-number')?.value ?? "",
+    honshi:  tr.querySelector('.honshi')?.value ?? "",
+    c:       tr.querySelector('.c')?.value ?? "",
+    amount:  tr.querySelector('.amount')?.value ?? "",
+    num:     tr.querySelector('.num')?.value ?? "",
+    detail:  tr.querySelector('.detail')?.value ?? "",
+    card:    tr.querySelector('.card')?.value ?? "",
+    total:   tr.querySelector('.total')?.value ?? ""
   }));
 
-  // ★ ここから追加：CB表のチェックボックスを拾う
-  // 「UKtotal」「Ktotal」…の <span id="◯◯total"> をキーの元にして安定化
+  // ★ 既存ロジック：CB表のチェック状態も保存
   const catChecks = {};
   document.querySelectorAll('#categorySection tbody tr').forEach(tr => {
     const cb = tr.querySelector('input[type="checkbox"]');
     if (!cb) return;
+
     const key =
       (tr.querySelector('span[id$="total"]')?.id || '')
-        .replace(/total$/, '')              // "UKtotal" -> "UK"
-      || (tr.textContent || '').trim().split(/\s+/)[0]; // 念のため保険
+        .replace(/total$/, '') ||
+      (tr.textContent || '').trim().split(/\s+/)[0];
+
     if (key) catChecks[key] = !!cb.checked;
   });
 
-  return { rows, catChecks };   // ★ 追加した catChecks も返す
+  return { rows, catChecks };
 }
-function applyApp1State(state){
-  if(!state || !state.rows) return;
-  const tbody = document.getElementById('formRows');
-  if(!tbody) return;
 
-  // 既存行を空に
+function applyApp1State(state) {
+  if (!state || !Array.isArray(state.rows)) return;
+
+  const tbody = document.getElementById('formRows');
+  if (!tbody) return;
+
+  // いったん全部消す
   tbody.innerHTML = "";
 
   // 行を追加して値を流し込む
-  state.rows.forEach((r, idx)=>{
-    if(typeof window.addRow === "function"){
+  state.rows.forEach((r, idx) => {
+    // 既存の addRow があればそれを使う（アニメーションなども活かす）
+    if (typeof window.addRow === "function") {
       window.addRow();
-    }else{
-      // フォールバックで行を追加
+    } else {
+      // フォールバック：素の tr を生成
       const tr = document.createElement('tr');
       tr.className = 'row';
       tr.innerHTML = `
         <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
-        <td class="rowNumber">${idx+1}</td>
+        <td class="rowNumber"></td>
         <td><input class="table-number" type="text"/></td>
         <td><input class="honshi" type="text"/></td>
         <td>
@@ -6357,11 +6366,20 @@ function applyApp1State(state){
       tbody.appendChild(tr);
     }
 
-    // 追加した行を取得
+    // いま追加した行を取得
     const tr = tbody.querySelector('tr.row:last-child');
-    if(!tr) return;
+    if (!tr) return;
 
-    // 値を安全に代入するヘルパ
+    // --- rowNumber を復元（ここが今回のキモ） ---
+    const noCell = tr.querySelector('.rowNumber');
+    const storedNo =
+      (r && r.no != null && String(r.no).trim() !== "")
+        ? String(r.no).trim()     // 保存済みの番号を優先
+        : String(idx + 1);        // 古いデータ互換用: 番号が無ければ連番
+
+    if (noCell) noCell.textContent = storedNo;
+
+    // 値を流し込むヘルパ
     const setVal = (sel, val) => {
       const el = tr.querySelector(sel);
       if (el) el.value = (val ?? "");
@@ -6377,10 +6395,9 @@ function applyApp1State(state){
     setVal('.total',        r.total);
   });
 
-    // ★ ここから追加：CB表のチェックを復元
+  // ★ 既存：カテゴリチェック復元
   if (state.catChecks) {
     Object.entries(state.catChecks).forEach(([key, checked]) => {
-      // "UK" → "#UKtotal" を探し、その行のチェックボックスに反映
       const span = document.querySelector(`#categorySection #${CSS.escape(key)}total`);
       const tr   = span?.closest('tr');
       const cb   = tr?.querySelector('input[type="checkbox"]');
@@ -6393,6 +6410,7 @@ function applyApp1State(state){
     window.updateTotals();
   }
 }
+
 
 /* app2（報酬計算）：id を持つ input/select/textarea を丸ごと保存/復元＋ボトル明細 */
 function collectApp2State(){
