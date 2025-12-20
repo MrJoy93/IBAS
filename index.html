@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.3.1</title>
+<title>IBASD  Ver. 8.3.2</title>
 <style>
 
   html, body {
@@ -1159,6 +1159,16 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
 }
 .history-index-toggle .caret{ opacity:.9; }
 
+/* ===== 一括入力：5人ごとの区切り線 ===== */
+#bulkGrid tbody tr.bulk-mainrow:nth-child(5n) td {
+  border-bottom: 3px solid #00f5ff !important;
+}
+
+/* ついでに少し余白を出したい場合（任意） */
+#bulkGrid tbody tr.bulk-mainrow:nth-child(5n) td {
+  padding-bottom: 6px !important;
+}
+
 
 /* =========================================================
    MOBILE (<=700px) — 統合版（app1/app2/app3）
@@ -2223,6 +2233,7 @@ body[data-active-app="app3"] #maleAttendance {
     font-size: 14px !important;
   }
 }
+
 
 
 
