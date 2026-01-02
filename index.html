@@ -2847,40 +2847,8 @@ body[data-active-app="app3"] #maleAttendance {
 
 
 <script>
+
 //<base script---------------------------------------------------------------------------------------------------------------->
-
-/* =========================
-   Common utilities
-   - DOM helpers
-   - number parsing
-   - localStorage JSON
-========================= */
-const byId = (id) => document.getElementById(id);
-const $  = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-function toInt(value, fallback = 0) {
-  const s = String(value ?? '').replace(/[,\s￥¥]/g, '');
-  const n = parseInt(s, 10);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-const LS = Object.freeze({
-  getJSON(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch {
-      return fallback;
-    }
-  },
-  setJSON(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-  },
-  remove(key) {
-    localStorage.removeItem(key);
-  }
-});
   function updateAdviserFeeFromTotalCount() {
     const countEl = document.getElementById('totalCountValue');
     const adviserFeeInput = document.getElementById('adviserFee');
@@ -2929,7 +2897,28 @@ document.addEventListener('touchmove', function (e) {
 }, { passive: false });
 
 // ---- 固定ヘッダ(タブ+可視サブナビ)込みで目的地へスクロール ----
+function scrollToFixed(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
 
+  const tabsH = document.querySelector('.tabs')?.offsetHeight || 0;
+  const visibleSub = Array.from(document.querySelectorAll('nav.subnav'))
+    .find(n => getComputedStyle(n).display !== 'none');
+  const subH = visibleSub?.offsetHeight || 0;
+
+  // 念のためサブナビの top も加味（CSSでtop:80px）
+  const subTop = visibleSub ? parseInt(getComputedStyle(visibleSub).top || '0', 10) : 0;
+
+  const offset = tabsH + subH + subTop + 20;     // 余白+20
+  const y = target.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+
+  // 入力欄があるならフォーカス（任意）
+  const focusable = target.matches('input,select,textarea,button')
+      ? target
+      : target.querySelector('input,select,textarea,button');
+  focusable?.focus();
+}
 
 // 共通スクロール関数（サイド／サブナビ用）
 function scrollWithOffset(targetId) {
@@ -3373,6 +3362,13 @@ function updateRowColor(select) {
 
 // グローバルにキャッチバック内訳を保持するオブジェクト
 let catchbackDetails = {};
+
+let _raf = 0;
+function scheduleTotals(){
+  if (_raf) return;
+  _raf = requestAnimationFrame(()=>{ _raf = 0; updateTotals(); });
+}
+
 function updateTotals() {
   let totalCustomers = 0;
   let cardTotal = 0;
@@ -3389,11 +3385,11 @@ function updateTotals() {
 
   // 各行を走査して集計
   document.querySelectorAll(".row").forEach(row => {
-    const num    = toInt(row.querySelector('.num')?.value, 0);
-    const honshi = toInt(row.querySelector('.honshi')?.value, 0);
-    const amount = toInt(row.querySelector('.amount')?.value, 0);
-    const card   = toInt(row.querySelector('.card')?.value, 0);
-    const total  = toInt(row.querySelector('.total')?.value, 0);
+    const num    = parseInt(row.querySelector(".num")?.value.replace(/,/g, '')) || 0;
+    const honshi = parseInt(row.querySelector(".honshi")?.value.replace(/,/g, '')) || 0;
+    const amount = parseInt(row.querySelector(".amount")?.value.replace(/,/g, '')) || 0;
+    const card   = parseInt(row.querySelector(".card")?.value.replace(/,/g, '')) || 0;
+    const total  = parseInt(row.querySelector(".total")?.value.replace(/,/g, '')) || 0;
     const category = row.querySelector(".c")?.value;
 
     // 全体集計
@@ -3455,8 +3451,26 @@ function updateTotals() {
   const totalSalesInput = document.getElementById("totalSales");
   if (totalSalesInput) totalSalesInput.value = formatNumber(totalAmount);
 
-  // 印刷系で参照するために公開
-  window.catchbackDetails = catchbackDetails;
+  if (!window.catchbackDetails) window.catchbackDetails = {};
+window.catchbackDetails = {}; // 初期化
+
+document.querySelectorAll('#formRows tr').forEach(row => {
+  const c = row.querySelector('.c')?.value || '';
+  if (!c) return;
+
+  const num  = parseInt((row.querySelector('.num')?.value || '0').replace(/,/g,''), 10);    // 本数
+  const unit = parseInt((row.querySelector('.amount')?.value || '0').replace(/,/g,''), 10); // 単価（金額）
+  const detail = row.querySelector('.detail')?.value || '';
+
+  const amount = unit * num; // 合計金額
+
+  (window.catchbackDetails[c] ||= []).push({
+    unit,        // 単価
+    count: num,  // 本数
+    amount,      // 金額（unit × count）
+    detail
+  });
+});
 
   saveForm();
 }
@@ -3824,7 +3838,7 @@ sel.addEventListener('change', (e) => {
 }
 
 
-window.BOTTLE_REFRESHING = false;
+let BOTTLE_REFRESHING = false;
 
 // === APP2: ボトルの登録バック金額（ユーザー指定版） ===
 const BOTTLE_BASE = Object.freeze({
@@ -4024,13 +4038,13 @@ function saveBottleForms() {
     bottleForms.push({ bottleDetails, splitCount, bottleQuantity, bottleAmount });
   });
 
-  LS.setJSON('bottleForms', bottleForms);
+  localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
 }
 
 
 
 function loadBottleForms() {
-  const bottleFormsData = LS.getJSON('bottleForms', []);
+  const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms')) || [];
   const container = document.getElementById('bottleFormsContainer');
   if (!container) return;   // ← 念のため
 
@@ -4607,9 +4621,73 @@ function updateSummary() {
 }
 
 
+function toggleDetails(button) {
+  const container = button.nextElementSibling.nextElementSibling; 
+  // ボタンのすぐ次のボタンの次のdiv（details-html-container）を取得
+  if (container.style.display === 'none' || container.style.display === '') {
+    container.style.display = 'block';
+    button.textContent = '詳細を隠す';
+  } else {
+    container.style.display = 'none';
+    button.textContent = '詳細を表示';
+  }
+}
 
+function calculateBack() {
+  const values = {
+    f: 1500,
+    f2: 2000,
+    jounai: 1000,
+    honshiri: 0,
+    douhan: 1500,
+    eda: 500,
+    help: -1500,
+    set40: 5500,
+    set20: 3500,
+    vip: 2000,
+    a: 500,
+    b: 1000,
+    c: 1500,
+    d: 2000,
+    e: 2500
+  };
 
+  const inputs = {
+    f: document.getElementById("f"),
+    f2: document.getElementById("f2"),
+    jounai: document.getElementById("jounai"),
+    honshiri: document.getElementById("honshiri"),
+    douhan: document.getElementById("douhan"),
+    eda: document.getElementById("eda"),
+    help: document.getElementById("help"),
+    set40: document.getElementById("set40"),
+    set20: document.getElementById("set20"),
+    vip: document.getElementById("vip"),
+    a: document.getElementById("a"),
+    b: document.getElementById("b"),
+    c: document.getElementById("c"),
+    d: document.getElementById("d"),
+    e: document.getElementById("e")
+  };
 
+  let total = 0;
+  let detailLines = [];
+
+  Object.keys(values).forEach(key => {
+    const count = parseInt(inputs[key]?.value || 0);
+    if (count > 0) {
+      const unitPrice = values[key];
+      const itemTotal = count * unitPrice;
+      total += itemTotal;
+
+      const sign = unitPrice < 0 ? "-" : "";
+      detailLines.push(`${key.toUpperCase()} ×${count}（¥${Math.abs(unitPrice).toLocaleString()}）= ${sign}¥${Math.abs(itemTotal).toLocaleString()}`);
+    }
+  });
+
+  document.getElementById("total").textContent = "¥" + total.toLocaleString();
+  document.getElementById("detail").value = detailLines.join("\n");
+}
 
 
 function restoreCheckboxes() {
@@ -5023,7 +5101,13 @@ function saveToLocal() {
   });
 }
 
-
+function loadFromLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    const saved = localStorage.getItem(input.id);
+    if (saved !== null) input.value = saved;
+  });
+}
 
 
 //業務内容を保存
@@ -5231,7 +5315,19 @@ function resetApp2(full) {
   if (bottleForms) bottleForms.innerHTML = '';
 
   // === 一括入力フォームのクリア（内包） ===============================
-  ()();
+  (function clearBulkInputForm() {
+    const grid = document.getElementById('bulkGrid');
+    if (!grid) return;
+
+    grid.querySelectorAll('.bulk-name, .bulk-send, .bulk-num').forEach(el => el.value = '');
+    grid.querySelectorAll('.bulk-exp').forEach(el => (el.checked = false));
+    grid.querySelectorAll('.btl-subrow').forEach(tr => tr.remove());
+    grid.querySelectorAll('tr.bulk-mainrow').forEach(row => {
+      row.dataset.bottleCount = '0';
+      const minusBtn = row.querySelector('.btl-minus');
+      if (minusBtn) minusBtn.setAttribute('disabled', 'true');
+    });
+  })();
 
   // === 完全クリア時（履歴/保存データも削除） =========================
   if (full) {
@@ -6127,6 +6223,32 @@ try {
 } catch(_) {}
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </script>
 
 <script type="module">
@@ -6796,7 +6918,10 @@ function getNavOffsetPx(){
 }
 
 // オフセット付きスムーススクロール
-
+function scrollWithOffset(targetEl){
+  const y = targetEl.getBoundingClientRect().top + window.scrollY - getNavOffsetPx();
+  window.scrollTo({ top: y, behavior: 'smooth' });
+}
 
 // インデックス置き場（テーブル）を確保 or 作成（app2-inputSection の直前）
 function ensureHistoryIndexTable(){
@@ -6893,7 +7018,7 @@ if (isMobile) {
     btn.className = 'idx-btn';
     btn.type = 'button';
     btn.textContent = p.name;
-    btn.addEventListener('click', () => window.scrollWithOffset(p.el));
+    btn.addEventListener('click', () => scrollWithOffset(p.el));
     wrap.appendChild(btn);
   });
 
@@ -6912,7 +7037,7 @@ if (isMobile) {
         btn.className = 'idx-btn';
         btn.type = 'button';
         btn.textContent = p.name;
-        btn.addEventListener('click', () => window.scrollWithOffset(p.el));
+        btn.addEventListener('click', () => scrollWithOffset(p.el));
         td.appendChild(btn);
       }
       tr.appendChild(td);
@@ -7844,10 +7969,15 @@ window.BOTTLE_OPTIONS_HTML = `
 
 // === 金額変換ユーティリティ ==========================================
 // 入力 → 数値変換（カンマ除去・数値化）
-
+function intSafe(v, d = 0) {
+  const n = parseInt(String(v ?? '').toString().replace(/,/g,''), 10);
+  return Number.isFinite(n) ? n : d;
+}
 
 // 100円未満切り捨て（例: 3750 → 3700）
-
+function floor100(yen) {
+  return Math.floor(intSafe(yen) / 100) * 100;
+}
 
 // === ボトル自動入力ルール ============================================
 // キー：セレクトの value
@@ -8000,8 +8130,8 @@ function applySelectRule(selectEl) {
 // === 一括入力フォーム用：金額再計算 ======================================
 function updateBottleAmountForRow(tr) {
   const sel   = tr.querySelector('.bottleDetails');
-  const split = window.intSafe(tr.querySelector('.splitCount')?.value || 1, 1);
-  const qty   = window.intSafe(tr.querySelector('.bottleQuantity')?.value || 1, 1);
+  const split = intSafe(tr.querySelector('.splitCount')?.value || 1, 1);
+  const qty   = intSafe(tr.querySelector('.bottleQuantity')?.value || 1, 1);
   const amtEl = tr.querySelector('.bottleAmount');
   if (!sel || !amtEl) return;
 
@@ -8021,7 +8151,7 @@ function updateBottleAmountForRow(tr) {
 
   // ★ 割ったあと 100 円未満切り捨て
   const perRaw     = base / Math.max(1, split);
-  const perPerson  = window.floor100(perRaw);                // ←ここで 100 円未満切り捨て
+  const perPerson  = floor100(perRaw);                // ←ここで 100 円未満切り捨て
   const total      = perPerson * Math.max(1, qty);    // 本数分掛ける
 
   amtEl.value = total ? total.toLocaleString() : '';
@@ -9635,6 +9765,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 //EXCELエクスポート関連コード終了-------------------------------------------------------------
+
+
+
+
 </script>
 
 </body>
