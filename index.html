@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.3.3</title>
+<title>IBASD  Ver. 8.4.3</title>
 <style>
 
   html, body {
@@ -7464,8 +7464,12 @@ const COLS = [
   { key:'name', type:'text', header:'氏名', cls:'bulk-name' },
   { key:'exp', type:'check', header:'体/貸', cls:'bulk-exp' },
   { key:'send', type:'num', header:'送迎', cls:'bulk-send' },
-  { key:'f', type:'num', header:'F1' },
-  { key:'f2', type:'num', header:'F2' },
+  // ★追加：Fの左にチェック（チェック有り=2000側）
+  { key:'f2000', type:'check', header:'F2', cls:'bulk-f2000' },
+
+  // ★統合：F数量（旧F1/F2の回数）
+  { key:'f', type:'num', header:'F' },
+
   { key:'jounai', type:'num', header:'場内' },
   { key:'honshiri', type:'num', header:'本指' },
   { key:'douhan', type:'num', header:'同伴' },
@@ -7530,7 +7534,13 @@ function addBottleSubrow(mainTr) {
     <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
   `;
   tr.innerHTML = html;
-  mainTr.insertAdjacentElement('afterend', tr);
+
+    // 既存サブ行があるなら「末尾のサブ行の後ろ」に追加
+  let anchor = mainTr;
+  while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
+    anchor = anchor.nextElementSibling;
+  }
+  anchor.insertAdjacentElement('afterend', tr);
 
   const selectEl = tr.querySelector('.bottleDetails');
   if (selectEl) {
@@ -7538,13 +7548,20 @@ function addBottleSubrow(mainTr) {
     selectEl.selectedIndex = 0;
     selectEl.value = "";
 
-    // ✅ イベント登録を追加（ここが抜けていた）
     selectEl.addEventListener('change', () => {
-      // 共通ルール適用＋金額反映
-      applySelectRule(selectEl);
-      const row = selectEl.closest('.btl-subrow');
-      if (row) updateBottleAmountForRow(row);
-    });
+  applySelectRule(selectEl);
+
+  const row = selectEl.closest('.btl-subrow');
+  if (!row) return;
+
+  const opt = selectEl.selectedOptions?.[0];
+  const saved = (opt?.dataset?.amt ?? opt?.dataset?.amount);
+
+  // 履歴で「保存金額」があるなら上書き再計算しない（split/qty変更時は別イベントで再計算される）
+  if (saved === undefined || saved === null || saved === '') {
+    updateBottleAmountForRow(row);
+  }
+});
   }
 }
 
@@ -7615,12 +7632,17 @@ function buildGrid(n){
       <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
     `;
     const placeholders = {
-  f: 'F1', f2: 'F2',
+  f: 'F',
   jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
   set40: '40', set20: '20', vip: 'VIP',
   a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
 };
-['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+
+// ★ send の直後に「F2000チェック」セルを追加
+html += `<td style="text-align:center;"><input type="checkbox" class="bulk-f2000" data-k="f2000"></td>`;
+
+// ★ 数量系は f とそれ以外だけ生成（f2は削除）
+['f','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
   .forEach(k => {
     const ph = placeholders[k] || '';
     html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="${ph}"></td>`;
@@ -7647,9 +7669,17 @@ async function bulkRegister(){
   if(!tb) return alert('内部テーブルが見つかりません');
   const mains=[...tb.querySelectorAll('.bulk-mainrow')];
   const rows=mains.map(m=>{
-    const nums={};
-    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
-      .forEach(k=>nums[k]=parseInt(m.querySelector(`[data-k="${k}"]`)?.value||0));
+    const nums = {};
+
+// ★F統合（グリッド→保存データは従来どおり f/f2 を持つ）
+const fCount = parseInt(m.querySelector(`[data-k="f"]`)?.value || 0);
+const is2000 = !!m.querySelector(`[data-k="f2000"]`)?.checked;
+nums.f  = is2000 ? 0      : fCount;
+nums.f2 = is2000 ? fCount : 0;
+
+// ★他は従来どおり
+['jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+  .forEach(k => nums[k] = parseInt(m.querySelector(`[data-k="${k}"]`)?.value || 0));
     const bottles=[];
     let n=m.nextElementSibling;
     while(n&&n.classList.contains('btl-subrow')){
@@ -8065,14 +8095,17 @@ function appendBottleHistoryOptions(selectEl, historyList){
     grp.appendChild(o);
   });
 
-  [...selectEl.querySelectorAll('optgroup[label="最近の登録（履歴）"]')].forEach(n=>n.remove());
+  selectEl.querySelectorAll('optgroup[label="最近の登録（履歴）"]').forEach(n => n.remove());
   selectEl.insertBefore(grp, selectEl.firstChild);
 }
 
 
 // === 自動入力処理本体 ================================================
+// === 自動入力処理本体 ================================================
 function applySelectRule(selectEl) {
   const tr = selectEl.closest('.btl-subrow') || selectEl.closest('.bottle-form');
+  if (!tr) return;
+
   const splitEl = tr.querySelector('.splitCount');
   const qtyEl   = tr.querySelector('.bottleQuantity');
   const amtEl   = tr.querySelector('.bottleAmount');
@@ -8081,31 +8114,55 @@ function applySelectRule(selectEl) {
   const val  = selectEl.value;
   const rule = bottleRules[val];
 
-  // 1) 履歴由来オプション
-  if (opt && (opt.dataset.split || opt.dataset.qty || opt.dataset.amt || opt.dataset.base)) {
-    const baseName = opt.dataset.base || val;
-    if (splitEl) splitEl.value = opt.dataset.split ?? '';
-    if (qtyEl)   qtyEl.value   = opt.dataset.qty   ?? '';
+  // 履歴ロック情報を消すヘルパ
+  const clearHistLock = () => {
+    delete tr.dataset.histLock;
+    delete tr.dataset.histAmt;
+    delete tr.dataset.histSplit;
+    delete tr.dataset.histQty;
+  };
 
-    // --- ★ 修正版ここから ---
+  // 1) 履歴由来オプション（datasetが付いているもの）
+  if (opt && (opt.dataset.split || opt.dataset.qty || opt.dataset.amt || opt.dataset.base)) {
+    const baseName = (opt.dataset.base || val || '').trim();
+
+    const sTxt = (opt.dataset.split ?? '');
+    const qTxt = (opt.dataset.qty   ?? '');
+    if (splitEl) splitEl.value = sTxt;
+    if (qtyEl)   qtyEl.value   = qTxt;
+
+    // 金額：履歴に amt があるならそれを優先
+    let amtNum = null;
     const savedAmt = opt.dataset.amt;
+
     if (savedAmt !== undefined && savedAmt !== null && savedAmt !== '') {
-      // dataset.amt が存在すればそのまま使う
       const num = parseInt(savedAmt, 10);
-      amtEl.value = Number.isFinite(num) ? num.toLocaleString() : '';
+      amtNum = Number.isFinite(num) ? num : null;
     } else {
-      // dataset.amt が空なら rule から再計算
+      // dataset.amt が空なら rule から再計算（100円未満切り捨て）
       const base = bottleRules[baseName]?.amt ?? 0;
-      const s = Math.max(1, parseInt(splitEl.value || '1', 10) || 1);
-      const q = Math.max(1, parseInt(qtyEl.value   || '1', 10) || 1);
-      const per   = Math.floor(base / s);
-      const total = per * q;
-      amtEl.value = total ? total.toLocaleString() : '';
+      const s = Math.max(1, parseInt(sTxt || '1', 10) || 1);
+      const q = Math.max(1, parseInt(qTxt || '1', 10) || 1);
+
+      const perRaw    = base / s;
+      const perPerson = floor100(perRaw);
+      const total     = perPerson * q;
+
+      amtNum = total > 0 ? total : null;
     }
-    // --- ★ 修正版ここまで ---
+
+    if (amtEl) amtEl.value = amtNum ? amtNum.toLocaleString() : '';
+
+    // ★ 履歴ロック：この split/qty の組み合わせの間は amt を固定（後述の再計算で上書きさせない）
+    tr.dataset.histLock  = '1';
+    tr.dataset.histAmt   = amtNum ? String(amtNum) : '';
+    tr.dataset.histSplit = String(splitEl ? (splitEl.value || '') : '');
+    tr.dataset.histQty   = String(qtyEl   ? (qtyEl.value   || '') : '');
 
   } else if (rule) {
     // 2) 通常オプション
+    clearHistLock();
+
     if (splitEl && splitEl.value === '') splitEl.value = rule.split ?? '';
     if (qtyEl   && qtyEl.value   === '') qtyEl.value   = rule.qty   ?? '';
     if (amtEl)  {
@@ -8114,19 +8171,23 @@ function applySelectRule(selectEl) {
     }
 
   } else {
-    // 3) その他
+    // 3) その他（未選択など）
+    clearHistLock();
+
     if (splitEl) splitEl.value = '';
     if (qtyEl)   qtyEl.value   = '';
     if (amtEl)   amtEl.value   = '';
   }
 
   // 入力イベントを発火
-  splitEl?.dispatchEvent(new Event('input',  { bubbles:true }));
-  qtyEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
-  amtEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
+  splitEl?.dispatchEvent(new Event('input', { bubbles:true }));
+  qtyEl  ?.dispatchEvent(new Event('input', { bubbles:true }));
+  amtEl  ?.dispatchEvent(new Event('input', { bubbles:true }));
 }
 
 
+
+// === 一括入力フォーム用：金額再計算 ======================================
 // === 一括入力フォーム用：金額再計算 ======================================
 function updateBottleAmountForRow(tr) {
   const sel   = tr.querySelector('.bottleDetails');
@@ -8135,27 +8196,43 @@ function updateBottleAmountForRow(tr) {
   const amtEl = tr.querySelector('.bottleAmount');
   if (!sel || !amtEl) return;
 
-  // ---- 品名の決定（履歴対応版） ----
-  let val = sel.value || '';
-  let baseName = sel.selectedOptions?.[0]?.dataset?.base || val;
+  const opt = sel.selectedOptions?.[0];
 
-  try {
-    if (val.startsWith('__HIST__')) {
-      const decoded = decodeURIComponent(val.split('|')[0].replace('__HIST__', ''));
-      if (decoded) baseName = decoded;
+  // ★ 履歴ロック中：split/qty が履歴のままなら amt を固定して終了
+  if (tr.dataset.histLock === '1') {
+    const hs = tr.dataset.histSplit ?? '';
+    const hq = tr.dataset.histQty   ?? '';
+    const curS = String(tr.querySelector('.splitCount')?.value || '');
+    const curQ = String(tr.querySelector('.bottleQuantity')?.value || '');
+
+    if (curS === hs && curQ === hq) {
+      const ha = tr.dataset.histAmt ?? '';
+      const num = parseInt(ha, 10);
+      amtEl.value = Number.isFinite(num) && num > 0 ? num.toLocaleString() : '';
+      return;
+    } else {
+      // split/qty を触ったらロック解除して通常再計算に移行
+      delete tr.dataset.histLock;
+      delete tr.dataset.histAmt;
+      delete tr.dataset.histSplit;
+      delete tr.dataset.histQty;
     }
-  } catch (e) {}
-  baseName = baseName.trim();
+  }
+
+  // ---- 品名の決定（dataset.base 優先） ----
+  let val = sel.value || '';
+  let baseName = (opt?.dataset?.base || val || '').trim();
 
   const base = bottleRules[baseName]?.amt ?? 0;
 
   // ★ 割ったあと 100 円未満切り捨て
   const perRaw     = base / Math.max(1, split);
-  const perPerson  = floor100(perRaw);                // ←ここで 100 円未満切り捨て
-  const total      = perPerson * Math.max(1, qty);    // 本数分掛ける
+  const perPerson  = floor100(perRaw);
+  const total      = perPerson * Math.max(1, qty);
 
   amtEl.value = total ? total.toLocaleString() : '';
 }
+
 
 
 // === 割・数量の変更で金額を自動再計算（グリッド版） ===
@@ -8429,111 +8506,36 @@ document.addEventListener('click', async (e) => {
         mainRow.nextElementSibling.remove();
       }
     };
-    const addAndGetSubrow = (mainRow) => {
-  const grid = document.getElementById('bulkGrid');
-  const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
-
-  // ★ 修正点：「退」列を考慮した調整
-  // 新規追加と同じく cols - 5 に統一
-  const pads = Math.max(0, cols - 5);
-
-  const tr = document.createElement('tr');
-  tr.className = 'btl-subrow';
-
-  for (let i = 0; i < pads; i++) {
-    const td = document.createElement('td');
-    td.className = 'btl-pad';
-    tr.appendChild(td);
+    
+    // 本体の addBottleSubrow(mainTr) を使って、追加されたサブ行(tr)を返す
+// ※ addBottleSubrow は IBASD 本体側に既に存在する前提
+const addBottleSubrowAndReturn = (mainTr) => {
+  if (typeof addBottleSubrow !== 'function') {
+    throw new Error('addBottleSubrow(mainTr) が見つかりません（本体側の関数未ロード）');
   }
 
-  tr.insertAdjacentHTML('beforeend', `
-    <td class="btl-detail">
-      <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
-      <input class="bottleFreeText" type="text" style="display:none;">
-    </td>
-    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
-  `);
+  // 追加前の「直後サブ行先頭」を覚える
+  const before = mainTr.nextElementSibling;
 
-  let anchor = mainRow;
-  while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
-    anchor = anchor.nextElementSibling;
+  // 本体ロジックで追加（退列の有無などを吸収してくれる）
+  addBottleSubrow(mainTr);
+
+  // 追加後：mainTr直後の要素がサブ行ならそれ、既にサブ行が並んでいるなら末尾を探す
+  let n = mainTr.nextElementSibling;
+  if (!n || !n.classList.contains('btl-subrow')) return null;
+
+  // 連続するサブ行の末尾まで進める（addBottleSubrow 実装によっては直後に入る）
+  let last = n;
+  while (last.nextElementSibling && last.nextElementSibling.classList.contains('btl-subrow')) {
+    last = last.nextElementSibling;
   }
-  anchor.insertAdjacentElement('afterend', tr);
-  return tr;
+
+  // 「追加前から既にサブ行があった」ケースだと末尾が既存の可能性があるので、
+  // before からの差分で特定する：before がサブ行だった場合は、その“手前”が追加分になり得る
+  // ただし通常は clearSubrows() の直後に呼ぶので、ここまでで十分。
+  return last;
 };
 
-
-    // ===== 1) 履歴ノード =====
-    let items = document.querySelectorAll('#app2-historySection .history-item');
-    if (!items.length) {
-      const list = document.getElementById('historyList');
-      if (list) items = list.querySelectorAll('li');
-    }
-    items = Array.from(items);
-    if (!items.length) throw new Error('復元できる履歴がありません。');
-    if (FILL_OLD_TO_NEW) items.reverse();
-
-    const total = items.length; let done = 0;
-    const hudCount = document.getElementById('bulkHUDCount');
-    const hudBar   = document.getElementById('bulkHUDBar');
-    const updateProgress = () => {
-      const pct = total ? Math.floor((done/total)*100) : 0;
-      const label = `復元中...｜${done}/${total}（${pct}%）`;
-      if (hudCount) hudCount.textContent = `${done}/${total}（${pct}%）`;
-      if (hudBar)   hudBar.style.width = pct + '%';
-      if (badge)    badge.textContent  = label;
-    };
-    updateProgress();
-
-    // ===== 2) 行数合わせ =====
-    const need = items.length;
-    const rowsSel = document.getElementById('bulkRows');
-    if (rowsSel) rowsSel.value = String(Math.max(need, parseInt(rowsSel.value||'0',10)||0));
-    if (typeof buildGrid === 'function') buildGrid(need);
-    const tbody = document.querySelector('#bulkGrid tbody');
-    if (!tbody) throw new Error('一括入力テーブルが見つかりません。');
-
-    // ===== 3) 復元ループ =====
-    const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
-    let rowIndex = 0;
-    for (const it of items) {
-      const row = tbody.querySelectorAll('tr.bulk-mainrow')[rowIndex];
-      if (!row) break;
-
-      const restoreBtn = Array.from(it.querySelectorAll('button')).find(b => b.textContent.includes('復元'));
-      if (!restoreBtn) { rowIndex++; continue; }
-
-      restoreBtn.click();
-      await sleep(RESTORE_WAIT_MS);
-
-      setVal(row.querySelector('.bulk-name'), document.getElementById('castName')?.value, 'input');
-      const exp = row.querySelector('.bulk-exp');
-      if (exp) { exp.checked = !!document.getElementById('experienceAndRental')?.checked; exp.dispatchEvent(new Event('change', {bubbles:true})); }
-      setVal(row.querySelector('.bulk-send'), document.getElementById('sendoffAmount')?.value, 'input');
-      QUANT_IDS.forEach(id => { const v = document.getElementById(id)?.value || ''; const input = row.querySelector(`[data-k="${id}"]`); if (input) setVal(input, v, 'input'); });
-
-      clearSubrows(row);
-      const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
-      for (const f of forms) {
-        const d = f.querySelector('.bottleDetails')?.value || '';
-        const s = f.querySelector('.splitCount')?.value  || '';
-        const q = f.querySelector('.bottleQuantity')?.value || '';
-        const a = f.querySelector('.bottleAmount')?.value || '';
-        if (!d && !s && !q && !a) continue;
-        const sub = addAndGetSubrow(row); if (!sub) continue;
-        const sel = sub.querySelector('.bottleDetails'); if (sel) sel.value = d;
-        setVal(sub.querySelector('.splitCount'), s, 'input');
-        setVal(sub.querySelector('.bottleQuantity'), q, 'input');
-        setVal(sub.querySelector('.bottleAmount'), a, 'input');
-        if (typeof updateBottleAmountForRow === 'function') updateBottleAmountForRow(sub);
-      }
-
-      rowIndex++; done++;
-      updateProgress();
-      await new Promise(r => requestAnimationFrame(r)); // ← 描画更新を保証
-    }
 
     // 仕上げ
     document.querySelectorAll('#bulkGrid input')
@@ -8691,12 +8693,27 @@ function addAndGetSubrow(mainRow){
     const sendEl = document.getElementById('sendoffAmount');
     if (sendEl) { sendEl.value = send; sendEl.dispatchEvent(new Event('input', {bubbles:true})); }
 
-    // 数値系（F, F2, …）
-    QUANT_IDS.forEach(id => {
-      const v = mainRow.querySelector(`[data-k="${id}"]`)?.value ?? '';
-      const dest = document.getElementById(id);
-      if (dest) { dest.value = v; dest.dispatchEvent(new Event('input', {bubbles:true})); }
-    });
+      // ★F統合：グリッドの f と f2000 から、通常フォームの f / f2 を作る
+  const fCount = mainRow.querySelector(`[data-k="f"]`)?.value ?? '';
+  const is2000 = !!mainRow.querySelector(`[data-k="f2000"]`)?.checked;
+
+  const fEl  = document.getElementById('f');   // 通常フォーム F1(1500)
+  const f2El = document.getElementById('f2');  // 通常フォーム F2(2000)
+
+  if (fEl && f2El) {
+    if (is2000) { fEl.value = 0;  f2El.value = fCount; }
+    else        { fEl.value = fCount; f2El.value = 0; }
+    fEl.dispatchEvent(new Event('input', {bubbles:true}));
+    f2El.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+
+  // ★残りの数値系だけ転送（f / f2 は除外）
+  const REST_IDS = ['jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
+  REST_IDS.forEach(id => {
+    const v = mainRow.querySelector(`[data-k="${id}"]`)?.value ?? '';
+    const dest = document.getElementById(id);
+    if (dest) { dest.value = v; dest.dispatchEvent(new Event('input', {bubbles:true})); }
+  });
 
     // ボトルサブ行 → 通常フォームへ再構成
     // 既存のフォーム側コンテナを前提（ない場合はスキップ）
