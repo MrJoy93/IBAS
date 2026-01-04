@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.3.3</title>
+<title>IBASD  Ver. 8.4.5</title>
 <style>
 
   html, body {
@@ -2505,26 +2505,30 @@ body[data-active-app="app3"] #maleAttendance {
       </div>
 
       <div class="group group-basic">
-       <h3>フリーバック</h3>
-       <label>F1（¥1500）:
-        <input type="text" inputmode="numeric" pattern="\d*"
-          id="f"
-          autocomplete="off" autocapitalize="off" spellcheck="false"
-          placeholder="F1">
-       </label>
-       <label>F2（¥2000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
-          id="f2"
-          autocomplete="off" autocapitalize="off" spellcheck="false"
-          placeholder="F2">
-        </label>
-          <label>場内（¥1000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
-          id="jounai"
-          autocomplete="off" autocapitalize="off" spellcheck="false"
-          placeholder="場内">
-        </label>
-      </div>
+  <h3>フリーバック</h3>
+
+  <!-- 単価フラグ：チェック無し=1500 / チェック有り=2000 -->
+  <label>F単価（チェックなし=¥1500 / チェック有り=¥2000）:
+    <input type="checkbox"
+      id="f"
+      autocomplete="off" autocapitalize="off" spellcheck="false">
+  </label>
+
+  <!-- 数量：旧F2(id=f2)を「F数量」として使う -->
+  <label>F（数量）:
+    <input type="text" inputmode="numeric" pattern="\d*"
+      id="f2"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="F">
+  </label>
+
+  <label>場内（¥1000）:
+    <input type="text" inputmode="numeric" pattern="\d*"
+      id="jounai"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="場内">
+  </label>
+</div>
 
       <div class="group group-shimei">
         <h3>指名・同伴・枝・HELP</h3>
@@ -4083,16 +4087,32 @@ function calculate() {
   let experienceText = isExperienceAndRentalChecked ? '体験及び貸出: 有り' : '体験及び貸出: 無し';
 
   const values = {
-    f: 1500, f2: 2000, jounai: 1000, honshiri: 0, douhan: 1500,
-    eda: 500, help: -1500, set40: 5500, set20: 3500, vip: 2000,
-    a: 500, b: 1000, c: 1500, d: 2000, e: 2500
-  };
+  jounai: 1000,
+  honshiri: 0,
+  douhan: 1500,
+  eda: 500,
+  help: -1500,
+  set40: 5500,
+  set20: 3500,
+  vip: 2000,
+  a: 500,
+  b: 1000,
+  c: 1500,
+  d: 2000,
+  e: 2500
+};
 
-  let total = 0;
-  for (let key in values) {
-    const count = parseInt(document.getElementById(key).value) || 0;
-    total += count * values[key];
-  }
+// Fは「数量(f2) × 単価(チェックボックスfで1500/2000)」に統合
+const fCount = parseInt(document.getElementById('f2')?.value) || 0;
+const fUnit  = document.getElementById('f')?.checked ? 2000 : 1500;
+
+let total = fCount * fUnit;
+
+for (let key in values) {
+  const count = parseInt(document.getElementById(key).value) || 0;
+  total += count * values[key];
+}
+
 
    // 動的に追加されたボトルフォームから金額と詳細を取得
   const bottleForms = document.querySelectorAll('.bottle-form');
@@ -4181,16 +4201,22 @@ function calculate() {
   };
 
   let detailsHTML = '<div class="details" style="font-size: 14px; margin-top: 10px;">';
+
+    // F（統合）
+if (fCount > 0) {
+  const subtotal = fCount * fUnit;
+  detailsHTML += `<div>F ×${fCount}（@¥${fUnit.toLocaleString()}）= ¥${subtotal.toLocaleString()}</div>`;
+}
  
   for (let key in values) {
-    const count = parseInt(document.getElementById(key).value) || 0;
-    if (count > 0) {
-      const label = labels[key] || key.toUpperCase();
-      const unitPrice = values[key];
-      const subtotal = count * unitPrice;
-      detailsHTML += `<div>${label} ×${count}（¥${unitPrice.toLocaleString()}）= ¥${subtotal.toLocaleString()}</div>`;
-    }
+  const count = parseInt(document.getElementById(key).value) || 0;
+  if (count > 0) {
+    const label = labels[key] || key.toUpperCase();
+    const unitPrice = values[key];
+    const subtotal = count * unitPrice;
+    detailsHTML += `<div>${label} ×${count}（¥${unitPrice.toLocaleString()}）= ¥${subtotal.toLocaleString()}</div>`;
   }
+}
 
   // 追加された全ボトル明細
   bottleForms.forEach(form => {
@@ -4305,8 +4331,9 @@ function calculate() {
 
   // チェックボックスの状態も保存
   const checkboxStates = {
-  experienceAndRental: document.getElementById('experienceAndRental').checked
-   };
+  experienceAndRental: document.getElementById('experienceAndRental').checked,
+  fUnit2000: document.getElementById('f')?.checked || false
+  };
   localStorage.setItem('checkboxes', JSON.stringify(checkboxStates));
 
     // 🔽 ここを追加：ボトルフォームの内容も保存する
@@ -4496,6 +4523,28 @@ function restoreFromHistory(button) {
       document.getElementById(id).value = '';
     }
   });
+
+  // --- F（統合）の復元（新仕様/旧仕様どちらも吸収） ---
+const txt = historyItem.textContent || '';
+const f2Old = txt.match(/F2 ×(\d+)/);
+const fNew  = txt.match(/F ×(\d+)/);
+
+if (f2Old) {
+  // 旧: F2（2000）
+  document.getElementById('f2').value = f2Old[1];
+  const fEl = document.getElementById('f');
+  if (fEl && fEl.type === 'checkbox') fEl.checked = true;
+} else if (fNew) {
+  document.getElementById('f2').value = fNew[1];
+  const is2000 = /F ×\d+（@?¥?2,?000/.test(txt);
+  const fEl = document.getElementById('f');
+  if (fEl && fEl.type === 'checkbox') fEl.checked = !!is2000;
+} else {
+  document.getElementById('f2').value = '';
+  const fEl = document.getElementById('f');
+  if (fEl && fEl.type === 'checkbox') fEl.checked = false;
+}
+
 
   // 送迎金額を復元
   const sendoffMatch = (historyItem.textContent || '').match(/送迎:\s*¥([\d,]+)/);
@@ -4693,7 +4742,13 @@ function calculateBack() {
 function restoreCheckboxes() {
   const checkboxStates = JSON.parse(localStorage.getItem('checkboxes')) || {};
   document.getElementById('experienceAndRental').checked = checkboxStates.experienceAndRental || false;
+
+  const fEl = document.getElementById('f');
+  if (fEl && fEl.type === 'checkbox') {
+    fEl.checked = !!checkboxStates.fUnit2000;
+  }
 }
+
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7464,8 +7519,8 @@ const COLS = [
   { key:'name', type:'text', header:'氏名', cls:'bulk-name' },
   { key:'exp', type:'check', header:'体/貸', cls:'bulk-exp' },
   { key:'send', type:'num', header:'送迎', cls:'bulk-send' },
-  { key:'f', type:'num', header:'F1' },
-  { key:'f2', type:'num', header:'F2' },
+  { key:'f',  type:'check', header:'2k' },
+  { key:'f2', type:'num',   header:'F'  },
   { key:'jounai', type:'num', header:'場内' },
   { key:'honshiri', type:'num', header:'本指' },
   { key:'douhan', type:'num', header:'同伴' },
@@ -7614,17 +7669,25 @@ function buildGrid(n){
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
       <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
     `;
+
     const placeholders = {
-  f: 'F1', f2: 'F2',
+  f2: 'F',
   jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
   set40: '40', set20: '20', vip: 'VIP',
   a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
 };
+
 ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
   .forEach(k => {
+    if (k === 'f') {
+      // ★ 2kフラグ（チェックボックス）
+      html += `<td style="text-align:center;"><input type="checkbox" data-k="f" class="bulk-2k"></td>`;
+      return;
+    }
     const ph = placeholders[k] || '';
     html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="${ph}"></td>`;
   });
+  
     html += `
       <td class="btl-anchor">
         <div class="btl-toolbar">
@@ -7647,9 +7710,19 @@ async function bulkRegister(){
   if(!tb) return alert('内部テーブルが見つかりません');
   const mains=[...tb.querySelectorAll('.bulk-mainrow')];
   const rows=mains.map(m=>{
-    const nums={};
-    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
-      .forEach(k=>nums[k]=parseInt(m.querySelector(`[data-k="${k}"]`)?.value||0));
+    const nums = {};
+
+// ★ f = 2kフラグ（checkbox）
+nums.f = !!m.querySelector(`[data-k="f"]`)?.checked;
+
+// ★ f2 = F数量
+nums.f2 = parseInt(m.querySelector(`[data-k="f2"]`)?.value || 0, 10) || 0;
+
+// 他は従来どおり数値
+['jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+  .forEach(k => {
+    nums[k] = parseInt(m.querySelector(`[data-k="${k}"]`)?.value || 0, 10) || 0;
+  });
     const bottles=[];
     let n=m.nextElementSibling;
     while(n&&n.classList.contains('btl-subrow')){
@@ -7674,7 +7747,16 @@ async function bulkRegister(){
     setValue('castName',r.name);
     setChecked('experienceAndRental',r.exp);
     setValue('sendoffAmount',r.send);
-    Object.entries(r.nums).forEach(([id,val])=>setValue(id,val));
+    // ★ f(checkbox) だけ別
+    setChecked('f', !!r.nums.f);
+
+    // ★ f2 は数量
+    setValue('f2', r.nums.f2 || '');
+
+    // ★ 残り
+    ['jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+    .forEach(id => setValue(id, r.nums[id] || ''));
+
     const cont=document.getElementById('bottleFormsContainer');
     if(cont){
       cont.innerHTML='';
@@ -7811,9 +7893,16 @@ document.addEventListener('DOMContentLoaded', () => {
         nums: {},
         bottles: []
       };
+
       tr.querySelectorAll('[data-k]').forEach(el => {
-        row.nums[el.dataset.k] = el.value || '';
+      const k = el.dataset.k;
+      if (el.type === 'checkbox') {
+      row.nums[k] = !!el.checked;  // ★ booleanで保存
+      } else {
+      row.nums[k] = el.value || '';
+      }
       });
+
       // サブ行（ボトル）
       let n = tr.nextElementSibling;
       while (n && n.classList.contains('btl-subrow')) {
@@ -7832,34 +7921,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* --- 一括入力グリッドの復元 --- */
   function restoreBulkGridState() {
-    const data = JSON.parse(localStorage.getItem(GRID_KEY) || '[]');
-    if (!data.length) return;
-    buildGrid(data.length);
-    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
-    data.forEach((r, i) => {
-      const tr = mains[i];
-      if (!tr) return;
-      tr.querySelector('.bulk-name').value = r.name || '';
-      tr.querySelector('.bulk-exp').checked = !!r.exp;
-      tr.querySelector('.bulk-send').value = r.send || '';
-      for (const k in r.nums) {
-        const el = tr.querySelector(`[data-k="${k}"]`);
-        if (el) el.value = r.nums[k] || '';
+  const data = JSON.parse(localStorage.getItem(GRID_KEY) || '[]');
+  if (!data.length) return;
+
+  buildGrid(data.length);
+
+  const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+
+  // ★ 0を反映しないための正規化
+  const norm = (v) => {
+    if (v === 0 || v === '0') return '';
+    if (v === null || v === undefined) return '';
+    return String(v);
+  };
+
+  data.forEach((r, i) => {
+    const tr = mains[i];
+    if (!tr) return;
+
+    // 先に固定3要素
+    tr.querySelector('.bulk-name').value = r.name || '';
+    tr.querySelector('.bulk-exp').checked = !!r.exp;
+
+    // 送迎：0は反映しない
+    tr.querySelector('.bulk-send').value = norm(r.send);
+
+    // ★ data-k要素を一度だけ取得して辞書化（高速化の肝）
+    const kmap = {};
+    tr.querySelectorAll('[data-k]').forEach(el => { kmap[el.dataset.k] = el; });
+
+    // nums復元
+    const nums = r.nums || {};
+    for (const k in nums) {
+      const el = kmap[k];
+      if (!el) continue;
+
+      if (el.type === 'checkbox') {
+        el.checked = !!nums[k];             // ★ checkbox復元
+      } else {
+        el.value = norm(nums[k]);           // ★ 0は空欄扱い
       }
-      if (r.bottles?.length) {
-        r.bottles.forEach(b => {
-          addBottleSubrow(tr);
-          const last = tr.nextElementSibling;
-          if (last?.classList.contains('btl-subrow')) {
-            last.querySelector('.bottleDetails').value = b.detail || '';
-            last.querySelector('.splitCount').value = b.split || '';
-            last.querySelector('.bottleQuantity').value = b.qty || '';
-            last.querySelector('.bottleAmount').value = b.amount || '';
-          }
-        });
+    }
+
+    // ボトル（従来処理を維持：必要な人だけ）
+    if (r.bottles?.length) {
+      // 既存サブ行削除
+      let n = tr.nextElementSibling;
+      while (n && n.classList.contains('btl-subrow')) {
+        const del = n;
+        n = n.nextElementSibling;
+        del.remove();
       }
-    });
-  }
+
+      // サブ行追加
+      r.bottles.forEach(b => {
+        addBottleSubrow(tr);
+        const last = tr.nextElementSibling;
+        if (last?.classList.contains('btl-subrow')) {
+          last.querySelector('.bottleDetails').value = b.detail || '';
+          last.querySelector('.splitCount').value = norm(b.split);
+          last.querySelector('.bottleQuantity').value = norm(b.qty);
+          last.querySelector('.bottleAmount').value = norm(b.amount);
+        }
+      });
+    }
+  });
+}
+
 
   /* --- 表示状態保存 --- */
   function savePanelState(visible) {
@@ -8419,7 +8547,7 @@ document.addEventListener('click', async (e) => {
 
     // ===== 設定 =====
     const FILL_OLD_TO_NEW = true;
-    const RESTORE_WAIT_MS = 700;
+    const RESTORE_WAIT_MS = 200;
 
     // ===== ユーティリティ =====
     const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -8512,7 +8640,26 @@ document.addEventListener('click', async (e) => {
       const exp = row.querySelector('.bulk-exp');
       if (exp) { exp.checked = !!document.getElementById('experienceAndRental')?.checked; exp.dispatchEvent(new Event('change', {bubbles:true})); }
       setVal(row.querySelector('.bulk-send'), document.getElementById('sendoffAmount')?.value, 'input');
-      QUANT_IDS.forEach(id => { const v = document.getElementById(id)?.value || ''; const input = row.querySelector(`[data-k="${id}"]`); if (input) setVal(input, v, 'input'); });
+      const norm = (v) => {
+      const s = (v ?? '').toString().trim();
+      return (s === '' || s === '0') ? '' : s;
+      };
+
+      QUANT_IDS.forEach(id => {
+       const input = row.querySelector(`[data-k="${id}"]`);
+     if (!input) return;
+
+     // ★ 2k（f）は checkbox：checked をコピー
+     if (id === 'f') {
+    input.checked = !!document.getElementById('f')?.checked;
+    return;
+      }
+
+     // ★ それ以外は value：ただし "0" は空扱い
+     const v = norm(document.getElementById(id)?.value);
+     setVal(input, v, 'input');
+      });
+
 
       clearSubrows(row);
       const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
@@ -8693,10 +8840,21 @@ function addAndGetSubrow(mainRow){
 
     // 数値系（F, F2, …）
     QUANT_IDS.forEach(id => {
-      const v = mainRow.querySelector(`[data-k="${id}"]`)?.value ?? '';
-      const dest = document.getElementById(id);
-      if (dest) { dest.value = v; dest.dispatchEvent(new Event('input', {bubbles:true})); }
-    });
+  const src = mainRow.querySelector(`[data-k="${id}"]`);
+  const dst = document.getElementById(id);
+  if (!src || !dst) return;
+
+  // ★ 2k（f）はチェックボックスなので checked を転送
+  if (id === 'f') {
+    dst.checked = !!src.checked;
+    return;
+  }
+
+  // ★ 数値は "0" を入れない（空扱い）
+  const v = (src.value ?? '').toString().trim();
+  dst.value = (v === '0') ? '' : v;
+});
+
 
     // ボトルサブ行 → 通常フォームへ再構成
     // 既存のフォーム側コンテナを前提（ない場合はスキップ）
@@ -8855,6 +9013,7 @@ document.addEventListener('change', (e) => {
 })();
 
 // ===== 空行判定：氏名/体験/送迎/数量群/ボトルのどれも入ってなければ空 =====
+// ===== 空行判定：氏名/体験/送迎/数量群/ボトルのどれも入ってなければ空 =====
 function isBulkRowEmpty(mainRow){
   if (!mainRow) return true;
 
@@ -8868,9 +9027,25 @@ function isBulkRowEmpty(mainRow){
     ? window.QUANT_IDS
     : ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
 
+  // "0" を空扱いする正規化
+  const norm = (v) => {
+    const s = (v ?? '').toString().trim();
+    return (s === '' || s === '0') ? '' : s;
+  };
+
   let anyQuant = false;
   ids.forEach(k => {
-    const v = mainRow.querySelector(`[data-k="${k}"]`)?.value?.trim() || '';
+    const el = mainRow.querySelector(`[data-k="${k}"]`);
+    if (!el) return;
+
+    // ★ f（2k）はチェックボックス
+    if (k === 'f') {
+      if (el.checked) anyQuant = true;
+      return;
+    }
+
+    // ★ 数値は 0 を空扱い
+    const v = norm(el.value);
     if (v !== '') anyQuant = true;
   });
 
@@ -8879,15 +9054,17 @@ function isBulkRowEmpty(mainRow){
   let anyBottle = false;
   while (anchor && anchor.classList.contains('btl-subrow')) {
     const d = anchor.querySelector('.bottleDetails')?.value?.trim() || '';
-    const s = anchor.querySelector('.splitCount')?.value?.trim() || '';
-    const q = anchor.querySelector('.bottleQuantity')?.value?.trim() || '';
-    const a = anchor.querySelector('.bottleAmount')?.value?.trim() || '';
+    const s = norm(anchor.querySelector('.splitCount')?.value);
+    const q = norm(anchor.querySelector('.bottleQuantity')?.value);
+    const a = norm(anchor.querySelector('.bottleAmount')?.value);
     if (d || s || q || a) { anyBottle = true; break; }
     anchor = anchor.nextElementSibling;
   }
 
+  // 送迎も "0" は空扱いにしたい場合は norm(send) にしてOK
   return !(name || send || exp || anyQuant || anyBottle);
 }
+
 
 // チェックボックスの活性/選択を空行に合わせて更新
 function updateRowCheckState(mainRow){
