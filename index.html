@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.4.5</title>
+<title>IBASD  Ver. 8.5.5</title>
 <style>
 
   html, body {
@@ -2683,13 +2683,13 @@ body[data-active-app="app3"] #maleAttendance {
 <div class="group no-bg">
   <label>
     <span>開始時金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="updateCalculations()">
+    <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
   </label>
 
   <!-- ▼追加金庫金 -->
   <label>
     <span>追加金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash" oninput="updateCalculations()">
+    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash" oninoninput="scheduleApp3Update('app3:maleSalary')"put="updateCalculations()">
   </label>
 </div>
 
@@ -2723,16 +2723,16 @@ body[data-active-app="app3"] #maleAttendance {
 
       <div class="group" id="laborGroup">
         <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
-        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="updateCalculations()">
+        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
-        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="updateCalculations()">
+        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
         <label>
         <span>ドライバー代:</span>
         <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
-        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="updateCalculations()">
+        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
         <input type="text" id="driverFee" disabled placeholder="合計">
         </label>
         </label>
@@ -2742,17 +2742,17 @@ body[data-active-app="app3"] #maleAttendance {
 
       <div class="group" id="taxGroup">
         <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
-        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="updateCalculations()"></label>
+        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
       </div>
 
       <div class="group" id="expensesGroup">
-        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="updateCalculations()"></label>
-        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="updateCalculations()"></label>
-        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="updateCalculations()"></label>
-        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="updateCalculations()"></label>
-        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="updateCalculations()"></label>
-        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="updateCalculations()"></label>
+        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
         <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
       </div>
@@ -2791,7 +2791,7 @@ body[data-active-app="app3"] #maleAttendance {
  </table>
 
   <div class="group no-bg">
-    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="updateCalculations()"></label>
+    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
     <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
@@ -3372,6 +3372,39 @@ function scheduleTotals(){
   if (_raf) return;
   _raf = requestAnimationFrame(()=>{ _raf = 0; updateTotals(); });
 }
+
+// ============================================================
+// APP3 更新を「次フレームにまとめる」グローバル関数（必須）
+// updateTotals() などから呼ばれても落ちないように window に生やす
+// ============================================================
+(function(){
+  let pending = false;
+
+  window.scheduleApp3Update = function(reason = '') {
+    if (pending) return;
+    pending = true;
+
+    requestAnimationFrame(() => {
+      pending = false;
+
+      // APP3 側の更新関数が存在する場合だけ呼ぶ（存在しない環境でも落とさない）
+      try {
+        if (typeof window.updateAttendanceMiniForm === 'function') {
+          window.updateAttendanceMiniForm();
+        }
+      } catch(e){}
+
+      try {
+        if (typeof window.updateCalculations === 'function') {
+          window.updateCalculations();
+        }
+      } catch(e){
+        console.warn('scheduleApp3Update failed:', reason, e);
+      }
+    });
+  };
+})();
+
 
 function updateTotals() {
   let totalCustomers = 0;
@@ -5110,6 +5143,54 @@ function updateCalculations(){
   attachCommaFormatApp3();
   saveToLocal();
 }
+
+// ============================================================
+// APP1/APP2 の集計DOM変化を監視 → APP3更新を予約
+// ============================================================
+(function installApp3AutoSyncObservers(){
+  const watchIds = [
+    'cardTotal',        // カード売上の元
+    'summaryTotalTax',  // 税合計の元
+    'totalBackAmount',  // CB合計の元
+    'totalCustomers',   // 総客数（ミニフォーム用）
+    'historyIndexCount' // 女子出勤数（ミニフォーム用）
+  ];
+
+  const observer = new MutationObserver(() => {
+    scheduleApp3Update('mutation');
+  });
+
+  watchIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    observer.observe(el, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  });
+})();
+
+// ============================================================
+// APP1/APP2 の入力・選択操作でも APP3 更新を予約（保険）
+// ============================================================
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t) return;
+  if (t.closest('#app1') || t.closest('#app2')) {
+    scheduleApp3Update('input(app1/app2)');
+  }
+}, true);
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (!t) return;
+  if (t.closest('#app1') || t.closest('#app2')) {
+    scheduleApp3Update('change(app1/app2)');
+  }
+}, true);
+
 
 function updateExtraGroupFields() {
   // それぞれの値を取得（必要に応じて変数は他から渡してください）
