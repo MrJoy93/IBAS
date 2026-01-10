@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.5.5</title>
+<title>IBASD  Ver. 8.5.6</title>
 <style>
 
   html, body {
@@ -4786,14 +4786,17 @@ function restoreCheckboxes() {
 
 document.addEventListener('DOMContentLoaded', () => {
   const exp = document.getElementById('experienceAndRental');
-  if (exp) {
-    exp.addEventListener('change', function () {
-      if (this.checked) {
-        const confirmed = confirm('「体験及び貸出」にチェックが入りました。');
-        if (!confirmed) this.checked = false;
-      }
-    });
-  }
+  if (!exp) return;
+
+  exp.addEventListener('change', function (e) {
+    // ★ プログラムからの変更（dispatchEvent等）は無視
+    if (!e.isTrusted) return;
+
+    if (this.checked) {
+      const confirmed = confirm('「体験及び貸出」にチェックが入りました。');
+      if (!confirmed) this.checked = false;
+    }
+  });
 });
 
 // 統一された初期化処理
@@ -8912,7 +8915,7 @@ function addAndGetSubrow(mainRow){
     // 体験/貸出
     const exp = !!mainRow.querySelector('.bulk-exp')?.checked;
     const expEl = document.getElementById('experienceAndRental');
-    if (expEl) { expEl.checked = exp; expEl.dispatchEvent(new Event('change', {bubbles:true})); }
+    if (expEl) { expEl.checked = exp; }  // ★ change擬似発火は不要
 
     // 送迎
     const send = mainRow.querySelector('.bulk-send')?.value ?? '';
