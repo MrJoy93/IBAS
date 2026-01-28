@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.5.6</title>
+<title>IBASD  Ver. 8.5.7</title>
 <style>
 
   html, body {
@@ -2689,7 +2689,7 @@ body[data-active-app="app3"] #maleAttendance {
   <!-- ▼追加金庫金 -->
   <label>
     <span>追加金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash" oninoninput="scheduleApp3Update('app3:maleSalary')"put="updateCalculations()">
+    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
   </label>
 </div>
 
@@ -5181,9 +5181,9 @@ function updateCalculations(){
 document.addEventListener('input', (e) => {
   const t = e.target;
   if (!t) return;
-  if (t.closest('#app1') || t.closest('#app2')) {
-    scheduleApp3Update('input(app1/app2)');
-  }
+  if (t.closest('#app1') || t.closest('#app2') || t.closest('#app3')) {
+  scheduleApp3Update('input(app1/app2/app3)');
+}
 }, true);
 
 document.addEventListener('change', (e) => {
