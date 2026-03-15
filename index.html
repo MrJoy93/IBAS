@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.5.7</title>
+<title>IBASD  Ver. 8.6.0</title>
 <style>
 
   html, body {
@@ -2234,6 +2234,144 @@ body[data-active-app="app3"] #maleAttendance {
   }
 }
 
+/* ===============================
+   一括入力グリッド用 ボトル階層ピッカー
+=============================== */
+#bottleHierarchyPicker {
+  position: fixed;
+  z-index: 99999;
+  min-width: 320px;
+  max-width: 92vw;
+  background: rgba(18, 24, 38, 0.98);
+  border: 1px solid rgba(0, 245, 255, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  padding: 10px;
+  color: #eaf6ff;
+}
+
+#bottleHierarchyPicker[hidden] {
+  display: none !important;
+}
+
+#bottleHierarchyPicker .bhp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+#bottleHierarchyPicker .bhp-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #00f5ff;
+}
+
+#bottleHierarchyPicker .bhp-close {
+  width: auto;
+  min-width: 0;
+  padding: 4px 10px;
+  height: 30px;
+  line-height: 1;
+  font-size: 12px;
+}
+
+#bottleHierarchyPicker .bhp-current {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  color: #bfefff;
+}
+
+#bottleHierarchyPicker .bhp-section {
+  margin-bottom: 10px;
+}
+
+#bottleHierarchyPicker .bhp-label {
+  font-size: 12px;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+#bottleHierarchyPicker .bhp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 4px;
+}
+
+#bottleHierarchyPicker .bhp-grid.bhp-detail-grid {
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+}
+
+#bottleHierarchyPicker .bhp-btn {
+  min-width: 0;
+  width: 100%;
+  padding: 4px 4px;
+  height: 32px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+#bottleHierarchyPicker .bhp-btn.active {
+  background: linear-gradient(90deg, #00f5ff 20%, #2636b3 80%);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(0,245,255,0.55);
+}
+
+#bottleHierarchyPicker .bhp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#bottleHierarchyPicker .bhp-confirm {
+  min-width: 88px;
+}
+
+#bulkGrid .btl-detail-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+#bulkGrid .btl-detail-inner .bottleDetails {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+#bulkGrid .bottle-hierarchy-btn {
+  flex: 0 0 42px !important;
+  min-width: 42px !important;
+  width: 42px !important;
+  padding: 1px 4px !important;
+  margin-left: 0 !important;
+  height: 22px !important;
+  line-height: 20px !important;
+  font-size: 11px !important;
+  white-space: nowrap !important;
+}
+
+#bottleHierarchyPicker {
+  position: fixed;
+  z-index: 99999;
+  min-width: 320px;
+  max-width: 92vw;
+  max-height: 80vh;
+  overflow: auto;
+  background: rgba(18, 24, 38, 0.98);
+  border: 1px solid rgba(0, 245, 255, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  padding: 10px;
+  color: #eaf6ff;
+}
+
 
 
 
@@ -3949,6 +4087,200 @@ function updateBottleAmountForForm(form){
   const out   = form.querySelector('.bottleAmount');
   out.value = amt ? String(amt) : ''; // 未登録(0)は空に
 }
+
+// ===============================
+// 一括入力グリッド用 ボトル階層選択（クリック完結版）
+// ===============================
+function makeRangeButtons(min, max) {
+  return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+}
+
+const BOTTLE_PICKER_CONFIG = {
+  defaultSplits: makeRangeButtons(1, 15),
+  defaultQtys: makeRangeButtons(1, 10)
+};
+let BOTTLE_PICKER_STATE = {
+  tr: null,
+  anchorEl: null,
+  detail: '',
+  split: '',
+  qty: ''
+};
+
+function getBottlePickerNames() {
+  try {
+    if (typeof bottleRules === 'object' && bottleRules) {
+      return Object.keys(bottleRules).filter(Boolean);
+    }
+  } catch (e) {}
+  return [];
+}
+
+function applyBottleHierarchySelection(tr, detail, split, qty) {
+  if (!tr) return;
+
+  const detailEl = tr.querySelector('.bottleDetails');
+  const splitEl  = tr.querySelector('.splitCount');
+  const qtyEl    = tr.querySelector('.bottleQuantity');
+
+  if (detailEl) detailEl.value = detail ?? '';
+  if (splitEl)  splitEl.value  = split ?? '';
+  if (qtyEl)    qtyEl.value    = qty ?? '';
+
+  if (detailEl) detailEl.dispatchEvent(new Event('change', { bubbles: true }));
+  if (splitEl)  splitEl.dispatchEvent(new Event('input',  { bubbles: true }));
+  if (splitEl)  splitEl.dispatchEvent(new Event('change', { bubbles: true }));
+  if (qtyEl)    qtyEl.dispatchEvent(new Event('input',  { bubbles: true }));
+  if (qtyEl)    qtyEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+  if (typeof updateBottleAmountForRow === 'function') {
+    updateBottleAmountForRow(tr);
+  }
+}
+
+function getBottleHierarchyPickerEl() {
+  return document.getElementById('bottleHierarchyPicker');
+}
+
+function renderBottleHierarchyPicker() {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker) return;
+
+  const names = getBottlePickerNames();
+
+  const detailGrid = picker.querySelector('.bhp-detail-grid');
+  const splitGrid  = picker.querySelector('.bhp-split-grid');
+  const qtyGrid    = picker.querySelector('.bhp-qty-grid');
+
+  const curDetail = picker.querySelector('.bhp-current-detail');
+  const curSplit  = picker.querySelector('.bhp-current-split');
+  const curQty    = picker.querySelector('.bhp-current-qty');
+
+  curDetail.textContent = BOTTLE_PICKER_STATE.detail || '-';
+  curSplit.textContent  = BOTTLE_PICKER_STATE.split || '-';
+  curQty.textContent    = BOTTLE_PICKER_STATE.qty || '-';
+
+  detailGrid.innerHTML = names.map(name => `
+    <button type="button"
+            class="bhp-btn ${BOTTLE_PICKER_STATE.detail === name ? 'active' : ''}"
+            data-bhp-kind="detail"
+            data-bhp-value="${escapeHtml(name)}">${escapeHtml(name)}</button>
+  `).join('');
+
+  splitGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultSplits.map(v => `
+  <button type="button"
+          class="bhp-btn ${String(BOTTLE_PICKER_STATE.split) === String(v) ? 'active' : ''}"
+          data-bhp-kind="split"
+          data-bhp-value="${v}">${v}</button>
+`).join('');
+
+qtyGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultQtys.map(v => `
+  <button type="button"
+          class="bhp-btn ${String(BOTTLE_PICKER_STATE.qty) === String(v) ? 'active' : ''}"
+          data-bhp-kind="qty"
+          data-bhp-value="${v}">${v}</button>
+`).join('');
+}
+
+function positionBottleHierarchyPicker(anchorEl) {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker || !anchorEl) return;
+
+  const rect = anchorEl.getBoundingClientRect();
+
+  // いったん表示してサイズを取る
+  const prevHidden = picker.hidden;
+  if (prevHidden) {
+    picker.hidden = false;
+    picker.style.visibility = 'hidden';
+  }
+
+  const pickerRect = picker.getBoundingClientRect();
+  const pickerWidth = Math.min(pickerRect.width || 420, window.innerWidth - 16);
+  const pickerHeight = pickerRect.height || 320;
+
+  let left = rect.left;
+  left = Math.max(8, Math.min(left, window.innerWidth - pickerWidth - 8));
+
+  let top = rect.bottom + 6;
+  if (top + pickerHeight > window.innerHeight - 8) {
+    top = rect.top - pickerHeight - 6;
+  }
+  top = Math.max(8, top);
+
+  picker.style.left = `${left}px`;
+  picker.style.top = `${top}px`;
+
+  if (prevHidden) {
+    picker.hidden = true;
+    picker.style.visibility = '';
+  }
+}
+
+function openBottleHierarchyPicker(tr, anchorEl = null) {
+  if (!tr) return;
+
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker) return;
+
+  const resolvedAnchor = anchorEl || tr.querySelector('.bottle-hierarchy-btn') || tr.querySelector('.bottleDetails');
+
+  BOTTLE_PICKER_STATE.tr = tr;
+  BOTTLE_PICKER_STATE.anchorEl = resolvedAnchor;
+  BOTTLE_PICKER_STATE.detail = tr.querySelector('.bottleDetails')?.value || '';
+  BOTTLE_PICKER_STATE.split  = tr.querySelector('.splitCount')?.value || '';
+  BOTTLE_PICKER_STATE.qty    = tr.querySelector('.bottleQuantity')?.value || '';
+
+  renderBottleHierarchyPicker();
+
+  picker.hidden = false;
+  positionBottleHierarchyPicker(resolvedAnchor);
+}
+
+function closeBottleHierarchyPicker() {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker) return;
+
+  picker.hidden = true;
+  BOTTLE_PICKER_STATE.anchorEl = null;
+}
+
+function confirmBottleHierarchyPicker() {
+  const { tr, detail, split, qty } = BOTTLE_PICKER_STATE;
+  if (!tr || !detail) return;
+
+  applyBottleHierarchySelection(
+    tr,
+    detail,
+    String(parseInt(split, 10) || 1),
+    String(parseInt(qty, 10) || 1)
+  );
+
+  closeBottleHierarchyPicker();
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function repositionBottleHierarchyPicker() {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker || picker.hidden) return;
+
+  const anchorEl = BOTTLE_PICKER_STATE.anchorEl;
+  if (!anchorEl || !document.body.contains(anchorEl)) {
+    closeBottleHierarchyPicker();
+    return;
+  }
+
+  positionBottleHierarchyPicker(anchorEl);
+}
+
 
 // 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
 let BOTTLE_HISTORY = {};
@@ -7660,14 +7992,17 @@ function addBottleSubrow(mainTr) {
   let html = '';
   for (let i = 0; i < start; i++) html += '<td class="btl-pad"></td>';
   html += `
-    <td class="btl-detail">
+  <td class="btl-detail">
+    <div class="btl-detail-inner">
       <select class="bottleDetails">${getBottleOptionsHTML()}</select>
-      <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
-    </td>
-    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
-  `;
+      <button type="button" class="bottle-hierarchy-btn">選択</button>
+    </div>
+    <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
+  </td>
+  <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
+  <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
+  <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+`;
   tr.innerHTML = html;
   mainTr.insertAdjacentElement('afterend', tr);
 
@@ -7685,6 +8020,15 @@ function addBottleSubrow(mainTr) {
       if (row) updateBottleAmountForRow(row);
     });
   }
+
+    // サブ行追加後、マイナスボタンを有効化
+  const minusBtn = mainTr.querySelector('.btl-minus');
+  if (minusBtn) minusBtn.disabled = false;
+
+  // 件数同期
+  const subs = getBottleSubrows(mainTr);
+  mainTr.dataset.bottleCount = String(subs.length);
+  
 }
 
 
@@ -7717,7 +8061,11 @@ function removeBottleSubrow(mainTr, targetSub = null) {
     if (remain <= 0) minusBtn.disabled = true;
     else minusBtn.disabled = false;
   }
+
+    if (typeof saveBulkGridState === 'function') saveBulkGridState();
+
 }
+
 // === テーブル構築 ===========================================================
 function buildGrid(n){
   const grid  = document.getElementById('bulkGrid');
@@ -7926,24 +8274,34 @@ document.addEventListener('DOMContentLoaded',()=>{
     // −ボタン → クリックした行を優先して削除
     if (e.target.closest('.btl-minus')) {
   console.log('--- Minus clicked ---');
+
   const sub = e.target.closest('tr.btl-subrow');
   console.log('sub:', sub);
+
   let mainTr = e.target.closest('tr.bulk-mainrow');
   console.log('mainTr initial:', mainTr);
 
   if (!mainTr && sub) {
     let prev = sub.previousElementSibling;
-    while (prev && !prev.classList.contains('bulk-mainrow')) prev = prev.previousElementSibling;
+    while (prev && !prev.classList.contains('bulk-mainrow')) {
+      prev = prev.previousElementSibling;
+    }
     mainTr = prev;
   }
+
   console.log('mainTr resolved:', mainTr);
 
   if (mainTr) {
     console.log('Call removeBottleSubrow', mainTr, sub);
     removeBottleSubrow(mainTr, sub);
+
+    if (typeof window.saveBulkGridState === 'function') {
+      window.saveBulkGridState();
+    }
   } else {
     console.warn('mainTr not found');
   }
+
   return;
 }
 
@@ -7967,42 +8325,40 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!panel || !grid || !toggle) return;
 
   /* --- 一括入力グリッドの内容保存 --- */
-  function saveBulkGridState() {
-    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
-    const rows = mains.map(tr => {
-      const row = {
-        name: tr.querySelector('.bulk-name')?.value || '',
-        exp: tr.querySelector('.bulk-exp')?.checked || false,
-        send: tr.querySelector('.bulk-send')?.value || '',
-        nums: {},
-        bottles: []
-      };
+ function saveBulkGridState() {
+  const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+  const rows = mains.map(tr => {
+    const row = {
+      name: tr.querySelector('.bulk-name')?.value || '',
+      exp: tr.querySelector('.bulk-exp')?.checked || false,
+      send: tr.querySelector('.bulk-send')?.value || '',
+      nums: {},
+      bottles: []
+    };
 
-      tr.querySelectorAll('[data-k]').forEach(el => {
+    tr.querySelectorAll('[data-k]').forEach(el => {
       const k = el.dataset.k;
-      if (el.type === 'checkbox') {
-      row.nums[k] = !!el.checked;  // ★ booleanで保存
-      } else {
-      row.nums[k] = el.value || '';
-      }
-      });
-
-      // サブ行（ボトル）
-      let n = tr.nextElementSibling;
-      while (n && n.classList.contains('btl-subrow')) {
-        row.bottles.push({
-          detail: n.querySelector('.bottleDetails')?.value || '',
-          split: n.querySelector('.splitCount')?.value || '',
-          qty: n.querySelector('.bottleQuantity')?.value || '',
-          amount: n.querySelector('.bottleAmount')?.value || ''
-        });
-        n = n.nextElementSibling;
-      }
-      return row;
+      if (el.type === 'checkbox') row.nums[k] = !!el.checked;
+      else row.nums[k] = el.value || '';
     });
-    localStorage.setItem(GRID_KEY, JSON.stringify(rows));
-  }
 
+    let n = tr.nextElementSibling;
+    while (n && n.classList.contains('btl-subrow')) {
+      row.bottles.push({
+        detail: n.querySelector('.bottleDetails')?.value || '',
+        split: n.querySelector('.splitCount')?.value || '',
+        qty: n.querySelector('.bottleQuantity')?.value || '',
+        amount: n.querySelector('.bottleAmount')?.value || ''
+      });
+      n = n.nextElementSibling;
+    }
+    return row;
+  });
+
+  localStorage.setItem(GRID_KEY, JSON.stringify(rows));
+}
+
+window.saveBulkGridState = saveBulkGridState;
   /* --- 一括入力グリッドの復元 --- */
   function restoreBulkGridState() {
   const data = JSON.parse(localStorage.getItem(GRID_KEY) || '[]');
@@ -8393,13 +8749,89 @@ document.addEventListener('change', e => {
 
 // === ボトル選択時に自動入力 + 金額自動計算 ===============================
 document.addEventListener('change', e => {
-  if (e.target.classList.contains('bottleDetails')) {
-    applySelectRule(e.target);
 
-    const tr = e.target.closest('.btl-subrow');
-    if (tr) updateBottleAmountForRow(tr);
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.bottle-hierarchy-btn');
+  if (btn) {
+    const tr = btn.closest('.btl-subrow');
+    if (!tr) return;
+    openBottleHierarchyPicker(tr, btn);
+    return;
+  }
+
+  const pickerBtn = e.target.closest('[data-bhp-kind]');
+  if (pickerBtn) {
+    const kind = pickerBtn.dataset.bhpKind;
+    const value = pickerBtn.dataset.bhpValue || '';
+
+    if (kind === 'detail') BOTTLE_PICKER_STATE.detail = value;
+    if (kind === 'split')  BOTTLE_PICKER_STATE.split  = value;
+    if (kind === 'qty')    BOTTLE_PICKER_STATE.qty    = value;
+
+    renderBottleHierarchyPicker();
+    return;
+  }
+
+  if (e.target.closest('.bhp-close')) {
+    closeBottleHierarchyPicker();
+    return;
+  }
+
+  if (e.target.closest('.bhp-confirm')) {
+    confirmBottleHierarchyPicker();
+    return;
+  }
+
+  const picker = document.getElementById('bottleHierarchyPicker');
+  if (picker && !picker.hidden) {
+    if (!e.target.closest('#bottleHierarchyPicker') &&
+        !e.target.closest('.bottle-hierarchy-btn')) {
+      closeBottleHierarchyPicker();
+    }
   }
 });
+  if (!e.target.classList.contains('bottleDetails')) return;
+
+  const selectEl = e.target;
+  const tr = selectEl.closest('.btl-subrow');
+  if (!tr) return;
+
+  // まず既存ルールを適用
+  applySelectRule(selectEl);
+
+  // 未選択ならそのまま再計算だけ
+  if (!selectEl.value) {
+    updateBottleAmountForRow(tr);
+    return;
+  }
+
+  const splitEl = tr.querySelector('.splitCount');
+  const qtyEl   = tr.querySelector('.bottleQuantity');
+
+  const currentSplit = splitEl?.value || '1';
+  const currentQty   = qtyEl?.value || '1';
+
+  const splitNum = Math.max(1, parseInt(splitInput, 10) || 1);
+  if (splitEl) {
+    splitEl.value = String(splitNum);
+    splitEl.dispatchEvent(new Event('input', { bubbles: true }));
+    splitEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+
+  const qtyNum = Math.max(1, parseInt(qtyInput, 10) || 1);
+  if (qtyEl) {
+    qtyEl.value = String(qtyNum);
+    qtyEl.dispatchEvent(new Event('input', { bubbles: true }));
+    qtyEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // 最後に金額再計算
+  updateBottleAmountForRow(tr);
+});
+
+window.addEventListener('scroll', repositionBottleHierarchyPicker, true);
+window.addEventListener('resize', repositionBottleHierarchyPicker);
 
 // ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
 (function(){
@@ -10031,6 +10463,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 </script>
+
+<div id="bottleHierarchyPicker" hidden>
+  <div class="bhp-head">
+    <div class="bhp-title">ボトル選択</div>
+    <button type="button" class="bhp-close">閉じる</button>
+  </div>
+
+  <div class="bhp-current">
+    品名: <span class="bhp-current-detail">-</span> /
+    割: <span class="bhp-current-split">-</span> /
+    数: <span class="bhp-current-qty">-</span>
+  </div>
+
+  <div class="bhp-section">
+    <div class="bhp-label">品名</div>
+    <div class="bhp-grid bhp-detail-grid"></div>
+  </div>
+
+  <div class="bhp-section">
+    <div class="bhp-label">割り人数</div>
+    <div class="bhp-grid bhp-split-grid"></div>
+  </div>
+
+  <div class="bhp-section">
+    <div class="bhp-label">数量</div>
+    <div class="bhp-grid bhp-qty-grid"></div>
+  </div>
+
+  <div class="bhp-actions">
+    <button type="button" class="bhp-confirm">決定</button>
+  </div>
+</div>
 
 </body>
 </html>
