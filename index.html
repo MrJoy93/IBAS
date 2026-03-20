@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.6.2</title>
+<title>IBASD  Ver. 8.7.2</title>
 <style>
 
   html, body {
@@ -4100,6 +4100,142 @@ const BOTTLE_PICKER_CONFIG = {
   defaultQtys: makeRangeButtons(1, 10)
 };
 
+// ===============================
+// APP2 一括入力グリッド用：追加ボトル候補の学習
+// ===============================
+const APP2_CUSTOM_BOTTLE_KEY = 'app2_custom_bottle_memory_v1';
+const APP2_CUSTOM_BOTTLE_MAX = 120;
+
+function normalizeBottleText(v) {
+  return String(v ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeBottleNum(v, fallback = '') {
+  const n = parseInt(String(v ?? '').replace(/[^\d.-]/g, ''), 10);
+  return Number.isFinite(n) && n > 0 ? String(n) : fallback;
+}
+
+function loadCustomBottleMemory() {
+  try {
+    const raw = localStorage.getItem(APP2_CUSTOM_BOTTLE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCustomBottleMemory(list) {
+  try {
+    localStorage.setItem(APP2_CUSTOM_BOTTLE_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+function upsertCustomBottleMemory(entry) {
+  const detail = normalizeBottleText(entry?.detail);
+  const split  = normalizeBottleNum(entry?.split, '1');
+  const qty    = normalizeBottleNum(entry?.qty, '1');
+
+  if (!detail) return;
+
+  let list = loadCustomBottleMemory();
+
+  // 同一 detail / split / qty は重複させない
+  list = list.filter(x => !(
+    normalizeBottleText(x.detail) === detail &&
+    normalizeBottleNum(x.split, '1') === split &&
+    normalizeBottleNum(x.qty, '1') === qty
+  ));
+
+  list.unshift({
+    detail,
+    split,
+    qty,
+    updatedAt: Date.now()
+  });
+
+  // detail 重複は新しいもの優先で整理
+  const seenVariant = new Set();
+  const compact = [];
+  for (const item of list) {
+    const key = [
+      normalizeBottleText(item.detail),
+      normalizeBottleNum(item.split, '1'),
+      normalizeBottleNum(item.qty, '1')
+    ].join('||');
+
+    if (seenVariant.has(key)) continue;
+    seenVariant.add(key);
+    compact.push(item);
+    if (compact.length >= APP2_CUSTOM_BOTTLE_MAX) break;
+  }
+
+  saveCustomBottleMemory(compact);
+}
+
+function getCustomBottleMemory() {
+  return loadCustomBottleMemory()
+    .filter(x => normalizeBottleText(x.detail))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
+function getCustomBottleNames() {
+  const out = [];
+  const seen = new Set();
+
+  getCustomBottleMemory().forEach(x => {
+    const name = normalizeBottleText(x.detail);
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    out.push(name);
+  });
+
+  return out;
+}
+
+function ensureBottleOptionExists(detail) {
+  const name = normalizeBottleText(detail);
+  if (!name) return;
+
+  document.querySelectorAll('select.bottleDetails').forEach(select => {
+    const exists = Array.from(select.options).some(opt => opt.value === name);
+    if (exists) return;
+
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = `${name} *`;
+    opt.dataset.customBottle = '1';
+    select.appendChild(opt);
+  });
+}
+
+function hydrateAllBottleSelectsWithCustomOptions() {
+  getCustomBottleNames().forEach(name => ensureBottleOptionExists(name));
+}
+
+function rememberBottleSelectionFromRow(row) {
+  if (!row || !row.classList.contains('btl-subrow')) return;
+
+  const detail = normalizeBottleText(
+    row.querySelector('.bottleDetails')?.value ||
+    row.querySelector('.bottleFreeText')?.value ||
+    ''
+  );
+  const split = normalizeBottleNum(row.querySelector('.splitCount')?.value, '');
+  const qty   = normalizeBottleNum(row.querySelector('.bottleQuantity')?.value, '');
+
+  if (!detail) return;
+
+  upsertCustomBottleMemory({
+    detail,
+    split: split || '1',
+    qty: qty || '1'
+  });
+
+  ensureBottleOptionExists(detail);
+}
+
 let BOTTLE_PICKER_STATE = {
   tr: null,
   anchorEl: null,
@@ -4110,30 +4246,50 @@ let BOTTLE_PICKER_STATE = {
 };
 
 function getBottlePickerNames() {
+  const base = [];
   try {
     if (typeof bottleRules === 'object' && bottleRules) {
-      return Object.keys(bottleRules).filter(Boolean);
+      base.push(...Object.keys(bottleRules).filter(Boolean));
     }
   } catch (e) {}
-  return [];
+
+  const custom = getCustomBottleNames();
+
+  const seen = new Set();
+  return [...base, ...custom].filter(name => {
+    const key = normalizeBottleText(name);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function applyBottleHierarchySelection(tr, detail, split, qty) {
   if (!tr) return;
 
+  const normalizedDetail = normalizeBottleText(detail);
+  const normalizedSplit  = normalizeBottleNum(split, '1');
+  const normalizedQty    = normalizeBottleNum(qty, '1');
+
   const detailEl = tr.querySelector('.bottleDetails');
   const splitEl  = tr.querySelector('.splitCount');
   const qtyEl    = tr.querySelector('.bottleQuantity');
 
-  if (detailEl) detailEl.value = detail ?? '';
-  if (splitEl)  splitEl.value  = split ?? '';
-  if (qtyEl)    qtyEl.value    = qty ?? '';
+  if (normalizedDetail) {
+    ensureBottleOptionExists(normalizedDetail);
+  }
+
+  if (detailEl) detailEl.value = normalizedDetail ?? '';
+  if (splitEl)  splitEl.value  = normalizedSplit ?? '';
+  if (qtyEl)    qtyEl.value    = normalizedQty ?? '';
 
   if (detailEl) detailEl.dispatchEvent(new Event('change', { bubbles: true }));
   if (splitEl)  splitEl.dispatchEvent(new Event('input',  { bubbles: true }));
   if (splitEl)  splitEl.dispatchEvent(new Event('change', { bubbles: true }));
   if (qtyEl)    qtyEl.dispatchEvent(new Event('input',  { bubbles: true }));
   if (qtyEl)    qtyEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+  rememberBottleSelectionFromRow(tr);
 
   if (typeof updateBottleAmountForRow === 'function') {
     updateBottleAmountForRow(tr);
@@ -8013,11 +8169,17 @@ function addBottleSubrow(mainTr) {
 
     // ✅ イベント登録を追加（ここが抜けていた）
     selectEl.addEventListener('change', () => {
-      // 共通ルール適用＋金額反映
       applySelectRule(selectEl);
       const row = selectEl.closest('.btl-subrow');
-      if (row) updateBottleAmountForRow(row);
+      if (row) {
+        updateBottleAmountForRow(row);
+        rememberBottleSelectionFromRow(row);
+      }
     });
+  }
+
+    if (selectEl) {
+    hydrateAllBottleSelectsWithCustomOptions();
   }
 
     // サブ行追加後、マイナスボタンを有効化
@@ -8798,6 +8960,40 @@ document.addEventListener('change', e => {
 
   applySelectRule(selectEl);
   updateBottleAmountForRow(tr);
+});
+
+// ===============================
+// 一括入力グリッドのボトル学習イベント
+// ===============================
+document.addEventListener('change', e => {
+  const row = e.target.closest('#bulkGrid tr.btl-subrow');
+  if (!row) return;
+
+  if (
+    e.target.matches('.bottleDetails') ||
+    e.target.matches('.splitCount') ||
+    e.target.matches('.bottleQuantity') ||
+    e.target.matches('.bottleFreeText')
+  ) {
+    rememberBottleSelectionFromRow(row);
+  }
+});
+
+document.addEventListener('blur', e => {
+  const row = e.target.closest?.('#bulkGrid tr.btl-subrow');
+  if (!row) return;
+
+  if (
+    e.target.matches('.splitCount') ||
+    e.target.matches('.bottleQuantity') ||
+    e.target.matches('.bottleFreeText')
+  ) {
+    rememberBottleSelectionFromRow(row);
+  }
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+  hydrateAllBottleSelectsWithCustomOptions();
 });
 
 window.addEventListener('scroll', requestRepositionBottleHierarchyPicker, true);
