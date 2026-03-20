@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.6.1</title>
+<title>IBASD  Ver. 8.6.2</title>
 <style>
 
   html, body {
@@ -4099,12 +4099,14 @@ const BOTTLE_PICKER_CONFIG = {
   defaultSplits: makeRangeButtons(1, 15),
   defaultQtys: makeRangeButtons(1, 10)
 };
+
 let BOTTLE_PICKER_STATE = {
   tr: null,
   anchorEl: null,
   detail: '',
   split: '',
-  qty: ''
+  qty: '',
+  rafId: 0
 };
 
 function getBottlePickerNames() {
@@ -4184,19 +4186,12 @@ qtyGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultQtys.map(v => `
 
 function positionBottleHierarchyPicker(anchorEl) {
   const picker = getBottleHierarchyPickerEl();
-  if (!picker || !anchorEl) return;
+  if (!picker || !anchorEl || picker.hidden) return;
 
   const rect = anchorEl.getBoundingClientRect();
-
-  // いったん表示してサイズを取る
-  const prevHidden = picker.hidden;
-  if (prevHidden) {
-    picker.hidden = false;
-    picker.style.visibility = 'hidden';
-  }
-
   const pickerRect = picker.getBoundingClientRect();
-  const pickerWidth = Math.min(pickerRect.width || 420, window.innerWidth - 16);
+
+  const pickerWidth = pickerRect.width || 420;
   const pickerHeight = pickerRect.height || 320;
 
   let left = rect.left;
@@ -4210,11 +4205,6 @@ function positionBottleHierarchyPicker(anchorEl) {
 
   picker.style.left = `${left}px`;
   picker.style.top = `${top}px`;
-
-  if (prevHidden) {
-    picker.hidden = true;
-    picker.style.visibility = '';
-  }
 }
 
 function openBottleHierarchyPicker(tr, anchorEl = null) {
@@ -4268,7 +4258,7 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-function repositionBottleHierarchyPicker() {
+function repositionBottleHierarchyPickerNow() {
   const picker = getBottleHierarchyPickerEl();
   if (!picker || picker.hidden) return;
 
@@ -4279,6 +4269,15 @@ function repositionBottleHierarchyPicker() {
   }
 
   positionBottleHierarchyPicker(anchorEl);
+}
+
+function requestRepositionBottleHierarchyPicker() {
+  if (BOTTLE_PICKER_STATE.rafId) return;
+
+  BOTTLE_PICKER_STATE.rafId = requestAnimationFrame(() => {
+    BOTTLE_PICKER_STATE.rafId = 0;
+    repositionBottleHierarchyPickerNow();
+  });
 }
 
 
@@ -8747,9 +8746,7 @@ document.addEventListener('change', e => {
 });
 
 
-// === ボトル選択時に自動入力 + 金額自動計算 ===============================
-document.addEventListener('change', e => {
-
+// === クリック式ボトル階層ピッカー制御 ===============================
 document.addEventListener('click', e => {
   const btn = e.target.closest('.bottle-hierarchy-btn');
   if (btn) {
@@ -8790,48 +8787,21 @@ document.addEventListener('click', e => {
     }
   }
 });
+
+// === ボトル選択時に既存ルール適用 + 金額再計算 ===============================
+document.addEventListener('change', e => {
   if (!e.target.classList.contains('bottleDetails')) return;
 
   const selectEl = e.target;
   const tr = selectEl.closest('.btl-subrow');
   if (!tr) return;
 
-  // まず既存ルールを適用
   applySelectRule(selectEl);
-
-  // 未選択ならそのまま再計算だけ
-  if (!selectEl.value) {
-    updateBottleAmountForRow(tr);
-    return;
-  }
-
-  const splitEl = tr.querySelector('.splitCount');
-  const qtyEl   = tr.querySelector('.bottleQuantity');
-
-  const currentSplit = splitEl?.value || '1';
-  const currentQty   = qtyEl?.value || '1';
-
-  const splitNum = Math.max(1, parseInt(splitInput, 10) || 1);
-  if (splitEl) {
-    splitEl.value = String(splitNum);
-    splitEl.dispatchEvent(new Event('input', { bubbles: true }));
-    splitEl.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-
-  const qtyNum = Math.max(1, parseInt(qtyInput, 10) || 1);
-  if (qtyEl) {
-    qtyEl.value = String(qtyNum);
-    qtyEl.dispatchEvent(new Event('input', { bubbles: true }));
-    qtyEl.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  // 最後に金額再計算
   updateBottleAmountForRow(tr);
 });
 
-window.addEventListener('scroll', repositionBottleHierarchyPicker, true);
-window.addEventListener('resize', repositionBottleHierarchyPicker);
+window.addEventListener('scroll', requestRepositionBottleHierarchyPicker, true);
+window.addEventListener('resize', requestRepositionBottleHierarchyPicker);
 
 // ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
 (function(){
@@ -10279,6 +10249,7 @@ const COLMAP_PA = {
   totalCustomers:  "B",
   historyIndexCount: "C",
   maleAttendance: "D",
+  cashSales: "E",
   cardSales: "F",
   totalSales: "G",
   femaleSalary: "H",
@@ -10287,10 +10258,15 @@ const COLMAP_PA = {
   scoutBack: "K",
   adviserFee: "L",
   driverFee: "M",
+  totalLaborCosts: "N",
   femaleTax: "O",
   maleTax: "P",
+  totalTax: "Q",
   alcohol: "R",
   receipt6: "S",
+  totalExpenses: "T",
+  grossProfit: "U",
+  remainingCash:"V"
 };
 
 
