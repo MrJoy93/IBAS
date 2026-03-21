@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.2</title>
+<title>IBASD  Ver. 8.7.3</title>
 <style>
 
   html, body {
@@ -8319,18 +8319,21 @@ nums.f2 = parseInt(m.querySelector(`[data-k="f2"]`)?.value || 0, 10) || 0;
     const bottles=[];
     let n=m.nextElementSibling;
     while(n&&n.classList.contains('btl-subrow')){
-      bottles.push({
-        detail:n.querySelector('.bottleDetails')?.selectedOptions[0]?.textContent||'',
-        split:n.querySelector('.splitCount')?.value||'',
-        qty:n.querySelector('.bottleQuantity')?.value||'',
-        amount:parseInt((n.querySelector('.bottleAmount')?.value||'0').replace(/,/g,''))||0
-      });
-      n=n.nextElementSibling;
-    }
+  const detail = n.querySelector('.bottleDetails')?.value || '';
+  const split  = n.querySelector('.splitCount')?.value || '';
+  const qty    = n.querySelector('.bottleQuantity')?.value || '';
+  const amount = parseInt((n.querySelector('.bottleAmount')?.value||'0').replace(/,/g,'')) || 0;
+
+  if (detail || split || qty || amount) {
+    bottles.push({ detail, split, qty, amount });
+  }
+
+  n=n.nextElementSibling;
+}
     return {
       name:m.querySelector('.bulk-name')?.value||'',
       exp:m.querySelector('.bulk-exp')?.checked||false,
-      send:parseInt(m.querySelector('.bulk-send')?.value||0),
+      send: parseInt(m.querySelector('.bulk-send')?.value || '0', 10) || 0,
       nums,bottles
     };
   }).filter(r=>r.name||r.exp||r.send||Object.values(r.nums).some(v=>v>0)||r.bottles.length);
@@ -8357,23 +8360,56 @@ nums.f2 = parseInt(m.querySelector(`[data-k="f2"]`)?.value || 0, 10) || 0;
         const f=createBottleForm(b.detail,b.split,b.qty,b.amount);
         cont.appendChild(f);
       });
+
+      r.bottles.forEach(b => {
+  upsertCustomBottleMemory({
+    detail: b.detail,
+    split: b.split || '1',
+    qty: b.qty || '1'
+  });
+  ensureBottleOptionExists(b.detail);
+});
     }
         // 旧: if(typeof calculate==='function') calculate();
     if (typeof confirmAndCalculate === 'function') {
-      // イベント無しで呼ぶ（＝内部処理用）
-      confirmAndCalculate();
-    } else if (typeof calculate === 'function') {
-      // 念のため既存の calculate があればフォールバック
-      calculate();
-    }
+  confirmAndCalculate();
+} else if (typeof calculate === 'function') {
+  calculate();
+}
+
+document.getElementById('registerButton')?.click();
+
+rememberBottleSelectionsFromMainRow(r.mainRow);
+
   }
   alert('一括登録完了');
 }
 
+function rememberBottleSelectionsFromMainRow(mainRow) {
+  if (!mainRow) return;
+
+  const subs = typeof getBottleSubrows === 'function'
+    ? getBottleSubrows(mainRow)
+    : Array.from(mainRow.parentNode.querySelectorAll(`tr.btl-subrow[data-parent-id="${mainRow.dataset.rowId}"]`));
+
+  subs.forEach(row => {
+    try {
+      rememberBottleSelectionFromRow(row);
+    } catch (e) {
+      console.warn('rememberBottleSelectionFromRow failed:', e);
+    }
+  });
+}
+
 function setValue(id,val){
   const el=document.getElementById(id);
-  if(el){ el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); }
+  if(el){
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles:true }));
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+  }
 }
+
 function setChecked(id,v){
   const el=document.getElementById(id);
   if(el){ el.checked=!!v; el.dispatchEvent(new Event('change',{bubbles:true})); }
