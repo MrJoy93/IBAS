@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.3</title>
+<title>IBASD  Ver. 8.7.4</title>
 <style>
 
   html, body {
@@ -8464,9 +8464,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     // ＋ボタン → 追加
     if (e.target.closest('.btl-plus')) {
-      addBottleSubrow(main);
-      return;
-    }
+  addBottleSubrow(main);
+
+  buildBottleHistoryMap();
+  refreshBottleDropdownsFromHistory();
+
+  return;
+}
 
     // −ボタン → クリックした行を優先して削除
     if (e.target.closest('.btl-minus')) {
