@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4.3</title>
+<title>IBASD  Ver. 8.7.4.4</title>
 <style>
 
   html, body {
@@ -2489,7 +2489,7 @@ body[data-active-app="app3"] #maleAttendance {
   <button onclick="sortRowsByNumber()">番号順に並べ替え</button>
 
   <div class="search-box">
-    <input type="text" id="searchAmount" placeholder="金額で検索" inputmode="numeric">
+    <input type="text" id="searchAmount" placeholder="金額で検索" class="num-only">
     <button onclick="searchByAmount()">検索</button>
     <button onclick="resetSearch()">リセット</button>
   </div>
@@ -2637,7 +2637,7 @@ body[data-active-app="app3"] #maleAttendance {
           autocomplete="off" autocapitalize="off" spellcheck="false">
         </label>
         <label>送迎:
-        <input type="text" inputmode="numeric" pattern="\d*"
+        <input type="text" class="num-only" pattern="\d*"
           id="sendoffAmount"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="送迎金額">
@@ -2656,14 +2656,14 @@ body[data-active-app="app3"] #maleAttendance {
 
   <!-- 数量：旧F2(id=f2)を「F数量」として使う -->
   <label>F（数量）:
-    <input type="text" inputmode="numeric" pattern="\d*"
+    <input type="text" class="num-only" pattern="\d*"
       id="f2"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="F">
   </label>
 
   <label>場内（¥1000）:
-    <input type="text" inputmode="numeric" pattern="\d*"
+    <input type="text" class="num-only" pattern="\d*"
       id="jounai"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="場内">
@@ -2673,25 +2673,25 @@ body[data-active-app="app3"] #maleAttendance {
       <div class="group group-shimei">
         <h3>指名・同伴・枝・HELP</h3>
         <label>本指（¥0）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="honshiri"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="本指">
         </label>
         <label>同伴（¥1500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="douhan"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="同伴">
         </label>
         <label>枝（¥500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="eda"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="枝">
         </label>
         <label>HELP（-¥1500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="help"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="HELP">
@@ -2701,19 +2701,19 @@ body[data-active-app="app3"] #maleAttendance {
       <div class="group group-set">
         <h3>セット・VIP</h3>
         <label>SET40（¥5500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="set40"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="SET40">
         </label>
         <label>SET20（¥3500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="set20"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="SET20">
         </label>
         <label>VIP（¥2000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="vip"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="VIP">
@@ -2723,31 +2723,31 @@ body[data-active-app="app3"] #maleAttendance {
       <div class="group group-option">
         <h3>ドリンク・その他</h3>
         <label>A（¥500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="a"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="A">
         </label>
         <label>B（¥1000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="b"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="B">
         </label>
         <label>C（¥1500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="c"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="C">
         </label>
         <label>D（¥2000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="d"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="D">
         </label>
         <label>E（¥2500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" class="num-only" pattern="\d*"
           id="e"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="E">
@@ -2850,7 +2850,7 @@ body[data-active-app="app3"] #maleAttendance {
         </label>
 
         <label><span>男子:</span>
-        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact" inputmode="numeric" pattern="\d*">
+        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact" class="num-only" pattern="\d*">
         </label>
 
 
@@ -3354,8 +3354,8 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
-    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
+    <td><input class="table-number" type="text" class="num-only" placeholder="卓番" oninput="updateTotals()" /></td>
+    <td><input class="honshi" type="text" class="num-only" placeholder="本指" oninput="updateTotals()" /></td>
     <td>
       <select class="c" oninput="updateRowColor(this); updateTotals()">
         <option value="">-</option>
@@ -3376,11 +3376,11 @@ function createEmptyRow(number) {
         <option value="Z">Z</option>
       </select>
     </td>
-    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
-    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
+    <td><input class="amount" type="text" class="num-only" placeholder="金額" oninput="updateTotals()" /></td>
+    <td><input class="num" type="text" class="num-only" placeholder="人数" oninput="updateTotals()" /></td>
     <td><input class="detail" type="text" placeholder="詳細" /></td>
-    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
-    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
+    <td><input class="card" type="text" class="num-only" placeholder="カード" oninput="updateTotals()" /></td>
+    <td><input class="total" type="text" class="num-only" placeholder="総合計" oninput="updateTotals()" /></td>
   `;
   return tr;
 }
@@ -8156,9 +8156,9 @@ function addBottleSubrow(mainTr) {
     </div>
     <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
   </td>
-  <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-  <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-  <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+  <td><input class="splitCount" class="num-only" placeholder="割"></td>
+  <td><input class="bottleQuantity" class="num-only" placeholder="数"></td>
+  <td><input class="bottleAmount" class="num-only" placeholder="金額"></td>
 `;
   tr.innerHTML = html;
   mainTr.insertAdjacentElement('afterend', tr);
@@ -8262,7 +8262,7 @@ function buildGrid(n){
       <td>${i}</td>
       <td><input class="bulk-name" placeholder="氏名"></td>
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
-      <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
+      <td><input class="bulk-send" class="num-only" placeholder="送迎"></td>
     `;
 
     const placeholders = {
@@ -8280,7 +8280,7 @@ function buildGrid(n){
       return;
     }
     const ph = placeholders[k] || '';
-    html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="${ph}"></td>`;
+    html += `<td><input data-k="${k}" class="bulk-num" class="num-only" placeholder="${ph}"></td>`;
   });
   
     html += `
@@ -9303,9 +9303,9 @@ document.addEventListener('click', async (e) => {
       <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
       <input class="bottleFreeText" type="text" style="display:none;">
     </td>
-    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+    <td><input class="splitCount" class="num-only" placeholder="割"></td>
+    <td><input class="bottleQuantity" class="num-only" placeholder="数"></td>
+    <td><input class="bottleAmount" class="num-only" placeholder="金額"></td>
   `);
 
   let anchor = mainRow;
@@ -9602,9 +9602,9 @@ function addAndGetSubrow(mainRow){
           <div class="left-group">
             <select class="bottleDetails">${window.BOTTLE_OPTIONS_HTML || '<option value=""></option>'}</select>
           </div>
-          <input class="splitCount" inputmode="numeric">
-          <input class="bottleQuantity" inputmode="numeric">
-          <input class="bottleAmount" inputmode="numeric">
+          <input class="splitCount" class="num-only">
+          <input class="bottleQuantity" class="num-only">
+          <input class="bottleAmount" class="num-only">
         `;
         container.appendChild(form);
 
