@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4.9</title>
+<title>IBASD  Ver. 8.7.5</title>
 <style>
 
   html, body {
@@ -2390,7 +2390,7 @@ body[data-active-app="app3"] #maleAttendance {
 
 .pad-grid{
   display: grid;
-  grid-template-columns: repeat(3, 72px);
+  grid-template-columns: repeat(4, 62px);
   gap: 8px;
 }
 
@@ -2400,12 +2400,11 @@ body[data-active-app="app3"] #maleAttendance {
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(32,48,78,.95), rgba(24,34,58,.95));
   color: #eaf6ff;
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
-  height: 64px;
+  height: 56px;
   padding: 0;
   margin: 0;
-  box-shadow: 0 0 10px rgba(0,245,255,.10);
   touch-action: manipulation;
 }
 
@@ -2413,11 +2412,6 @@ body[data-active-app="app3"] #maleAttendance {
   transform: scale(0.98);
 }
 
-.num-pad .pad-wide{
-  grid-column: span 1;
-}
-
-/* 入力中セルの強調 */
 .input-active{
   outline: 3px solid #00f5ff !important;
   outline-offset: -1px !important;
@@ -2428,7 +2422,6 @@ body[data-active-app="app3"] #maleAttendance {
   color: #ffffff !important;
 }
 
-/* 行やラベル単位でも見えるようにする */
 .row-active td,
 .row-active th{
   background: rgba(0,245,255,0.07) !important;
@@ -2438,18 +2431,6 @@ body[data-active-app="app3"] #maleAttendance {
   box-shadow:
     0 0 0 2px rgba(0,245,255,0.18) inset,
     0 0 18px rgba(0,245,255,0.18) !important;
-}
-
-/* スマホ・iPad縦で少し小さく */
-@media (max-width: 900px){
-  .pad-grid{
-    grid-template-columns: repeat(3, 62px);
-  }
-
-  .num-pad button{
-    height: 56px;
-    font-size: 24px;
-  }
 }
 
 
@@ -2529,37 +2510,34 @@ body[data-active-app="app3"] #maleAttendance {
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
-      <td><input class="honshi" type="text" placeholder="本指" oninput="updateTotals()" /></td>
-      <td>
-        <select class="c" oninput="updateRowColor(this); updateTotals()">
-          <option value="">-</option>
-          <option value="UK">UK</option>
-          <option value="K">K</option>
-          <option value="AB">AB</option>
-          <option value="LA">LA</option>
-          <option value="PA">PA</option>
-          <option value="BB">BB</option>
-          <option value="MS">MS</option>
-          <option value="GM">GM</option>
-          <option value="B">B</option>
-          <option value="JOE">JOE</option>
-          <option value="KOSE">KOSE</option>
-          <option value="HE">HE</option>
-          <option value="PB">PB</option>
-          <option value="X">X</option>
-          <option value="Z">Z</option>
-        </select>
-
-        
-
-      </td>
-      <td><input class="amount" type="text" placeholder="金額" oninput="updateTotals()" /></td>
-      <td><input class="num" type="text" placeholder="人数" oninput="updateTotals()" /></td>
-      <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="text" placeholder="カード" oninput="updateTotals()" /></td>
-      <td><input class="total" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
-    </tr>
+      <td><input class="table-number num-only" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
+<td><input class="honshi num-only" type="text" placeholder="本指" oninput="updateTotals()" /></td>
+<td>
+  <select class="c" oninput="updateRowColor(this); updateTotals()">
+    <option value="">-</option>
+    <option value="UK">UK</option>
+    <option value="K">K</option>
+    <option value="AB">AB</option>
+    <option value="LA">LA</option>
+    <option value="PA">PA</option>
+    <option value="BB">BB</option>
+    <option value="MS">MS</option>
+    <option value="GM">GM</option>
+    <option value="B">B</option>
+    <option value="JOE">JOE</option>
+    <option value="KOSE">KOSE</option>
+    <option value="HE">HE</option>
+    <option value="PB">PB</option>
+    <option value="X">X</option>
+    <option value="Z">Z</option>
+  </select>
+</td>
+<td><input class="amount num-only" type="text" placeholder="金額" oninput="updateTotals()" /></td>
+<td><input class="num num-only" type="text" placeholder="人数" oninput="updateTotals()" /></td>
+<td><input class="detail" type="text" placeholder="詳細" /></td>
+<td><input class="card num-only" type="text" placeholder="カード" oninput="updateTotals()" /></td>
+<td><input class="total num-only" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
+  </tr>
   </tbody>
 </table>
 
@@ -10784,6 +10762,7 @@ document.addEventListener('input', (e) => {
 
   function isVisibleField(el) {
     if (!(el instanceof HTMLElement)) return false;
+    if (!el.matches('input, select, textarea')) return false;
     if (el.matches('[disabled], [type="hidden"], [hidden]')) return false;
     if (el.closest('[hidden]')) return false;
 
@@ -10791,7 +10770,7 @@ document.addEventListener('input', (e) => {
     if (style.display === 'none' || style.visibility === 'hidden') return false;
     if (el.offsetParent === null && style.position !== 'fixed') return false;
 
-    return el.matches('input, select, textarea');
+    return true;
   }
 
   function clearActiveState() {
@@ -10818,18 +10797,6 @@ document.addEventListener('input', (e) => {
     if (group) group.classList.add('group-active');
   }
 
-  function getScopeRoot(el) {
-    return el.closest('#app1') || el.closest('#app2') || document;
-  }
-
-  function getScopedFields(el) {
-    const root = getScopeRoot(el);
-
-    return Array.from(
-      root.querySelectorAll('input, select, textarea')
-    ).filter(node => isVisibleField(node));
-  }
-
   function focusField(el) {
     if (!isVisibleField(el)) return;
 
@@ -10846,21 +10813,27 @@ document.addEventListener('input', (e) => {
 
     el.focus({ preventScroll: true });
 
-    if (typeof el.scrollIntoView === 'function') {
+    try {
       el.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
         inline: 'nearest'
       });
-    }
+    } catch (_) {}
   }
 
-  function moveFocus(step) {
+  function getRowFields(row) {
+    if (!row) return [];
+    return Array.from(row.querySelectorAll('input, select, textarea')).filter(isVisibleField);
+  }
+
+  function moveHorizontal(step) {
     if (!currentInput) return;
 
-    const fields = getScopedFields(currentInput);
-    if (!fields.length) return;
+    const row = currentInput.closest('tr');
+    if (!row) return;
 
+    const fields = getRowFields(row);
     const index = fields.indexOf(currentInput);
     if (index === -1) return;
 
@@ -10869,6 +10842,37 @@ document.addEventListener('input', (e) => {
     if (nextIndex >= fields.length) nextIndex = fields.length - 1;
 
     focusField(fields[nextIndex]);
+  }
+
+  function moveVertical(step) {
+    if (!currentInput) return;
+
+    const row = currentInput.closest('tr');
+    if (!row) return;
+
+    const fields = getRowFields(row);
+    const colIndex = fields.indexOf(currentInput);
+    if (colIndex === -1) return;
+
+    const root =
+      currentInput.closest('#bulkGrid tbody') ||
+      currentInput.closest('#app1 tbody') ||
+      currentInput.closest('table') ||
+      document;
+
+    const rows = Array.from(root.querySelectorAll('tr')).filter(tr => getRowFields(tr).length > 0);
+    const rowIndex = rows.indexOf(row);
+    if (rowIndex === -1) return;
+
+    let nextRowIndex = rowIndex + step;
+    if (nextRowIndex < 0) nextRowIndex = 0;
+    if (nextRowIndex >= rows.length) nextRowIndex = rows.length - 1;
+
+    const nextRowFields = getRowFields(rows[nextRowIndex]);
+    if (!nextRowFields.length) return;
+
+    const target = nextRowFields[Math.min(colIndex, nextRowFields.length - 1)];
+    focusField(target);
   }
 
   function insertValue(value) {
@@ -10895,7 +10899,6 @@ document.addEventListener('input', (e) => {
     currentInput.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  /* テンキーを押した時に入力欄のフォーカスを奪わない */
   pad.addEventListener('pointerdown', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -10904,7 +10907,6 @@ document.addEventListener('input', (e) => {
 
   document.addEventListener('focusin', (e) => {
     const el = e.target;
-
     if (!isVisibleField(el)) return;
 
     currentInput = el;
@@ -10959,27 +10961,35 @@ document.addEventListener('input', (e) => {
     }
 
     if (fn === 'prev') {
-      moveFocus(-1);
+      moveHorizontal(-1);
       return;
     }
 
     if (fn === 'next') {
-      moveFocus(1);
+      moveHorizontal(1);
+      return;
+    }
+
+    if (fn === 'up') {
+      moveVertical(-1);
+      return;
+    }
+
+    if (fn === 'down') {
+      moveVertical(1);
       return;
     }
   });
 
-  /* ハードウェアキーボードのEnterでも移動 */
   document.addEventListener('keydown', (e) => {
     const el = e.target;
     if (!isVisibleField(el)) return;
-
     if (!el.closest('#app1') && !el.closest('#app2')) return;
 
     if (e.key === 'Enter') {
       e.preventDefault();
       currentInput = el;
-      moveFocus(1);
+      moveHorizontal(1);
     }
   });
 })();
@@ -11031,21 +11041,22 @@ document.addEventListener('input', (e) => {
     <button type="button" data-v="7">7</button>
     <button type="button" data-v="8">8</button>
     <button type="button" data-v="9">9</button>
+    <button type="button" data-fn="up">↑</button>
 
     <button type="button" data-v="4">4</button>
     <button type="button" data-v="5">5</button>
     <button type="button" data-v="6">6</button>
+    <button type="button" data-fn="down">↓</button>
 
     <button type="button" data-v="1">1</button>
     <button type="button" data-v="2">2</button>
     <button type="button" data-v="3">3</button>
+    <button type="button" data-fn="back">⌫</button>
 
     <button type="button" data-fn="clear">C</button>
     <button type="button" data-v="0">0</button>
-    <button type="button" data-fn="back">⌫</button>
-
-    <button type="button" class="pad-wide" data-fn="prev">←</button>
-    <button type="button" class="pad-wide" data-fn="next">→</button>
+    <button type="button" data-fn="prev">←</button>
+    <button type="button" data-fn="next">→</button>
   </div>
 </div>
 
