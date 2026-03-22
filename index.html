@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.6</title>
+<title>IBASD  Ver. 8.7.5.7</title>
 <style>
 
   html, body {
@@ -3077,6 +3077,11 @@ body.numpad-open[data-active-app="app2"] #app2{
 
 
 <script>
+
+  function isTarget(el) {
+  return el instanceof HTMLElement
+    && el.matches('#bulkGrid .num-only');
+}
 
 //<base script---------------------------------------------------------------------------------------------------------------->
   function updateAdviserFeeFromTotalCount() {
