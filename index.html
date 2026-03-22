@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4.7</title>
+<title>IBASD  Ver. 8.7.4.8</title>
 <style>
 
   html, body {
@@ -2398,6 +2398,18 @@ body[data-active-app="app3"] #maleAttendance {
   background: #1f2633;
   color: #fff;
   border: 1px solid #00f5ff55;
+}
+
+
+/*テンキー用CSS*/
+.input-active{
+  outline: 2px solid #00f5ff !important;
+  box-shadow: 0 0 12px #00f5ff88 !important;
+  background: rgba(0,245,255,0.12) !important;
+}
+
+.row-active td{
+  background: rgba(0,245,255,0.08) !important;
 }
 
 
@@ -10717,32 +10729,7 @@ document.addEventListener('input', (e) => {
   }
 });
 
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Enter') return;
 
-  const el = e.target;
-  if (!el.matches('input, select, textarea')) return;
-
-  // ←これが重要
-  e.preventDefault();
-
-  const container = el.closest('#bulkGrid') || el.closest('#app1') || document;
-
-  const fields = Array.from(
-    container.querySelectorAll('input, select, textarea')
-  ).filter(node => !node.disabled && node.offsetParent !== null);
-
-  const idx = fields.indexOf(el);
-  if (idx >= 0 && idx < fields.length - 1) {
-    const next = fields[idx + 1];
-
-    // 少し遅らせる（超重要）
-    setTimeout(() => {
-      next.focus();
-      next.select?.();
-    }, 0);
-  }
-});
 
 (function(){
 
@@ -10753,19 +10740,48 @@ document.addEventListener('keydown', function(e) {
     return el.matches('.num-only');
   }
 
-  document.addEventListener('focusin', (e)=>{
-    if(isTarget(e.target)){
-      currentInput = e.target;
+  function clearActive(){
+    document.querySelectorAll('.input-active')
+      .forEach(n => n.classList.remove('input-active'));
 
-      // OSキーボード潰す
-      setTimeout(()=>{
-        e.target.blur();
-        currentInput = e.target;
-      }, 0);
+    document.querySelectorAll('.row-active')
+      .forEach(n => n.classList.remove('row-active'));
+  }
+
+  function setActive(el){
+    clearActive();
+
+    el.classList.add('input-active');
+
+    const tr = el.closest('tr');
+    if(tr){
+      tr.classList.add('row-active');
+    }
+  }
+
+  document.addEventListener('focusin', (e)=>{
+    const el = e.target;
+
+    if(isTarget(el)){
+      currentInput = el;
+
+      setActive(el);
+
+      // キーボードだけ潰す（フォーカスは維持）
+      el.setAttribute('readonly', true);
 
       pad.hidden = false;
+
     } else {
       pad.hidden = true;
+    }
+  });
+
+  // フォーカス外れたらreadonly解除（重要）
+  document.addEventListener('focusout', (e)=>{
+    const el = e.target;
+    if(isTarget(el)){
+      el.removeAttribute('readonly');
     }
   });
 
