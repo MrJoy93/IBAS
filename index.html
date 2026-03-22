@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4.4</title>
+<title>IBASD  Ver. 8.7.4.5</title>
 <style>
 
   html, body {
@@ -8280,7 +8280,7 @@ function buildGrid(n){
       return;
     }
     const ph = placeholders[k] || '';
-    html += `<td><input data-k="${k}" class="bulk-num" class="num-only" placeholder="${ph}"></td>`;
+    html += `<td><input data-k="${k}" class="bulk-num num-only" type="text" placeholder="${ph}"></td>`;
   });
   
     html += `
