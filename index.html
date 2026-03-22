@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5</title>
+<title>IBASD  Ver. 8.7.5.1</title>
 <style>
 
   html, body {
@@ -2431,6 +2431,21 @@ body[data-active-app="app3"] #maleAttendance {
   box-shadow:
     0 0 0 2px rgba(0,245,255,0.18) inset,
     0 0 18px rgba(0,245,255,0.18) !important;
+}
+
+.num-pad button{
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.08s ease,
+    background 0.08s ease;
+}
+
+.num-pad button.pad-press{
+  transform: scale(0.94);
+  box-shadow:
+    0 0 0 2px rgba(0,245,255,0.20) inset,
+    0 0 18px rgba(0,245,255,0.35);
+  background: linear-gradient(180deg, rgba(40,68,110,.98), rgba(24,34,58,.98));
 }
 
 
@@ -10994,10 +11009,31 @@ document.addEventListener('input', (e) => {
   });
 })();
 
+
+
+//テンキー用モーション
+(function () {
+  const pad = document.getElementById('numPad');
+  if (!pad) return;
+
+  function pressFx(btn) {
+    btn.classList.add('pad-press');
+    setTimeout(() => btn.classList.remove('pad-press'), 70);
+
+    if (navigator.vibrate) {
+      try { navigator.vibrate(8); } catch (_) {}
+    }
+  }
+
+  pad.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    e.preventDefault();
+    pressFx(btn);
+  });
+})();
+
 //テンキー用JS終了--------------------------------------------------------
-
-
-
 
 
 </script>
