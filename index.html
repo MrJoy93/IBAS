@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4</title>
+<title>IBASD  Ver. 8.7.5</title>
 <style>
 
   html, body {
@@ -2448,8 +2448,8 @@ body[data-active-app="app3"] #maleAttendance {
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
-      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
+      <td><input class="table-number" type="text" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
+      <td><input class="honshi" type="text" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
       <td>
         <select class="c" oninput="updateRowColor(this); updateTotals()">
           <option value="">-</option>
@@ -2473,11 +2473,11 @@ body[data-active-app="app3"] #maleAttendance {
         
 
       </td>
-      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
-      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
+      <td><input class="amount" type="text" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
+      <td><input class="num" type="text" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
       <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
-      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
+      <td><input class="card" type="text" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
+      <td><input class="total" type="text" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
     </tr>
   </tbody>
 </table>
@@ -2487,7 +2487,7 @@ body[data-active-app="app3"] #maleAttendance {
   <button onclick="sortRowsByNumber()">番号順に並べ替え</button>
 
   <div class="search-box">
-    <input type="text" id="searchAmount" placeholder="金額で検索" inputmode="numeric">
+    <input type="text" id="searchAmount" placeholder="金額で検索" >
     <button onclick="searchByAmount()">検索</button>
     <button onclick="resetSearch()">リセット</button>
   </div>
@@ -2635,7 +2635,7 @@ body[data-active-app="app3"] #maleAttendance {
           autocomplete="off" autocapitalize="off" spellcheck="false">
         </label>
         <label>送迎:
-        <input type="text" inputmode="numeric" pattern="\d*"
+        <input type="text" pattern="\d*"
           id="sendoffAmount"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="送迎金額">
@@ -2654,14 +2654,14 @@ body[data-active-app="app3"] #maleAttendance {
 
   <!-- 数量：旧F2(id=f2)を「F数量」として使う -->
   <label>F（数量）:
-    <input type="text" inputmode="numeric" pattern="\d*"
+    <input type="text" pattern="\d*"
       id="f2"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="F">
   </label>
 
   <label>場内（¥1000）:
-    <input type="text" inputmode="numeric" pattern="\d*"
+    <input type="text" pattern="\d*"
       id="jounai"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="場内">
@@ -2671,7 +2671,7 @@ body[data-active-app="app3"] #maleAttendance {
       <div class="group group-shimei">
         <h3>指名・同伴・枝・HELP</h3>
         <label>本指（¥0）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text" pattern="\d*"
           id="honshiri"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="本指">
@@ -2683,13 +2683,13 @@ body[data-active-app="app3"] #maleAttendance {
           placeholder="同伴">
         </label>
         <label>枝（¥500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="eda"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="枝">
         </label>
         <label>HELP（-¥1500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="help"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="HELP">
@@ -2699,19 +2699,19 @@ body[data-active-app="app3"] #maleAttendance {
       <div class="group group-set">
         <h3>セット・VIP</h3>
         <label>SET40（¥5500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="set40"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="SET40">
         </label>
         <label>SET20（¥3500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="set20"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="SET20">
         </label>
         <label>VIP（¥2000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="vip"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="VIP">
@@ -2721,31 +2721,31 @@ body[data-active-app="app3"] #maleAttendance {
       <div class="group group-option">
         <h3>ドリンク・その他</h3>
         <label>A（¥500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="a"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="A">
         </label>
         <label>B（¥1000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="b"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="B">
         </label>
         <label>C（¥1500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="c"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="C">
         </label>
         <label>D（¥2000）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="d"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="D">
         </label>
         <label>E（¥2500）:
-          <input type="text" inputmode="numeric" pattern="\d*"
+          <input type="text"  pattern="\d*"
           id="e"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="E">
@@ -2821,13 +2821,13 @@ body[data-active-app="app3"] #maleAttendance {
 <div class="group no-bg">
   <label>
     <span>開始時金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
+    <input type="text"  pattern="\d*" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
   </label>
 
   <!-- ▼追加金庫金 -->
   <label>
     <span>追加金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
+    <input type="text"  pattern="\d*" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
   </label>
 </div>
 
@@ -2839,16 +2839,16 @@ body[data-active-app="app3"] #maleAttendance {
         <div class="mini-attendance-row">
         <label><span>総客:</span>
         <input type="number" id="customersCount" name="customersCount"
-          class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
+          class="num right compact"  pattern="\d*" readonly tabindex="-1">
         </label>
 
         <label><span>女子:</span>
          <input type="number" id="femaleAttendance" name="femaleAttendance"
-           class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
+           class="num right compact"  pattern="\d*" readonly tabindex="-1">
         </label>
 
         <label><span>男子:</span>
-        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact" inputmode="numeric" pattern="\d*">
+        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact"  pattern="\d*">
         </label>
 
 
@@ -2861,16 +2861,16 @@ body[data-active-app="app3"] #maleAttendance {
 
       <div class="group" id="laborGroup">
         <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
-        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
+        <label><span>男子給与:</span> <input type="text"  pattern="\d*" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
-        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
+        <label><span>スカウトバック:</span> <input type="text"  pattern="\d*" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
         <label>
         <span>ドライバー代:</span>
         <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
-        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
+        <input type="text" id="driverExtra2"  pattern="\d*" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
         <input type="text" id="driverFee" disabled placeholder="合計">
         </label>
         </label>
@@ -2880,17 +2880,17 @@ body[data-active-app="app3"] #maleAttendance {
 
       <div class="group" id="taxGroup">
         <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
-        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>男子源泉費:</span> <input type="text"  pattern="\d*" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
       </div>
 
       <div class="group" id="expensesGroup">
-        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>酒代:</span> <input type="text"  pattern="\d*" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書①:</span> <input type="text"  pattern="\d*" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書②:</span> <input type="text"  pattern="\d*" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書③:</span> <input type="text"  pattern="\d*" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書④:</span> <input type="text"  pattern="\d*" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書⑤:</span> <input type="text"  pattern="\d*" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
         <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
       </div>
@@ -2929,7 +2929,7 @@ body[data-active-app="app3"] #maleAttendance {
  </table>
 
   <div class="group no-bg">
-    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+    <label><span>集計提出前金庫金:</span> <input type="text"  pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
     <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
@@ -3352,8 +3352,8 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
-    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
+    <td><input class="table-number" type="text"  placeholder="卓番" oninput="updateTotals()" /></td>
+    <td><input class="honshi" type="text" ninput="updateTotals()" /></td>
     <td>
       <select class="c" oninput="updateRowColor(this); updateTotals()">
         <option value="">-</option>
@@ -3374,11 +3374,11 @@ function createEmptyRow(number) {
         <option value="Z">Z</option>
       </select>
     </td>
-    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
-    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
+    <td><input class="amount" type="text" ninput="updateTotals()" /></td>
+    <td><input class="num" type="text" ninput="updateTotals()" /></td>
     <td><input class="detail" type="text" placeholder="詳細" /></td>
-    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
-    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
+    <td><input class="card" type="text" oninput="updateTotals()" /></td>
+    <td><input class="total" type="text" oninput="updateTotals()" /></td>
   `;
   return tr;
 }
@@ -8154,9 +8154,9 @@ function addBottleSubrow(mainTr) {
     </div>
     <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
   </td>
-  <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-  <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-  <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+  <td><input class="splitCount" td>
+  <td><input class="bottleQuantity" td>
+  <td><input class="bottleAmount" /td>
 `;
   tr.innerHTML = html;
   mainTr.insertAdjacentElement('afterend', tr);
@@ -8260,7 +8260,7 @@ function buildGrid(n){
       <td>${i}</td>
       <td><input class="bulk-name" placeholder="氏名"></td>
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
-      <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
+      <td><input class="bulk-send" /td>
     `;
 
     const placeholders = {
@@ -8278,7 +8278,7 @@ function buildGrid(n){
       return;
     }
     const ph = placeholders[k] || '';
-    html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="${ph}"></td>`;
+    html += `<td><input data-k="${k}" class="bulk-num"  placeholder="${ph}"></td>`;
   });
   
     html += `
@@ -9301,9 +9301,9 @@ document.addEventListener('click', async (e) => {
       <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
       <input class="bottleFreeText" type="text" style="display:none;">
     </td>
-    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+    <td><input class="splitCount"  placeholder="割"></td>
+    <td><input class="bottleQuantity"  placeholder="数"></td>
+    <td><input class="bottleAmount"  placeholder="金額"></td>
   `);
 
   let anchor = mainRow;
@@ -9600,9 +9600,9 @@ function addAndGetSubrow(mainRow){
           <div class="left-group">
             <select class="bottleDetails">${window.BOTTLE_OPTIONS_HTML || '<option value=""></option>'}</select>
           </div>
-          <input class="splitCount" inputmode="numeric">
-          <input class="bottleQuantity" inputmode="numeric">
-          <input class="bottleAmount" inputmode="numeric">
+          <input class="splitCount" >
+          <input class="bottleQuantity" >
+          <input class="bottleAmount" >
         `;
         container.appendChild(form);
 
