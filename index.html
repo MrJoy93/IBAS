@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4.1</title>
+<title>IBASD  Ver. 8.7.4.2</title>
 <style>
 
   html, body {
@@ -10667,7 +10667,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 //EXCELエクスポート関連コード終了-------------------------------------------------------------
 
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (!el.classList.contains('num-only')) return;
 
+  const start = el.selectionStart ?? 0;
+  const before = el.value;
+
+  const after = before
+    .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
+    .replace(/[^\d]/g, '');
+
+  if (before !== after) {
+    el.value = after;
+
+    const diff = before.length - after.length;
+    const pos = Math.max(0, start - diff);
+
+    try {
+      el.setSelectionRange(pos, pos);
+    } catch (_) {}
+  }
+});
 
 
 
