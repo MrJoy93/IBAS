@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.2</title>
+<title>IBASD  Ver. 8.7.5.3</title>
 <style>
 
   html, body {
@@ -8348,7 +8348,7 @@ function buildGrid(n){
       <td>${i}</td>
       <td><input class="bulk-name" placeholder="氏名"></td>
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
-      <td><input class="bulk-send" class="num-only" placeholder="送迎"></td>
+      <td><input class="bulk-send num-only" type="text" placeholder="送迎"></td>
     `;
 
     const placeholders = {
@@ -10964,6 +10964,245 @@ document.addEventListener('input', (e) => {
         currentInput = null;
       }
     }
+  });
+
+  pad.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || !currentInput) return;
+
+    const value = btn.dataset.v;
+    const fn = btn.dataset.fn;
+
+    if (value) return insertValue(value);
+    if (fn === 'back') return backspaceValue();
+    if (fn === 'clear') return clearValue();
+    if (fn === 'prev') return moveHorizontal(-1);
+    if (fn === 'next') return moveHorizontal(1);
+    if (fn === 'up') return moveVertical(-1);
+    if (fn === 'down') return moveVertical(1);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const el = e.target;
+    if (!isVisibleField(el)) return;
+    if (!el.closest('#app1') && !el.closest('#app2')) return;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      currentInput = el;
+      moveHorizontal(1);
+    }
+  });
+})();
+
+(function () {
+  let currentInput = null;
+  const pad = document.getElementById('numPad');
+  if (!pad) return;
+
+  function isTarget(el) {
+    return el instanceof HTMLElement && el.matches('.num-only');
+  }
+
+  function isVisibleField(el) {
+    if (!(el instanceof HTMLElement)) return false;
+    if (!el.matches('input, select, textarea')) return false;
+    if (el.matches('[disabled], [type="hidden"], [hidden]')) return false;
+
+    const style = getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (el.offsetParent === null && style.position !== 'fixed') return false;
+
+    return true;
+  }
+
+  function clearActiveState() {
+    document.querySelectorAll('.input-active').forEach(el => el.classList.remove('input-active'));
+    document.querySelectorAll('.row-active').forEach(el => el.classList.remove('row-active'));
+    document.querySelectorAll('.group-active').forEach(el => el.classList.remove('group-active'));
+  }
+
+  function setActiveState(el) {
+    clearActiveState();
+
+    el.classList.add('input-active');
+
+    const row = el.closest('tr');
+    if (row) row.classList.add('row-active');
+
+    const group = el.closest('.group');
+    if (group) group.classList.add('group-active');
+  }
+
+  function openPadFor(el) {
+    currentInput = el;
+    setActiveState(el);
+
+    el.setAttribute('readonly', 'readonly');
+    pad.hidden = false;
+    document.body.classList.add('numpad-open');
+
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      el.focus();
+    }
+
+    try {
+      el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+    } catch (_) {}
+  }
+
+  function closePad() {
+    pad.hidden = true;
+    document.body.classList.remove('numpad-open');
+  }
+
+  /* ここが最重要：iPadが標準キーボードを出す前に奪う */
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.num-only');
+    if (!el || !isVisibleField(el)) return;
+
+    e.preventDefault();
+    openPadFor(el);
+  });
+
+  /* iPad対策で touchstart も入れる */
+  document.addEventListener('touchstart', (e) => {
+    const el = e.target.closest('.num-only');
+    if (!el || !isVisibleField(el)) return;
+
+    e.preventDefault();
+    openPadFor(el);
+  }, { passive: false });
+
+  /* 非num-onlyは通常動作 */
+  document.addEventListener('focusin', (e) => {
+    const el = e.target;
+    if (!isVisibleField(el)) return;
+
+    if (isTarget(el)) {
+      currentInput = el;
+      setActiveState(el);
+      pad.hidden = false;
+      document.body.classList.add('numpad-open');
+      return;
+    }
+
+    closePad();
+  });
+
+  document.addEventListener('click', (e) => {
+    const el = e.target;
+
+    if (isTarget(el)) return;
+    if (pad.contains(el)) return;
+
+    if (!(el instanceof HTMLElement) || !isVisibleField(el)) {
+      clearActiveState();
+      currentInput = null;
+      closePad();
+    }
+  });
+
+  function getRowFields(row) {
+    if (!row) return [];
+    return Array.from(row.querySelectorAll('input, select, textarea')).filter(isVisibleField);
+  }
+
+  function getMovementRoot(el) {
+    return el.closest('#bulkGrid') || el.closest('#app1 table') || el.closest('table');
+  }
+
+  function focusField(el) {
+    if (!isVisibleField(el)) return;
+
+    if (isTarget(el)) {
+      openPadFor(el);
+      return;
+    }
+
+    currentInput = el;
+    setActiveState(el);
+    closePad();
+    el.removeAttribute('readonly');
+    el.focus();
+  }
+
+  function moveHorizontal(step) {
+    if (!currentInput) return;
+
+    const row = currentInput.closest('tr');
+    if (!row) return;
+
+    const fields = getRowFields(row);
+    const index = fields.indexOf(currentInput);
+    if (index === -1) return;
+
+    let nextIndex = index + step;
+    if (nextIndex < 0) nextIndex = 0;
+    if (nextIndex >= fields.length) nextIndex = fields.length - 1;
+
+    focusField(fields[nextIndex]);
+  }
+
+  function moveVertical(step) {
+    if (!currentInput) return;
+
+    const row = currentInput.closest('tr');
+    if (!row) return;
+
+    const rowFields = getRowFields(row);
+    const colIndex = rowFields.indexOf(currentInput);
+    if (colIndex === -1) return;
+
+    const root = getMovementRoot(currentInput);
+    if (!root) return;
+
+    const rows = Array.from(root.querySelectorAll('tr')).filter(tr => getRowFields(tr).length > 0);
+    const rowIndex = rows.indexOf(row);
+    if (rowIndex === -1) return;
+
+    let nextRowIndex = rowIndex + step;
+    if (nextRowIndex < 0) nextRowIndex = 0;
+    if (nextRowIndex >= rows.length) nextRowIndex = rows.length - 1;
+
+    const nextRowFields = getRowFields(rows[nextRowIndex]);
+    if (!nextRowFields.length) return;
+
+    const target = nextRowFields[Math.min(colIndex, nextRowFields.length - 1)];
+    focusField(target);
+  }
+
+  function insertValue(value) {
+    if (!currentInput || !isTarget(currentInput)) return;
+    currentInput.value += value;
+    currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    currentInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function backspaceValue() {
+    if (!currentInput || !isTarget(currentInput)) return;
+    currentInput.value = currentInput.value.slice(0, -1);
+    currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    currentInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function clearValue() {
+    if (!currentInput || !isTarget(currentInput)) return;
+    currentInput.value = '';
+    currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    currentInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  pad.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    e.preventDefault();
   });
 
   pad.addEventListener('click', (e) => {
