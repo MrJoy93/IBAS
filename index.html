@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4</title>
+<title>IBASD  Ver. 8.7.4.1</title>
 <style>
 
   html, body {
@@ -2450,8 +2450,8 @@ body[data-active-app="app3"] #maleAttendance {
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
-      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
+      <td><input class="table-number num-only num-only num-only num-only" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
+      <td><input class="honshi" type="text" placeholder="本指" oninput="updateTotals()" /></td>
       <td>
         <select class="c" oninput="updateRowColor(this); updateTotals()">
           <option value="">-</option>
@@ -2475,11 +2475,11 @@ body[data-active-app="app3"] #maleAttendance {
         
 
       </td>
-      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
-      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
+      <td><input class="amount" type="text" placeholder="金額" oninput="updateTotals()" /></td>
+      <td><input class="num" type="text" placeholder="人数" oninput="updateTotals()" /></td>
       <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
-      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
+      <td><input class="card" type="text" placeholder="カード" oninput="updateTotals()" /></td>
+      <td><input class="total" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
     </tr>
   </tbody>
 </table>
@@ -2823,13 +2823,13 @@ body[data-active-app="app3"] #maleAttendance {
 <div class="group no-bg">
   <label>
     <span>開始時金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
+    <input type="text" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
   </label>
 
   <!-- ▼追加金庫金 -->
   <label>
     <span>追加金庫金:</span>
-    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
+    <input type="text" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
   </label>
 </div>
 
@@ -2841,12 +2841,12 @@ body[data-active-app="app3"] #maleAttendance {
         <div class="mini-attendance-row">
         <label><span>総客:</span>
         <input type="number" id="customersCount" name="customersCount"
-          class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
+          class="num right compact" readonly tabindex="-1">
         </label>
 
         <label><span>女子:</span>
          <input type="number" id="femaleAttendance" name="femaleAttendance"
-           class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
+           class="num right compact" readonly tabindex="-1">
         </label>
 
         <label><span>男子:</span>
@@ -2863,16 +2863,16 @@ body[data-active-app="app3"] #maleAttendance {
 
       <div class="group" id="laborGroup">
         <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
-        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
+        <label><span>男子給与:</span> <input type="text" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
-        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
+        <label><span>スカウトバック:</span> <input type="text" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
         <label>
         <span>ドライバー代:</span>
         <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
-        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
+        <input type="text" id="driverExtra2" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
         <input type="text" id="driverFee" disabled placeholder="合計">
         </label>
         </label>
@@ -2882,17 +2882,17 @@ body[data-active-app="app3"] #maleAttendance {
 
       <div class="group" id="taxGroup">
         <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
-        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>男子源泉費:</span> <input type="text" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
       </div>
 
       <div class="group" id="expensesGroup">
-        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>酒代:</span> <input type="text" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書①:</span> <input type="text" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書②:</span> <input type="text" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書③:</span> <input type="text" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書④:</span> <input type="text" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書⑤:</span> <input type="text" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
         <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
       </div>
@@ -2931,7 +2931,7 @@ body[data-active-app="app3"] #maleAttendance {
  </table>
 
   <div class="group no-bg">
-    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+    <label><span>集計提出前金庫金:</span> <input type="text" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
     <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
@@ -3354,7 +3354,7 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
+    <td><input class="table-number num-only" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
     <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
     <td>
       <select class="c" oninput="updateRowColor(this); updateTotals()">
