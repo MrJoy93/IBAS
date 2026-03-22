@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.5</title>
+<title>IBASD  Ver. 8.7.5.6</title>
 <style>
 
   html, body {
@@ -2539,8 +2539,8 @@ body.numpad-open[data-active-app="app2"] #app2{
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number num-only" data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
-<td><input class="honshi num-only" data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
+      <td><input class="table-number " data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
+<td><input class="honshi " data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
 <td>
   <select class="c" data-nav="1" oninput="updateRowColor(this); updateTotals()">
     <option value="">-</option>
@@ -2561,11 +2561,11 @@ body.numpad-open[data-active-app="app2"] #app2{
     <option value="Z">Z</option>
   </select>
 </td>
-<td><input class="amount num-only" data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
-<td><input class="num num-only" data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
+<td><input class="amount " data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
+<td><input class="num " data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
 <td><input class="detail" data-nav="1" type="text" placeholder="詳細" /></td>
 <td><input class="card" data-nav="1" type="text" placeholder="カード" oninput="updateTotals()" /></td>
-<td><input class="total num-only" data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
+<td><input class="total " data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
   </tr>
   </tbody>
 </table>
@@ -2575,7 +2575,7 @@ body.numpad-open[data-active-app="app2"] #app2{
   <button onclick="sortRowsByNumber()">番号順に並べ替え</button>
 
   <div class="search-box">
-    <input type="text" id="searchAmount" placeholder="金額で検索" class="num-only">
+    <input type="text" id="searchAmount" placeholder="金額で検索">
     <button onclick="searchByAmount()">検索</button>
     <button onclick="resetSearch()">リセット</button>
   </div>
@@ -2936,7 +2936,7 @@ body.numpad-open[data-active-app="app2"] #app2{
         </label>
 
         <label><span>男子:</span>
-        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact" class="num-only" pattern="\d*">
+        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact"  pattern="\d*">
         </label>
 
 
@@ -3440,8 +3440,8 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number num-only" data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
-<td><input class="honshi num-only" data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
+    <td><input class="table-number" data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
+<td><input class="honshi" data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
 <td>
   <select class="c" data-nav="1" oninput="updateRowColor(this); updateTotals()">
     <option value="">-</option>
@@ -3462,11 +3462,11 @@ function createEmptyRow(number) {
     <option value="Z">Z</option>
   </select>
 </td>
-<td><input class="amount num-only" data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
-<td><input class="num num-only" data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
+<td><input class="amount" data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
+<td><input class="num" data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
 <td><input class="detail" data-nav="1" type="text" placeholder="詳細" /></td>
 <td><input class="card" data-nav="1" type="text" placeholder="カード" oninput="updateTotals()" /></td>
-<td><input class="total num-only" data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
+<td><input class="total" data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
   `;
   return tr;
 }
@@ -8613,7 +8613,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   regBt?.addEventListener('click',bulkRegister);
 
   grid?.addEventListener('click', e => {
-  console.log('grid click detected', e.target);
+  window.__gridClickCount = (window.__gridClickCount || 0) + 1;
+console.log('[grid click]', window.__gridClickCount, {
+  target: e.target,
+  currentTarget: e.currentTarget,
+  activeElement: document.activeElement
+});
     let main = e.target.closest('tr.bulk-mainrow');
     if (!main) {
       const sub = e.target.closest('tr.btl-subrow');
@@ -10014,19 +10019,19 @@ document.addEventListener('focusin', (e) => {
   const el = e.target;
   if (!(el instanceof HTMLElement)) return;
 
-  // input, textarea のみ対象
   if (!(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
 
-  // APP2の業務ナビ対象だけ
+  // 数値欄は自前テンキー入力と競合しやすいので全選択しない
+  if (el.matches('.num-only')) return;
+
   if (el.closest('#bulkGrid')) {
-    if (!el.matches('[data-nav="1"], .num-only')) return;
+    if (!el.matches('[data-nav="1"]')) return;
     el.select?.();
     return;
   }
 
-  // APP1の業務対象だけ
   if (el.closest('#salesTableBody') || el.closest('#app1') || el.closest('#tab1')) {
-    if (!el.matches('[data-nav="1"], .num-only, .table-number, .honshi, .amount, .num, .total, .detail, .card')) return;
+    if (!el.matches('[data-nav="1"], .detail, .card')) return;
     el.select?.();
     return;
   }
@@ -11103,46 +11108,55 @@ document.addEventListener('input', (e) => {
   }
 
   document.addEventListener('focusin', (e) => {
-    const t = e.target;
-    if (!t) return;
+  const t = e.target;
+  if (!t) return;
 
+  // APP2グリッド内は grid 側の制御を優先
+  if (t.closest && t.closest('#bulkGrid')) {
     if (isNavField(t)) {
-  activeField = t;
+      activeField = t;
 
-  if (isNumField(t)) {
-    showPad();
-  } else {
-    hidePad();
-  }
-  return;
-}
-
-    if (!numPad.contains(t)) {
-      activeField = null;
-      hidePad();
-    }
-  });
-
-  document.addEventListener('click', (e) => {
-    const t = e.target;
-    if (!t) return;
-
-    const nav = t.closest('input, select, textarea');
-    if (nav && isNavField(nav)) {
-      activeField = nav;
-      if (isNumField(nav)) {
+      if (isNumField(t)) {
         showPad();
       } else {
         hidePad();
       }
-      return;
     }
+    return;
+  }
 
-    if (!numPad.contains(t)) {
-      activeField = null;
+  if (isNavField(t)) {
+    activeField = t;
+
+    if (isNumField(t)) {
+      showPad();
+    } else {
       hidePad();
     }
-  });
+    return;
+  }
+
+  if (!numPad.contains(t)) {
+    activeField = null;
+    hidePad();
+  }
+});
+
+  document.addEventListener('click', (e) => {
+  const el = e.target;
+
+  if (isTarget(el)) {
+    focusField(el);
+    return;
+  }
+
+  if (!pad.contains(el)) {
+    pad.hidden = true;
+    document.body.classList.remove('numpad-open');
+    clearActiveState();
+    currentInput = null;
+  }
+});
 
   numPad.addEventListener('pointerdown', (e) => {
     e.preventDefault();
