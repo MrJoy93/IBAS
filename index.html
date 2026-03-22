@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.4</title>
+<title>IBASD  Ver. 8.7.5.5</title>
 <style>
 
   html, body {
@@ -2539,10 +2539,10 @@ body.numpad-open[data-active-app="app2"] #app2{
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number num-only" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
-<td><input class="honshi num-only" type="text" placeholder="本指" oninput="updateTotals()" /></td>
+      <td><input class="table-number num-only" data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
+<td><input class="honshi num-only" data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
 <td>
-  <select class="c" oninput="updateRowColor(this); updateTotals()">
+  <select class="c" data-nav="1" oninput="updateRowColor(this); updateTotals()">
     <option value="">-</option>
     <option value="UK">UK</option>
     <option value="K">K</option>
@@ -2561,11 +2561,11 @@ body.numpad-open[data-active-app="app2"] #app2{
     <option value="Z">Z</option>
   </select>
 </td>
-<td><input class="amount num-only" type="text" placeholder="金額" oninput="updateTotals()" /></td>
-<td><input class="num num-only" type="text" placeholder="人数" oninput="updateTotals()" /></td>
-<td><input class="detail" type="text" placeholder="詳細" /></td>
-<td><input class="card num-only" type="text" placeholder="カード" oninput="updateTotals()" /></td>
-<td><input class="total num-only" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
+<td><input class="amount num-only" data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
+<td><input class="num num-only" data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
+<td><input class="detail" data-nav="1" type="text" placeholder="詳細" /></td>
+<td><input class="card" data-nav="1" type="text" placeholder="カード" oninput="updateTotals()" /></td>
+<td><input class="total num-only" data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
   </tr>
   </tbody>
 </table>
@@ -3440,33 +3440,33 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" type="text" class="num-only" placeholder="卓番" oninput="updateTotals()" /></td>
-    <td><input class="honshi" type="text" class="num-only" placeholder="本指" oninput="updateTotals()" /></td>
-    <td>
-      <select class="c" oninput="updateRowColor(this); updateTotals()">
-        <option value="">-</option>
-        <option value="UK">UK</option>
-        <option value="K">K</option>
-        <option value="AB">AB</option>
-        <option value="LA">LA</option>
-        <option value="PA">PA</option>
-        <option value="BB">BB</option>
-        <option value="MS">MS</option>
-        <option value="GM">GM</option>
-        <option value="B">B</option>
-        <option value="JOE">JOE</option>
-        <option value="KOSE">KOSE</option>
-        <option value="HE">HE</option>
-        <option value="PB">PB</option>
-        <option value="X">X</option>
-        <option value="Z">Z</option>
-      </select>
-    </td>
-    <td><input class="amount" type="text" class="num-only" placeholder="金額" oninput="updateTotals()" /></td>
-    <td><input class="num" type="text" class="num-only" placeholder="人数" oninput="updateTotals()" /></td>
-    <td><input class="detail" type="text" placeholder="詳細" /></td>
-    <td><input class="card" type="text" class="num-only" placeholder="カード" oninput="updateTotals()" /></td>
-    <td><input class="total" type="text" class="num-only" placeholder="総合計" oninput="updateTotals()" /></td>
+    <td><input class="table-number num-only" data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
+<td><input class="honshi num-only" data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
+<td>
+  <select class="c" data-nav="1" oninput="updateRowColor(this); updateTotals()">
+    <option value="">-</option>
+    <option value="UK">UK</option>
+    <option value="K">K</option>
+    <option value="AB">AB</option>
+    <option value="LA">LA</option>
+    <option value="PA">PA</option>
+    <option value="BB">BB</option>
+    <option value="MS">MS</option>
+    <option value="GM">GM</option>
+    <option value="B">B</option>
+    <option value="JOE">JOE</option>
+    <option value="KOSE">KOSE</option>
+    <option value="HE">HE</option>
+    <option value="PB">PB</option>
+    <option value="X">X</option>
+    <option value="Z">Z</option>
+  </select>
+</td>
+<td><input class="amount num-only" data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
+<td><input class="num num-only" data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
+<td><input class="detail" data-nav="1" type="text" placeholder="詳細" /></td>
+<td><input class="card" data-nav="1" type="text" placeholder="カード" oninput="updateTotals()" /></td>
+<td><input class="total num-only" data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
   `;
   return tr;
 }
@@ -8242,9 +8242,9 @@ function addBottleSubrow(mainTr) {
     </div>
     <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
   </td>
-  <td><input class="splitCount" class="num-only" placeholder="割"></td>
-  <td><input class="bottleQuantity" class="num-only" placeholder="数"></td>
-  <td><input class="bottleAmount" class="num-only" placeholder="金額"></td>
+  <td><input class="splitCount num-only" placeholder="割"></td>
+  <td><input class="bottleQuantity num-only" placeholder="数"></td>
+  <td><input class="bottleAmount num-only" placeholder="金額"></td>
 `;
   tr.innerHTML = html;
   mainTr.insertAdjacentElement('afterend', tr);
@@ -8346,29 +8346,28 @@ function buildGrid(n){
     tr.className = 'bulk-mainrow';
     let html = `
       <td>${i}</td>
-      <td><input class="bulk-name" placeholder="氏名"></td>
+      <td><input class="bulk-name" data-nav="1" placeholder="氏名"></td>
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
-      <td><input class="bulk-send num-only" type="text" placeholder="送迎"></td>
+      <td><input class="bulk-send num-only" data-nav="1" type="text" placeholder="送迎"></td>
     `;
 
     const placeholders = {
-  f2: 'F',
-  jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
-  set40: '40', set20: '20', vip: 'VIP',
-  a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
-};
+      f2: 'F',
+      jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
+      set40: '40', set20: '20', vip: 'VIP',
+      a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
+    };
 
-['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
-  .forEach(k => {
-    if (k === 'f') {
-      // ★ 2kフラグ（チェックボックス）
-      html += `<td style="text-align:center;"><input type="checkbox" data-k="f" class="bulk-2k"></td>`;
-      return;
-    }
-    const ph = placeholders[k] || '';
-    html += `<td><input data-k="${k}" class="bulk-num num-only" type="text" placeholder="${ph}"></td>`;
-  });
-  
+    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+      .forEach(k => {
+        if (k === 'f') {
+          html += `<td style="text-align:center;"><input type="checkbox" data-k="f" class="bulk-2k"></td>`;
+          return;
+        }
+        const ph = placeholders[k] || '';
+        html += `<td><input data-k="${k}" class="bulk-num num-only" data-nav="1" type="text" placeholder="${ph}"></td>`;
+      });
+
     html += `
       <td class="btl-anchor">
         <div class="btl-toolbar">
@@ -8383,6 +8382,82 @@ function buildGrid(n){
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
   applyApp2MobileView();
+}
+
+function isVisibleNavField(el) {
+  if (!el) return false;
+  if (el.disabled) return false;
+  if (el.hidden) return false;
+  if (el.type === 'hidden') return false;
+
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none') return false;
+  if (style.visibility === 'hidden') return false;
+
+  return true;
+}
+
+function getRowFields(row) {
+  if (!row) return [];
+
+  if (row.classList.contains('bulk-mainrow')) {
+  return Array.from(row.querySelectorAll('[data-nav="1"]'))
+    .filter(el => isVisibleNavField(el));
+}
+
+  return [];
+}
+
+function getBulkMainRows() {
+  const tbody = document.querySelector('#bulkGrid tbody');
+  if (!tbody) return [];
+
+  return Array.from(tbody.querySelectorAll('tr.bulk-mainrow'))
+    .filter(row => getRowFields(row).length > 0);
+}
+
+function moveBulkHorizontal(currentEl, dir) {
+  if (!currentEl) return null;
+
+  const row = currentEl.closest('tr.bulk-mainrow');
+  if (!row) return null;
+
+  const fields = getRowFields(row);
+  const idx = fields.indexOf(currentEl);
+  if (idx < 0) return null;
+
+  const next = fields[idx + dir] || null;
+  if (next) next.focus();
+
+  return next;
+}
+
+function moveBulkVertical(currentEl, dir) {
+  if (!currentEl) return null;
+
+  const row = currentEl.closest('tr.bulk-mainrow');
+  if (!row) return null;
+
+  const rows = getBulkMainRows();
+  const rowIdx = rows.indexOf(row);
+  if (rowIdx < 0) return null;
+
+  const fields = getRowFields(row);
+  const colIdx = fields.indexOf(currentEl);
+  if (colIdx < 0) return null;
+
+  for (let i = rowIdx + dir; i >= 0 && i < rows.length; i += dir) {
+    const targetFields = getRowFields(rows[i]);
+    if (!targetFields.length) continue;
+
+    const target = targetFields[Math.min(colIdx, targetFields.length - 1)];
+    if (target) {
+      target.focus();
+      return target;
+    }
+  }
+
+  return null;
 }
 
 // === 一括登録 ===============================================================
@@ -9128,54 +9203,50 @@ window.addEventListener('scroll', requestRepositionBottleHierarchyPicker, true);
 window.addEventListener('resize', requestRepositionBottleHierarchyPicker);
 
 // ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
+// ====== グリッド移動（Tab=横のみ補助） ======================
 (function(){
   const grid = document.getElementById('bulkGrid');
   if (!grid) return;
 
-  const isInvisible = (node) => node?.offsetParent === null;
-  const isDisabledLike = (node) => !node || node.disabled || node.readOnly || isInvisible(node);
-  const isBottleSpacerRow = (tr) =>
-    tr?.classList?.contains('btl-subrow') || tr?.dataset?.rowType === 'bottle-subrow';
-
   function onGridNav(e){
-  const key = e.key;
-  if (e.isComposing) return;
-  // ← Enter は新ナビが処理するので素通り
-  if (key === 'Enter') return;
-  // ここからは Tab 専用
-  if (key !== 'Tab') return;
+    const key = e.key;
+    if (e.isComposing) return;
 
-  const el = e.target;
-  if (!(el instanceof HTMLElement)) return;
-  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
-  if (!grid.contains(el)) return;
+    // Enter / 矢印は numPad側 or 新ナビ側へ委譲
+    if (key === 'Enter') return;
+    if (key === 'ArrowLeft') return;
+    if (key === 'ArrowRight') return;
+    if (key === 'ArrowUp') return;
+    if (key === 'ArrowDown') return;
 
-  // 同一行の左右（Tab/Shift+Tab）のみ面倒を見る
-  const currentRow = el.closest('tr');
-  if (!currentRow) return;
+    // ここでは Tab だけ補助
+    if (key !== 'Tab') return;
 
-  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
-  const colIdx = rowInputs.indexOf(el);
-  if (colIdx === -1) return;
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+    if (!grid.contains(el)) return;
+    if (!el.closest('tr.bulk-mainrow')) return;
+    if (!el.matches('[data-nav="1"]')) return;
 
-  e.preventDefault(); // ここでだけ既定の Tab を止める
+    const currentRow = el.closest('tr.bulk-mainrow');
+    if (!currentRow) return;
 
-  const delta = e.shiftKey ? -1 : 1;
-  const nextInRow = rowInputs[colIdx + delta];
+    const rowFields = getRowFields(currentRow);
+    const colIdx = rowFields.indexOf(el);
+    if (colIdx === -1) return;
 
-  // 非表示/無効はスキップせず“何もしない”＝他ハンドラを止めない
-  if (nextInRow && !nextInRow.disabled && nextInRow.offsetParent !== null) {
-    nextInRow.focus();
-    nextInRow.select?.();
-    // ここはフォーカス済みなので他へ流さないでOK
-    return;
+    e.preventDefault();
+
+    const delta = e.shiftKey ? -1 : 1;
+    const next = rowFields[colIdx + delta] || null;
+
+    if (next) {
+      next.focus();
+      next.select?.();
+    }
   }
 
-  // 見つからない/フォーカスできない場合は何もしない（他ハンドラに譲る）
-  return;
-}
-
-  // capture=true で最優先捕捉し、他ハンドラより先に制御
   document.addEventListener('keydown', onGridNav, true);
 })();
 
@@ -9389,9 +9460,9 @@ document.addEventListener('click', async (e) => {
       <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
       <input class="bottleFreeText" type="text" style="display:none;">
     </td>
-    <td><input class="splitCount" class="num-only" placeholder="割"></td>
-    <td><input class="bottleQuantity" class="num-only" placeholder="数"></td>
-    <td><input class="bottleAmount" class="num-only" placeholder="金額"></td>
+    <td><input class="splitCount num-only" placeholder="割"></td>
+   <td><input class="bottleQuantity num-only" placeholder="数"></td>
+   <td><input class="bottleAmount num-only" placeholder="金額"></td>
   `);
 
   let anchor = mainRow;
@@ -9688,9 +9759,9 @@ function addAndGetSubrow(mainRow){
           <div class="left-group">
             <select class="bottleDetails">${window.BOTTLE_OPTIONS_HTML || '<option value=""></option>'}</select>
           </div>
-          <input class="splitCount" class="num-only">
-          <input class="bottleQuantity" class="num-only">
-          <input class="bottleAmount" class="num-only">
+          <input class="splitCount num-only">
+          <input class="bottleQuantity num-only">
+          <input class="bottleAmount num-only">
         `;
         container.appendChild(form);
 
@@ -9943,10 +10014,21 @@ document.addEventListener('focusin', (e) => {
   const el = e.target;
   if (!(el instanceof HTMLElement)) return;
 
-  // input, textarea のみ対象（select はユーザー操作の都合で除外）
-  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-    // 数値入力でもフォーカス直後に全選択
+  // input, textarea のみ対象
+  if (!(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+
+  // APP2の業務ナビ対象だけ
+  if (el.closest('#bulkGrid')) {
+    if (!el.matches('[data-nav="1"], .num-only')) return;
     el.select?.();
+    return;
+  }
+
+  // APP1の業務対象だけ
+  if (el.closest('#salesTableBody') || el.closest('#app1') || el.closest('#tab1')) {
+    if (!el.matches('[data-nav="1"], .num-only, .table-number, .honshi, .amount, .num, .total, .detail, .card')) return;
+    el.select?.();
+    return;
   }
 });
 
@@ -10779,265 +10861,388 @@ document.addEventListener('input', (e) => {
 
 //テンキー用JS開始--------------------------------------------------------
 
-(function () {
+(() => {
   if (window.__IBAS_NUMPAD_INIT__) return;
   window.__IBAS_NUMPAD_INIT__ = true;
 
-  let currentInput = null;
-  let suppressFocusIn = false;
+  const numPad = document.getElementById('numPad');
+  if (!numPad) return;
 
-  const pad = document.getElementById('numPad');
-  if (!pad) return;
+  let activeField = null;
 
-  function isTarget(el) {
-    return el instanceof HTMLElement && el.matches('.num-only');
-  }
+  const APP1_SELECTOR = [
+    '.table-number',
+    '.honshi',
+    '.amount',
+    '.num',
+    '.total'
+  ].join(',');
 
-  function isVisibleField(el) {
-    if (!(el instanceof HTMLElement)) return false;
-    if (!el.matches('input, select, textarea')) return false;
-    if (el.matches('[disabled], [type="hidden"], [hidden]')) return false;
-    if (el.closest('[hidden]')) return false;
-
-    const style = getComputedStyle(el);
+  function isVisible(el) {
+    if (!el) return false;
+    if (el.hidden) return false;
+    if (el.disabled) return false;
+    if (el.type === 'hidden') return false;
+    const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return false;
-    if (el.offsetParent === null && style.position !== 'fixed') return false;
-
-    return true;
+    return !!(el.offsetParent || style.position === 'fixed');
   }
 
-  function clearActiveState() {
-    document.querySelectorAll('.input-active').forEach(el => el.classList.remove('input-active'));
-    document.querySelectorAll('.row-active').forEach(el => el.classList.remove('row-active'));
-    document.querySelectorAll('.group-active').forEach(el => el.classList.remove('group-active'));
+  function isNumField(el) {
+    return !!(el && el.matches('input.num-only'));
   }
 
-  function setActiveState(el) {
-    clearActiveState();
-    el.classList.add('input-active');
+  function isNavField(el) {
+    if (!el) return false;
 
-    const row = el.closest('tr');
-    if (row) row.classList.add('row-active');
+    if (el.matches('#bulkGrid [data-nav="1"]')) return true;
+    if (el.matches(APP1_SELECTOR)) return true;
+    if (el.matches('input.num-only[data-nav="1"]')) return true;
+    if (el.matches('input[type="text"][data-nav="1"], select[data-nav="1"], textarea[data-nav="1"]')) return true;
 
-    const group = el.closest('.group');
-    if (group) group.classList.add('group-active');
+    return false;
   }
 
-  function getMovementRoot(el) {
-    return el.closest('#bulkGrid') || el.closest('#app1 table') || el.closest('table');
+  function getBulkRowFields(row) {
+    if (!row) return [];
+    return Array.from(row.querySelectorAll('[data-nav="1"]'))
+      .filter(isVisible);
+  }
+
+  function getApp1RowFields(row) {
+    if (!row) return [];
+    return Array.from(
+      row.querySelectorAll([
+        '.table-number',
+        '.honshi',
+        'select.c',
+        '.amount',
+        '.num',
+        '.detail',
+        '.card',
+        '.total'
+      ].join(','))
+    ).filter(isVisible);
   }
 
   function getRowFields(row) {
     if (!row) return [];
-    return Array.from(row.querySelectorAll('input, select, textarea')).filter(isVisibleField);
+
+    if (row.closest('#bulkGrid')) {
+      return getBulkRowFields(row);
+    }
+
+    if (row.closest('#salesTableBody') || row.closest('#app1') || row.closest('#tab1')) {
+      return getApp1RowFields(row);
+    }
+
+    return Array.from(row.querySelectorAll('input, select, textarea')).filter(el => isNavField(el) && isVisible(el));
+  }
+
+  function getRowElement(el) {
+    return el?.closest('tr, .bulk-row, .entry-row') || null;
+  }
+
+  function getGridRows(el) {
+    if (!el) return [];
+
+    const bulkGrid = document.getElementById('bulkGrid');
+    if (bulkGrid && bulkGrid.contains(el)) {
+      return Array.from(bulkGrid.querySelectorAll('tr'))
+        .filter(row => getBulkRowFields(row).length > 0);
+    }
+
+    const salesBody = document.getElementById('salesTableBody');
+    if (salesBody && salesBody.contains(el)) {
+      return Array.from(salesBody.querySelectorAll('tr'))
+        .filter(row => getApp1RowFields(row).length > 0);
+    }
+
+    const table = el.closest('table');
+    if (table) {
+      return Array.from(table.querySelectorAll('tr'))
+        .filter(row => getRowFields(row).length > 0);
+    }
+
+    return [];
   }
 
   function focusField(el) {
-    if (!isVisibleField(el)) return;
+    if (!el || !isVisible(el)) return false;
 
-    suppressFocusIn = true;
-    currentInput = el;
-    setActiveState(el);
-
-    if (isTarget(el)) {
-      el.setAttribute('readonly', 'readonly');
-      pad.hidden = false;
-      document.body.classList.add('numpad-open');
-    } else {
-      el.removeAttribute('readonly');
-      pad.hidden = true;
-      document.body.classList.remove('numpad-open');
-    }
-
-    el.focus({ preventScroll: true });
+    activeField = el;
 
     try {
-      el.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest'
-      });
-    } catch (_) {}
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      el.focus();
+    }
 
     requestAnimationFrame(() => {
-      suppressFocusIn = false;
+      try {
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      } catch (_) {}
     });
+
+    if (isNumField(el)) {
+      showPad();
+    } else {
+      hidePad();
+    }
+
+    return true;
   }
 
-  function moveHorizontal(step) {
-    if (!currentInput) return;
+  function moveHorizontal(dir) {
+    const el = activeField;
+    if (!el) return;
 
-    const row = currentInput.closest('tr');
+    const row = getRowElement(el);
     if (!row) return;
 
     const fields = getRowFields(row);
-    const index = fields.indexOf(currentInput);
-    if (index === -1) return;
+    const index = fields.indexOf(el);
+    if (index < 0) return;
 
-    let nextIndex = index + step;
-    if (nextIndex < 0) nextIndex = 0;
-    if (nextIndex >= fields.length) nextIndex = fields.length - 1;
-
-    if (nextIndex !== index) {
-      focusField(fields[nextIndex]);
+    const next = fields[index + dir];
+    if (next) {
+      focusField(next);
     }
   }
 
-  function moveVertical(step) {
-    if (!currentInput) return;
+  function moveVertical(dir) {
+    const el = activeField;
+    if (!el) return;
 
-    const row = currentInput.closest('tr');
+    const row = getRowElement(el);
     if (!row) return;
 
-    const rowFields = getRowFields(row);
-    const colIndex = rowFields.indexOf(currentInput);
-    if (colIndex === -1) return;
-
-    const root = getMovementRoot(currentInput);
-    if (!root) return;
-
-    const rows = Array.from(root.querySelectorAll('tr')).filter(tr => getRowFields(tr).length > 0);
+    const rows = getGridRows(el);
     const rowIndex = rows.indexOf(row);
-    if (rowIndex === -1) return;
+    if (rowIndex < 0) return;
 
-    let nextRowIndex = rowIndex + step;
-    if (nextRowIndex < 0) nextRowIndex = 0;
-    if (nextRowIndex >= rows.length) nextRowIndex = rows.length - 1;
+    const fields = getRowFields(row);
+    const colIndex = fields.indexOf(el);
+    if (colIndex < 0) return;
 
-    if (nextRowIndex === rowIndex) return;
+    for (let i = rowIndex + dir; i >= 0 && i < rows.length; i += dir) {
+      const targetFields = getRowFields(rows[i]);
+      if (!targetFields.length) continue;
 
-    const nextRowFields = getRowFields(rows[nextRowIndex]);
-    if (!nextRowFields.length) return;
-
-    const target = nextRowFields[Math.min(colIndex, nextRowFields.length - 1)];
-    focusField(target);
+      const target = targetFields[Math.min(colIndex, targetFields.length - 1)];
+      if (target && isVisible(target)) {
+        focusField(target);
+        return;
+      }
+    }
   }
 
-  function emitInputEvents(el) {
+  function showPad() {
+    numPad.hidden = false;
+    document.body.classList.add('numpad-open');
+  }
+
+  function hidePad() {
+    numPad.hidden = true;
+    document.body.classList.remove('numpad-open');
+  }
+
+  function sanitizeNumericValue(value) {
+    return String(value || '').replace(/[^\d]/g, '');
+  }
+
+  function formatWithComma(el, digits) {
+    if (!el) return digits;
+
+    const shouldComma =
+      el.classList.contains('amount') ||
+      el.classList.contains('total') ||
+      el.classList.contains('bottleAmount');
+
+    if (!shouldComma) return digits;
+    if (!digits) return '';
+
+    return Number(digits).toLocaleString('ja-JP');
+  }
+
+  function setNumericValue(el, nextDigits) {
+    if (!el) return;
+
+    const formatted = formatWithComma(el, nextDigits);
+    el.value = formatted;
+
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function insertValue(value) {
-    if (!currentInput || !isTarget(currentInput)) return;
-    currentInput.value += value;
-    emitInputEvents(currentInput);
+  function appendDigit(digit) {
+    const el = activeField;
+    if (!isNumField(el)) return;
+
+    const currentDigits = sanitizeNumericValue(el.value);
+    const nextDigits = currentDigits + String(digit);
+
+    setNumericValue(el, nextDigits);
   }
 
-  function backspaceValue() {
-    if (!currentInput || !isTarget(currentInput)) return;
-    currentInput.value = currentInput.value.slice(0, -1);
-    emitInputEvents(currentInput);
+  function backspaceDigit() {
+    const el = activeField;
+    if (!isNumField(el)) return;
+
+    const currentDigits = sanitizeNumericValue(el.value);
+    const nextDigits = currentDigits.slice(0, -1);
+
+    setNumericValue(el, nextDigits);
   }
 
-  function clearValue() {
-    if (!currentInput || !isTarget(currentInput)) return;
-    currentInput.value = '';
-    emitInputEvents(currentInput);
-  }
+  function clearDigit() {
+    const el = activeField;
+    if (!isNumField(el)) return;
 
-  pad.addEventListener('pointerdown', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    e.preventDefault();
-  });
+    setNumericValue(el, '');
+  }
 
   document.addEventListener('focusin', (e) => {
-    if (suppressFocusIn) return;
+    const t = e.target;
+    if (!t) return;
 
-    const el = e.target;
-    if (!isVisibleField(el)) return;
+    if (isNavField(t)) {
+  activeField = t;
 
-    currentInput = el;
-    setActiveState(el);
+  if (isNumField(t)) {
+    showPad();
+  } else {
+    hidePad();
+  }
+  return;
+}
 
-    if (isTarget(el)) {
-      el.setAttribute('readonly', 'readonly');
-      pad.hidden = false;
-      document.body.classList.add('numpad-open');
-    } else {
-      el.removeAttribute('readonly');
-      pad.hidden = true;
-      document.body.classList.remove('numpad-open');
+    if (!numPad.contains(t)) {
+      activeField = null;
+      hidePad();
     }
   });
 
   document.addEventListener('click', (e) => {
-    const el = e.target;
+    const t = e.target;
+    if (!t) return;
 
-    if (isTarget(el)) {
-      focusField(el);
+    const nav = t.closest('input, select, textarea');
+    if (nav && isNavField(nav)) {
+      activeField = nav;
+      if (isNumField(nav)) {
+        showPad();
+      } else {
+        hidePad();
+      }
       return;
     }
 
-    if (!pad.contains(el)) {
-      if (!(el instanceof HTMLElement) || !isVisibleField(el)) {
-        pad.hidden = true;
-        document.body.classList.remove('numpad-open');
-        clearActiveState();
-        currentInput = null;
-      }
+    if (!numPad.contains(t)) {
+      activeField = null;
+      hidePad();
     }
   });
 
-  pad.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn || !currentInput) return;
-
+  numPad.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+  });
 
-    const value = btn.dataset.v;
+  numPad.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    if (!activeField) return;
+
+    const digit = btn.dataset.v;
     const fn = btn.dataset.fn;
 
-    if (value != null) {
-      insertValue(value);
+    if (digit != null) {
+      appendDigit(digit);
       return;
     }
 
-    if (fn === 'back') {
-      backspaceValue();
-      return;
-    }
-
-    if (fn === 'clear') {
-      clearValue();
-      return;
-    }
-
-    if (fn === 'prev') {
-      moveHorizontal(-1);
-      return;
-    }
-
-    if (fn === 'next') {
-      moveHorizontal(1);
-      return;
-    }
-
-    if (fn === 'up') {
-      moveVertical(-1);
-      return;
-    }
-
-    if (fn === 'down') {
-      moveVertical(1);
-      return;
+    switch (fn) {
+      case 'back':
+        backspaceDigit();
+        break;
+      case 'clear':
+        clearDigit();
+        break;
+      case 'prev':
+        moveHorizontal(-1);
+        break;
+      case 'next':
+        moveHorizontal(1);
+        break;
+      case 'up':
+        moveVertical(-1);
+        break;
+      case 'down':
+        moveVertical(1);
+        break;
     }
   });
 
   document.addEventListener('keydown', (e) => {
     const el = e.target;
-    if (!isVisibleField(el)) return;
-    if (!el.closest('#app1') && !el.closest('#app2')) return;
+    if (!el || !isNavField(el)) return;
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      currentInput = el;
+      if (isNumField(el)) {
+        moveHorizontal(1);
+      } else {
+        moveHorizontal(1);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      moveHorizontal(-1);
+      return;
+    }
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
       moveHorizontal(1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveVertical(-1);
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveVertical(1);
+      return;
+    }
+
+    if (isNumField(el)) {
+      if (/^\d$/.test(e.key)) {
+        e.preventDefault();
+        appendDigit(e.key);
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        backspaceDigit();
+        return;
+      }
+
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        clearDigit();
+        return;
+      }
     }
   });
 })();
-
 
 
 //テンキー用モーション
