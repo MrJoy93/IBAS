@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.7</title>
+<title>IBASD  Ver. 8.7.4</title>
 <style>
 
   html, body {
@@ -2372,95 +2372,6 @@ body[data-active-app="app3"] #maleAttendance {
   color: #eaf6ff;
 }
 
-/*テンキー用CSS*/
-:root{
-  --numpad-w: 360px;
-  --numpad-gap: 14px;
-}
-
-/* テンキー本体 */
-.num-pad{
-  position: fixed;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
-  z-index: 99999;
-  width: var(--numpad-w);
-  background: rgba(16, 24, 40, 0.96);
-  border: 1.5px solid rgba(0,245,255,.35);
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow:
-    0 10px 30px rgba(0,0,0,.45),
-    0 0 24px rgba(0,245,255,.18);
-  backdrop-filter: blur(10px);
-}
-
-.pad-grid{
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--numpad-gap);
-}
-
-.num-pad button{
-  appearance: none;
-  border: 1px solid rgba(0,245,255,.28);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(32,48,78,.96), rgba(24,34,58,.96));
-  color: #eaf6ff;
-  font-size: 24px;
-  line-height: 1;
-  height: 68px;
-  padding: 0;
-  margin: 0;
-  touch-action: manipulation;
-}
-
-.num-pad button:active{
-  transform: scale(0.97);
-}
-
-/* フォーカス可視化 */
-.input-active{
-  outline: 3px solid #00f5ff !important;
-  outline-offset: -1px !important;
-  background: rgba(0,245,255,.16) !important;
-  box-shadow:
-    0 0 0 2px rgba(0,245,255,.18) inset,
-    0 0 14px rgba(0,245,255,.35) !important;
-  color: #fff !important;
-}
-
-.row-active td,
-.row-active th{
-  background: rgba(0,245,255,.08) !important;
-}
-
-.group-active{
-  box-shadow:
-    0 0 0 2px rgba(0,245,255,.18) inset,
-    0 0 18px rgba(0,245,255,.18) !important;
-}
-
-/* テンキー表示中は右下に逃げ幅を作る */
-body.numpad-open[data-active-app="app1"] #app1,
-body.numpad-open[data-active-app="app2"] #app2{
-  padding-right: calc(var(--numpad-w) + 28px) !important;
-  padding-bottom: 220px !important;
-  transition: padding .15s ease;
-}
-
-/* iPad縦など狭い時は少し縮小 */
-@media (max-width: 1100px){
-  :root{
-    --numpad-w: 320px;
-    --numpad-gap: 12px;
-  }
-
-  .num-pad button{
-    height: 60px;
-    font-size: 22px;
-  }
-}
 
 
 
@@ -2539,34 +2450,37 @@ body.numpad-open[data-active-app="app2"] #app2{
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number " data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
-<td><input class="honshi " data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
-<td>
-  <select class="c" data-nav="1" oninput="updateRowColor(this); updateTotals()">
-    <option value="">-</option>
-    <option value="UK">UK</option>
-    <option value="K">K</option>
-    <option value="AB">AB</option>
-    <option value="LA">LA</option>
-    <option value="PA">PA</option>
-    <option value="BB">BB</option>
-    <option value="MS">MS</option>
-    <option value="GM">GM</option>
-    <option value="B">B</option>
-    <option value="JOE">JOE</option>
-    <option value="KOSE">KOSE</option>
-    <option value="HE">HE</option>
-    <option value="PB">PB</option>
-    <option value="X">X</option>
-    <option value="Z">Z</option>
-  </select>
-</td>
-<td><input class="amount " data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
-<td><input class="num " data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
-<td><input class="detail" data-nav="1" type="text" placeholder="詳細" /></td>
-<td><input class="card" data-nav="1" type="text" placeholder="カード" oninput="updateTotals()" /></td>
-<td><input class="total " data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
-  </tr>
+      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
+      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
+      <td>
+        <select class="c" oninput="updateRowColor(this); updateTotals()">
+          <option value="">-</option>
+          <option value="UK">UK</option>
+          <option value="K">K</option>
+          <option value="AB">AB</option>
+          <option value="LA">LA</option>
+          <option value="PA">PA</option>
+          <option value="BB">BB</option>
+          <option value="MS">MS</option>
+          <option value="GM">GM</option>
+          <option value="B">B</option>
+          <option value="JOE">JOE</option>
+          <option value="KOSE">KOSE</option>
+          <option value="HE">HE</option>
+          <option value="PB">PB</option>
+          <option value="X">X</option>
+          <option value="Z">Z</option>
+        </select>
+
+        
+
+      </td>
+      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
+      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
+      <td><input class="detail" type="text" placeholder="詳細" /></td>
+      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
+      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
+    </tr>
   </tbody>
 </table>
 
@@ -2575,7 +2489,7 @@ body.numpad-open[data-active-app="app2"] #app2{
   <button onclick="sortRowsByNumber()">番号順に並べ替え</button>
 
   <div class="search-box">
-    <input type="text" id="searchAmount" placeholder="金額で検索">
+    <input type="text" id="searchAmount" placeholder="金額で検索" inputmode="numeric">
     <button onclick="searchByAmount()">検索</button>
     <button onclick="resetSearch()">リセット</button>
   </div>
@@ -2723,7 +2637,7 @@ body.numpad-open[data-active-app="app2"] #app2{
           autocomplete="off" autocapitalize="off" spellcheck="false">
         </label>
         <label>送迎:
-        <input type="text" class="num-only" pattern="\d*"
+        <input type="text" inputmode="numeric" pattern="\d*"
           id="sendoffAmount"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="送迎金額">
@@ -2742,14 +2656,14 @@ body.numpad-open[data-active-app="app2"] #app2{
 
   <!-- 数量：旧F2(id=f2)を「F数量」として使う -->
   <label>F（数量）:
-    <input type="text" class="num-only" pattern="\d*"
+    <input type="text" inputmode="numeric" pattern="\d*"
       id="f2"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="F">
   </label>
 
   <label>場内（¥1000）:
-    <input type="text" class="num-only" pattern="\d*"
+    <input type="text" inputmode="numeric" pattern="\d*"
       id="jounai"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="場内">
@@ -2759,25 +2673,25 @@ body.numpad-open[data-active-app="app2"] #app2{
       <div class="group group-shimei">
         <h3>指名・同伴・枝・HELP</h3>
         <label>本指（¥0）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="honshiri"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="本指">
         </label>
         <label>同伴（¥1500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="douhan"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="同伴">
         </label>
         <label>枝（¥500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="eda"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="枝">
         </label>
         <label>HELP（-¥1500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="help"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="HELP">
@@ -2787,19 +2701,19 @@ body.numpad-open[data-active-app="app2"] #app2{
       <div class="group group-set">
         <h3>セット・VIP</h3>
         <label>SET40（¥5500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="set40"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="SET40">
         </label>
         <label>SET20（¥3500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="set20"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="SET20">
         </label>
         <label>VIP（¥2000）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="vip"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="VIP">
@@ -2809,31 +2723,31 @@ body.numpad-open[data-active-app="app2"] #app2{
       <div class="group group-option">
         <h3>ドリンク・その他</h3>
         <label>A（¥500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="a"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="A">
         </label>
         <label>B（¥1000）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="b"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="B">
         </label>
         <label>C（¥1500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="c"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="C">
         </label>
         <label>D（¥2000）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="d"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="D">
         </label>
         <label>E（¥2500）:
-          <input type="text" class="num-only" pattern="\d*"
+          <input type="text" inputmode="numeric" pattern="\d*"
           id="e"
           autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="E">
@@ -2909,13 +2823,13 @@ body.numpad-open[data-active-app="app2"] #app2{
 <div class="group no-bg">
   <label>
     <span>開始時金庫金:</span>
-    <input type="text" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
+    <input type="text" inputmode="numeric" pattern="\d*" id="startCash" oninput="scheduleApp3Update('app3:maleSalary')">
   </label>
 
   <!-- ▼追加金庫金 -->
   <label>
     <span>追加金庫金:</span>
-    <input type="text" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
+    <input type="text" inputmode="numeric" pattern="\d*" id="extraSafeCash"oninput="scheduleApp3Update('app3:extraSafeCash')">
   </label>
 </div>
 
@@ -2927,16 +2841,16 @@ body.numpad-open[data-active-app="app2"] #app2{
         <div class="mini-attendance-row">
         <label><span>総客:</span>
         <input type="number" id="customersCount" name="customersCount"
-          class="num right compact" readonly tabindex="-1">
+          class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
         </label>
 
         <label><span>女子:</span>
          <input type="number" id="femaleAttendance" name="femaleAttendance"
-           class="num right compact" readonly tabindex="-1">
+           class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
         </label>
 
         <label><span>男子:</span>
-        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact"  pattern="\d*">
+        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact" inputmode="numeric" pattern="\d*">
         </label>
 
 
@@ -2949,16 +2863,16 @@ body.numpad-open[data-active-app="app2"] #app2{
 
       <div class="group" id="laborGroup">
         <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
-        <label><span>男子給与:</span> <input type="text" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
+        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
-        <label><span>スカウトバック:</span> <input type="text" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
+        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
         </label>
         <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
         <label>
         <span>ドライバー代:</span>
         <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
-        <input type="text" id="driverExtra2" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
+        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
         <input type="text" id="driverFee" disabled placeholder="合計">
         </label>
         </label>
@@ -2968,17 +2882,17 @@ body.numpad-open[data-active-app="app2"] #app2{
 
       <div class="group" id="taxGroup">
         <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
-        <label><span>男子源泉費:</span> <input type="text" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
       </div>
 
       <div class="group" id="expensesGroup">
-        <label><span>酒代:</span> <input type="text" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書①:</span> <input type="text" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書②:</span> <input type="text" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書③:</span> <input type="text" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書④:</span> <input type="text" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書⑤:</span> <input type="text" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
         <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
         <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
       </div>
@@ -3017,7 +2931,7 @@ body.numpad-open[data-active-app="app2"] #app2{
  </table>
 
   <div class="group no-bg">
-    <label><span>集計提出前金庫金:</span> <input type="text" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
     <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
@@ -3077,11 +2991,6 @@ body.numpad-open[data-active-app="app2"] #app2{
 
 
 <script>
-
-  function isTarget(el) {
-  return el instanceof HTMLElement
-    && el.matches('#bulkGrid .num-only');
-}
 
 //<base script---------------------------------------------------------------------------------------------------------------->
   function updateAdviserFeeFromTotalCount() {
@@ -3445,33 +3354,33 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" data-nav="1" type="text" placeholder="卓番" oninput="updateTotals()" /></td>
-<td><input class="honshi" data-nav="1" type="text" placeholder="本指" oninput="updateTotals()" /></td>
-<td>
-  <select class="c" data-nav="1" oninput="updateRowColor(this); updateTotals()">
-    <option value="">-</option>
-    <option value="UK">UK</option>
-    <option value="K">K</option>
-    <option value="AB">AB</option>
-    <option value="LA">LA</option>
-    <option value="PA">PA</option>
-    <option value="BB">BB</option>
-    <option value="MS">MS</option>
-    <option value="GM">GM</option>
-    <option value="B">B</option>
-    <option value="JOE">JOE</option>
-    <option value="KOSE">KOSE</option>
-    <option value="HE">HE</option>
-    <option value="PB">PB</option>
-    <option value="X">X</option>
-    <option value="Z">Z</option>
-  </select>
-</td>
-<td><input class="amount" data-nav="1" type="text" placeholder="金額" oninput="updateTotals()" /></td>
-<td><input class="num" data-nav="1" type="text" placeholder="人数" oninput="updateTotals()" /></td>
-<td><input class="detail" data-nav="1" type="text" placeholder="詳細" /></td>
-<td><input class="card" data-nav="1" type="text" placeholder="カード" oninput="updateTotals()" /></td>
-<td><input class="total" data-nav="1" type="text" placeholder="総合計" oninput="updateTotals()" /></td>
+    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
+    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
+    <td>
+      <select class="c" oninput="updateRowColor(this); updateTotals()">
+        <option value="">-</option>
+        <option value="UK">UK</option>
+        <option value="K">K</option>
+        <option value="AB">AB</option>
+        <option value="LA">LA</option>
+        <option value="PA">PA</option>
+        <option value="BB">BB</option>
+        <option value="MS">MS</option>
+        <option value="GM">GM</option>
+        <option value="B">B</option>
+        <option value="JOE">JOE</option>
+        <option value="KOSE">KOSE</option>
+        <option value="HE">HE</option>
+        <option value="PB">PB</option>
+        <option value="X">X</option>
+        <option value="Z">Z</option>
+      </select>
+    </td>
+    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
+    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
+    <td><input class="detail" type="text" placeholder="詳細" /></td>
+    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
+    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
   `;
   return tr;
 }
@@ -8247,9 +8156,9 @@ function addBottleSubrow(mainTr) {
     </div>
     <input class="bottleFreeText" type="text" placeholder="品名（その他）" style="display:none;">
   </td>
-  <td><input class="splitCount num-only" placeholder="割"></td>
-  <td><input class="bottleQuantity num-only" placeholder="数"></td>
-  <td><input class="bottleAmount num-only" placeholder="金額"></td>
+  <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
+  <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
+  <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
 `;
   tr.innerHTML = html;
   mainTr.insertAdjacentElement('afterend', tr);
@@ -8351,28 +8260,29 @@ function buildGrid(n){
     tr.className = 'bulk-mainrow';
     let html = `
       <td>${i}</td>
-      <td><input class="bulk-name" data-nav="1" placeholder="氏名"></td>
+      <td><input class="bulk-name" placeholder="氏名"></td>
       <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
-      <td><input class="bulk-send num-only" data-nav="1" type="text" placeholder="送迎"></td>
+      <td><input class="bulk-send" inputmode="numeric" placeholder="送迎"></td>
     `;
 
     const placeholders = {
-      f2: 'F',
-      jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
-      set40: '40', set20: '20', vip: 'VIP',
-      a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
-    };
+  f2: 'F',
+  jounai: '場内', honshiri: '本指', douhan: '同伴', eda: '枝', help: 'HE',
+  set40: '40', set20: '20', vip: 'VIP',
+  a: 'A', b: 'B', c: 'C', d: 'D', e: 'E'
+};
 
-    ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
-      .forEach(k => {
-        if (k === 'f') {
-          html += `<td style="text-align:center;"><input type="checkbox" data-k="f" class="bulk-2k"></td>`;
-          return;
-        }
-        const ph = placeholders[k] || '';
-        html += `<td><input data-k="${k}" class="bulk-num num-only" data-nav="1" type="text" placeholder="${ph}"></td>`;
-      });
-
+['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e']
+  .forEach(k => {
+    if (k === 'f') {
+      // ★ 2kフラグ（チェックボックス）
+      html += `<td style="text-align:center;"><input type="checkbox" data-k="f" class="bulk-2k"></td>`;
+      return;
+    }
+    const ph = placeholders[k] || '';
+    html += `<td><input data-k="${k}" class="bulk-num" inputmode="numeric" placeholder="${ph}"></td>`;
+  });
+  
     html += `
       <td class="btl-anchor">
         <div class="btl-toolbar">
@@ -8387,82 +8297,6 @@ function buildGrid(n){
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
   applyApp2MobileView();
-}
-
-function isVisibleNavField(el) {
-  if (!el) return false;
-  if (el.disabled) return false;
-  if (el.hidden) return false;
-  if (el.type === 'hidden') return false;
-
-  const style = window.getComputedStyle(el);
-  if (style.display === 'none') return false;
-  if (style.visibility === 'hidden') return false;
-
-  return true;
-}
-
-function getRowFields(row) {
-  if (!row) return [];
-
-  if (row.classList.contains('bulk-mainrow')) {
-  return Array.from(row.querySelectorAll('[data-nav="1"]'))
-    .filter(el => isVisibleNavField(el));
-}
-
-  return [];
-}
-
-function getBulkMainRows() {
-  const tbody = document.querySelector('#bulkGrid tbody');
-  if (!tbody) return [];
-
-  return Array.from(tbody.querySelectorAll('tr.bulk-mainrow'))
-    .filter(row => getRowFields(row).length > 0);
-}
-
-function moveBulkHorizontal(currentEl, dir) {
-  if (!currentEl) return null;
-
-  const row = currentEl.closest('tr.bulk-mainrow');
-  if (!row) return null;
-
-  const fields = getRowFields(row);
-  const idx = fields.indexOf(currentEl);
-  if (idx < 0) return null;
-
-  const next = fields[idx + dir] || null;
-  if (next) next.focus();
-
-  return next;
-}
-
-function moveBulkVertical(currentEl, dir) {
-  if (!currentEl) return null;
-
-  const row = currentEl.closest('tr.bulk-mainrow');
-  if (!row) return null;
-
-  const rows = getBulkMainRows();
-  const rowIdx = rows.indexOf(row);
-  if (rowIdx < 0) return null;
-
-  const fields = getRowFields(row);
-  const colIdx = fields.indexOf(currentEl);
-  if (colIdx < 0) return null;
-
-  for (let i = rowIdx + dir; i >= 0 && i < rows.length; i += dir) {
-    const targetFields = getRowFields(rows[i]);
-    if (!targetFields.length) continue;
-
-    const target = targetFields[Math.min(colIdx, targetFields.length - 1)];
-    if (target) {
-      target.focus();
-      return target;
-    }
-  }
-
-  return null;
 }
 
 // === 一括登録 ===============================================================
@@ -8618,12 +8452,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   regBt?.addEventListener('click',bulkRegister);
 
   grid?.addEventListener('click', e => {
-  window.__gridClickCount = (window.__gridClickCount || 0) + 1;
-console.log('[grid click]', window.__gridClickCount, {
-  target: e.target,
-  currentTarget: e.currentTarget,
-  activeElement: document.activeElement
-});
+  console.log('grid click detected', e.target);
     let main = e.target.closest('tr.bulk-mainrow');
     if (!main) {
       const sub = e.target.closest('tr.btl-subrow');
@@ -9213,50 +9042,54 @@ window.addEventListener('scroll', requestRepositionBottleHierarchyPicker, true);
 window.addEventListener('resize', requestRepositionBottleHierarchyPicker);
 
 // ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
-// ====== グリッド移動（Tab=横のみ補助） ======================
 (function(){
   const grid = document.getElementById('bulkGrid');
   if (!grid) return;
 
+  const isInvisible = (node) => node?.offsetParent === null;
+  const isDisabledLike = (node) => !node || node.disabled || node.readOnly || isInvisible(node);
+  const isBottleSpacerRow = (tr) =>
+    tr?.classList?.contains('btl-subrow') || tr?.dataset?.rowType === 'bottle-subrow';
+
   function onGridNav(e){
-    const key = e.key;
-    if (e.isComposing) return;
+  const key = e.key;
+  if (e.isComposing) return;
+  // ← Enter は新ナビが処理するので素通り
+  if (key === 'Enter') return;
+  // ここからは Tab 専用
+  if (key !== 'Tab') return;
 
-    // Enter / 矢印は numPad側 or 新ナビ側へ委譲
-    if (key === 'Enter') return;
-    if (key === 'ArrowLeft') return;
-    if (key === 'ArrowRight') return;
-    if (key === 'ArrowUp') return;
-    if (key === 'ArrowDown') return;
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  if (!grid.contains(el)) return;
 
-    // ここでは Tab だけ補助
-    if (key !== 'Tab') return;
+  // 同一行の左右（Tab/Shift+Tab）のみ面倒を見る
+  const currentRow = el.closest('tr');
+  if (!currentRow) return;
 
-    const el = e.target;
-    if (!(el instanceof HTMLElement)) return;
-    if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
-    if (!grid.contains(el)) return;
-    if (!el.closest('tr.bulk-mainrow')) return;
-    if (!el.matches('[data-nav="1"]')) return;
+  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
+  const colIdx = rowInputs.indexOf(el);
+  if (colIdx === -1) return;
 
-    const currentRow = el.closest('tr.bulk-mainrow');
-    if (!currentRow) return;
+  e.preventDefault(); // ここでだけ既定の Tab を止める
 
-    const rowFields = getRowFields(currentRow);
-    const colIdx = rowFields.indexOf(el);
-    if (colIdx === -1) return;
+  const delta = e.shiftKey ? -1 : 1;
+  const nextInRow = rowInputs[colIdx + delta];
 
-    e.preventDefault();
-
-    const delta = e.shiftKey ? -1 : 1;
-    const next = rowFields[colIdx + delta] || null;
-
-    if (next) {
-      next.focus();
-      next.select?.();
-    }
+  // 非表示/無効はスキップせず“何もしない”＝他ハンドラを止めない
+  if (nextInRow && !nextInRow.disabled && nextInRow.offsetParent !== null) {
+    nextInRow.focus();
+    nextInRow.select?.();
+    // ここはフォーカス済みなので他へ流さないでOK
+    return;
   }
 
+  // 見つからない/フォーカスできない場合は何もしない（他ハンドラに譲る）
+  return;
+}
+
+  // capture=true で最優先捕捉し、他ハンドラより先に制御
   document.addEventListener('keydown', onGridNav, true);
 })();
 
@@ -9470,9 +9303,9 @@ document.addEventListener('click', async (e) => {
       <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
       <input class="bottleFreeText" type="text" style="display:none;">
     </td>
-    <td><input class="splitCount num-only" placeholder="割"></td>
-   <td><input class="bottleQuantity num-only" placeholder="数"></td>
-   <td><input class="bottleAmount num-only" placeholder="金額"></td>
+    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
+    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
+    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
   `);
 
   let anchor = mainRow;
@@ -9769,9 +9602,9 @@ function addAndGetSubrow(mainRow){
           <div class="left-group">
             <select class="bottleDetails">${window.BOTTLE_OPTIONS_HTML || '<option value=""></option>'}</select>
           </div>
-          <input class="splitCount num-only">
-          <input class="bottleQuantity num-only">
-          <input class="bottleAmount num-only">
+          <input class="splitCount" inputmode="numeric">
+          <input class="bottleQuantity" inputmode="numeric">
+          <input class="bottleAmount" inputmode="numeric">
         `;
         container.appendChild(form);
 
@@ -10024,21 +9857,10 @@ document.addEventListener('focusin', (e) => {
   const el = e.target;
   if (!(el instanceof HTMLElement)) return;
 
-  if (!(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
-
-  // 数値欄は自前テンキー入力と競合しやすいので全選択しない
-  if (el.matches('.num-only')) return;
-
-  if (el.closest('#bulkGrid')) {
-    if (!el.matches('[data-nav="1"]')) return;
+  // input, textarea のみ対象（select はユーザー操作の都合で除外）
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+    // 数値入力でもフォーカス直後に全選択
     el.select?.();
-    return;
-  }
-
-  if (el.closest('#salesTableBody') || el.closest('#app1') || el.closest('#tab1')) {
-    if (!el.matches('[data-nav="1"], .detail, .card')) return;
-    el.select?.();
-    return;
   }
 });
 
@@ -10845,448 +10667,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 //EXCELエクスポート関連コード終了-------------------------------------------------------------
 
-document.addEventListener('input', (e) => {
-  const el = e.target;
-  if (!el.classList.contains('num-only')) return;
 
-  const start = el.selectionStart ?? 0;
-  const before = el.value;
 
-  const after = before
-    .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
-    .replace(/[^\d]/g, '');
 
-  if (before !== after) {
-    el.value = after;
 
-    const diff = before.length - after.length;
-    const pos = Math.max(0, start - diff);
-
-    try {
-      el.setSelectionRange(pos, pos);
-    } catch (_) {}
-  }
-});
-
-
-//テンキー用JS開始--------------------------------------------------------
-
-(() => {
-  if (window.__IBAS_NUMPAD_INIT__) return;
-  window.__IBAS_NUMPAD_INIT__ = true;
-
-  const numPad = document.getElementById('numPad');
-  if (!numPad) return;
-
-  let activeField = null;
-
-  const APP1_SELECTOR = [
-    '.table-number',
-    '.honshi',
-    '.amount',
-    '.num',
-    '.total'
-  ].join(',');
-
-  function isVisible(el) {
-    if (!el) return false;
-    if (el.hidden) return false;
-    if (el.disabled) return false;
-    if (el.type === 'hidden') return false;
-    const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
-    return !!(el.offsetParent || style.position === 'fixed');
-  }
-
-  function isNumField(el) {
-    return !!(el && el.matches('input.num-only'));
-  }
-
-  function isNavField(el) {
-    if (!el) return false;
-
-    if (el.matches('#bulkGrid [data-nav="1"]')) return true;
-    if (el.matches(APP1_SELECTOR)) return true;
-    if (el.matches('input.num-only[data-nav="1"]')) return true;
-    if (el.matches('input[type="text"][data-nav="1"], select[data-nav="1"], textarea[data-nav="1"]')) return true;
-
-    return false;
-  }
-
-  function getBulkRowFields(row) {
-    if (!row) return [];
-    return Array.from(row.querySelectorAll('[data-nav="1"]'))
-      .filter(isVisible);
-  }
-
-  function getApp1RowFields(row) {
-    if (!row) return [];
-    return Array.from(
-      row.querySelectorAll([
-        '.table-number',
-        '.honshi',
-        'select.c',
-        '.amount',
-        '.num',
-        '.detail',
-        '.card',
-        '.total'
-      ].join(','))
-    ).filter(isVisible);
-  }
-
-  function getRowFields(row) {
-    if (!row) return [];
-
-    if (row.closest('#bulkGrid')) {
-      return getBulkRowFields(row);
-    }
-
-    if (row.closest('#salesTableBody') || row.closest('#app1') || row.closest('#tab1')) {
-      return getApp1RowFields(row);
-    }
-
-    return Array.from(row.querySelectorAll('input, select, textarea')).filter(el => isNavField(el) && isVisible(el));
-  }
-
-  function getRowElement(el) {
-    return el?.closest('tr, .bulk-row, .entry-row') || null;
-  }
-
-  function getGridRows(el) {
-    if (!el) return [];
-
-    const bulkGrid = document.getElementById('bulkGrid');
-    if (bulkGrid && bulkGrid.contains(el)) {
-      return Array.from(bulkGrid.querySelectorAll('tr'))
-        .filter(row => getBulkRowFields(row).length > 0);
-    }
-
-    const salesBody = document.getElementById('salesTableBody');
-    if (salesBody && salesBody.contains(el)) {
-      return Array.from(salesBody.querySelectorAll('tr'))
-        .filter(row => getApp1RowFields(row).length > 0);
-    }
-
-    const table = el.closest('table');
-    if (table) {
-      return Array.from(table.querySelectorAll('tr'))
-        .filter(row => getRowFields(row).length > 0);
-    }
-
-    return [];
-  }
-
-  function focusField(el) {
-    if (!el || !isVisible(el)) return false;
-
-    activeField = el;
-
-    try {
-      el.focus({ preventScroll: true });
-    } catch (_) {
-      el.focus();
-    }
-
-    requestAnimationFrame(() => {
-      try {
-        el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-      } catch (_) {}
-    });
-
-    if (isNumField(el)) {
-      showPad();
-    } else {
-      hidePad();
-    }
-
-    return true;
-  }
-
-  function moveHorizontal(dir) {
-    const el = activeField;
-    if (!el) return;
-
-    const row = getRowElement(el);
-    if (!row) return;
-
-    const fields = getRowFields(row);
-    const index = fields.indexOf(el);
-    if (index < 0) return;
-
-    const next = fields[index + dir];
-    if (next) {
-      focusField(next);
-    }
-  }
-
-  function moveVertical(dir) {
-    const el = activeField;
-    if (!el) return;
-
-    const row = getRowElement(el);
-    if (!row) return;
-
-    const rows = getGridRows(el);
-    const rowIndex = rows.indexOf(row);
-    if (rowIndex < 0) return;
-
-    const fields = getRowFields(row);
-    const colIndex = fields.indexOf(el);
-    if (colIndex < 0) return;
-
-    for (let i = rowIndex + dir; i >= 0 && i < rows.length; i += dir) {
-      const targetFields = getRowFields(rows[i]);
-      if (!targetFields.length) continue;
-
-      const target = targetFields[Math.min(colIndex, targetFields.length - 1)];
-      if (target && isVisible(target)) {
-        focusField(target);
-        return;
-      }
-    }
-  }
-
-  function showPad() {
-    numPad.hidden = false;
-    document.body.classList.add('numpad-open');
-  }
-
-  function hidePad() {
-    numPad.hidden = true;
-    document.body.classList.remove('numpad-open');
-  }
-
-  function sanitizeNumericValue(value) {
-    return String(value || '').replace(/[^\d]/g, '');
-  }
-
-  function formatWithComma(el, digits) {
-    if (!el) return digits;
-
-    const shouldComma =
-      el.classList.contains('amount') ||
-      el.classList.contains('total') ||
-      el.classList.contains('bottleAmount');
-
-    if (!shouldComma) return digits;
-    if (!digits) return '';
-
-    return Number(digits).toLocaleString('ja-JP');
-  }
-
-  function setNumericValue(el, nextDigits) {
-    if (!el) return;
-
-    const formatted = formatWithComma(el, nextDigits);
-    el.value = formatted;
-
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  function appendDigit(digit) {
-    const el = activeField;
-    if (!isNumField(el)) return;
-
-    const currentDigits = sanitizeNumericValue(el.value);
-    const nextDigits = currentDigits + String(digit);
-
-    setNumericValue(el, nextDigits);
-  }
-
-  function backspaceDigit() {
-    const el = activeField;
-    if (!isNumField(el)) return;
-
-    const currentDigits = sanitizeNumericValue(el.value);
-    const nextDigits = currentDigits.slice(0, -1);
-
-    setNumericValue(el, nextDigits);
-  }
-
-  function clearDigit() {
-    const el = activeField;
-    if (!isNumField(el)) return;
-
-    setNumericValue(el, '');
-  }
-
-  document.addEventListener('focusin', (e) => {
-  const t = e.target;
-  if (!t) return;
-
-  // APP2グリッド内は grid 側の制御を優先
-  if (t.closest && t.closest('#bulkGrid')) {
-    if (isNavField(t)) {
-      activeField = t;
-
-      if (isNumField(t)) {
-        showPad();
-      } else {
-        hidePad();
-      }
-    }
-    return;
-  }
-
-  if (isNavField(t)) {
-    activeField = t;
-
-    if (isNumField(t)) {
-      showPad();
-    } else {
-      hidePad();
-    }
-    return;
-  }
-
-  if (!numPad.contains(t)) {
-    activeField = null;
-    hidePad();
-  }
-});
-
-  document.addEventListener('click', (e) => {
-  const el = e.target;
-
-  if (isTarget(el)) {
-    focusField(el);
-    return;
-  }
-
-  if (!pad.contains(el)) {
-    pad.hidden = true;
-    document.body.classList.remove('numpad-open');
-    clearActiveState();
-    currentInput = null;
-  }
-});
-
-  numPad.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-  });
-
-  numPad.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-
-    if (!activeField) return;
-
-    const digit = btn.dataset.v;
-    const fn = btn.dataset.fn;
-
-    if (digit != null) {
-      appendDigit(digit);
-      return;
-    }
-
-    switch (fn) {
-      case 'back':
-        backspaceDigit();
-        break;
-      case 'clear':
-        clearDigit();
-        break;
-      case 'prev':
-        moveHorizontal(-1);
-        break;
-      case 'next':
-        moveHorizontal(1);
-        break;
-      case 'up':
-        moveVertical(-1);
-        break;
-      case 'down':
-        moveVertical(1);
-        break;
-    }
-  });
-
-  document.addEventListener('keydown', (e) => {
-    const el = e.target;
-    if (!el || !isNavField(el)) return;
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (isNumField(el)) {
-        moveHorizontal(1);
-      } else {
-        moveHorizontal(1);
-      }
-      return;
-    }
-
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      moveHorizontal(-1);
-      return;
-    }
-
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      moveHorizontal(1);
-      return;
-    }
-
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      moveVertical(-1);
-      return;
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      moveVertical(1);
-      return;
-    }
-
-    if (isNumField(el)) {
-      if (/^\d$/.test(e.key)) {
-        e.preventDefault();
-        appendDigit(e.key);
-        return;
-      }
-
-      if (e.key === 'Backspace') {
-        e.preventDefault();
-        backspaceDigit();
-        return;
-      }
-
-      if (e.key === 'Delete') {
-        e.preventDefault();
-        clearDigit();
-        return;
-      }
-    }
-  });
-})();
-
-
-//テンキー用モーション
-(function () {
-  const pad = document.getElementById('numPad');
-  if (!pad) return;
-
-  function pressFx(btn) {
-    btn.classList.add('pad-press');
-    setTimeout(() => btn.classList.remove('pad-press'), 70);
-
-    if (navigator.vibrate) {
-      try { navigator.vibrate(8); } catch (_) {}
-    }
-  }
-
-  pad.addEventListener('pointerdown', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    e.preventDefault();
-    pressFx(btn);
-  });
-})();
-
-//テンキー用JS終了--------------------------------------------------------
 
 
 </script>
@@ -11320,32 +10704,6 @@ document.addEventListener('input', (e) => {
 
   <div class="bhp-actions">
     <button type="button" class="bhp-confirm">決定</button>
-  </div>
-</div>
-
-
-
-<div id="numPad" class="num-pad" hidden>
-  <div class="pad-grid">
-    <button type="button" data-v="7">7</button>
-    <button type="button" data-v="8">8</button>
-    <button type="button" data-v="9">9</button>
-    <button type="button" data-fn="back">⌫</button>
-
-    <button type="button" data-v="4">4</button>
-    <button type="button" data-v="5">5</button>
-    <button type="button" data-v="6">6</button>
-    <button type="button" data-fn="up">↑</button>
-
-    <button type="button" data-v="1">1</button>
-    <button type="button" data-v="2">2</button>
-    <button type="button" data-v="3">3</button>
-    <button type="button" data-fn="down">↓</button>
-
-    <button type="button" data-fn="clear">C</button>
-    <button type="button" data-v="0">0</button>
-    <button type="button" data-fn="prev">←</button>
-    <button type="button" data-fn="next">→</button>
   </div>
 </div>
 
