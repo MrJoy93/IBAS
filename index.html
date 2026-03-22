@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.8.0</title>
+<title>IBASD  Ver. 8.7.4</title>
 <style>
 
   html, body {
@@ -2372,47 +2372,6 @@ body[data-active-app="app3"] #maleAttendance {
   color: #eaf6ff;
 }
 
-
-/*スマホ用ナビゲーション*/
-.focus-nav{
-  position: fixed;
-  left: 50%;
-  bottom: max(12px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: 99999;
-  display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(20, 20, 28, 0.92);
-  border: 1px solid rgba(0, 245, 255, 0.28);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-  backdrop-filter: blur(8px);
-}
-
-.focus-nav button{
-  appearance: none;
-  border: 1px solid rgba(0, 245, 255, 0.35);
-  background: #1f2633;
-  color: #fff;
-  padding: 12px 18px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 700;
-  min-width: 84px;
-  min-height: 48px;
-  touch-action: manipulation;
-}
-
-.focus-nav button:active{
-  transform: scale(0.98);
-}
-
-@media (pointer: coarse) {
-  .focus-nav{
-    display: flex;
-  }
-}
 
 
 
@@ -10706,112 +10665,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 //EXCELエクスポート関連コード終了-------------------------------------------------------------
 
-//スマホ用ナビゲーションボタン開始------------------------------------------------------------
-
-(function () {
-  const nav = document.getElementById('focusNav');
-  const prevBtn = document.getElementById('focusPrevBtn');
-  const nextBtn = document.getElementById('focusNextBtn');
-  const doneBtn = document.getElementById('focusDoneBtn');
-
-  if (!nav || !prevBtn || !nextBtn || !doneBtn) return;
-
-  function isIPadLike() {
-    const ua = navigator.userAgent || '';
-    const touchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-    return /iPad/i.test(ua) || touchMac;
-  }
-
-  function isFocusableField(el) {
-    if (!el) return false;
-    if (!(el instanceof HTMLElement)) return false;
-    if (el.matches('[disabled], [hidden]')) return false;
-    if (el.getAttribute('aria-hidden') === 'true') return false;
-    if (el.closest('[hidden]')) return false;
-
-    const style = getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
-    if (el.offsetParent === null && style.position !== 'fixed') return false;
-
-    if (!el.matches('input, select, textarea')) return false;
-
-    if (el instanceof HTMLInputElement) {
-      const t = (el.type || '').toLowerCase();
-      if (['hidden', 'button', 'submit', 'reset', 'file'].includes(t)) return false;
-    }
-
-    return true;
-  }
-
-  function getFocusableFields() {
-    return Array.from(document.querySelectorAll('input, select, textarea'))
-      .filter(isFocusableField);
-  }
-
-  function getCurrentIndex() {
-    const fields = getFocusableFields();
-    const active = document.activeElement;
-    return {
-      fields,
-      index: fields.indexOf(active)
-    };
-  }
-
-  function focusField(el) {
-    if (!el) return;
-    el.focus({ preventScroll: true });
-    if (typeof el.select === 'function' && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-      try { el.select(); } catch (e) {}
-    }
-    try {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-    } catch (e) {}
-  }
-
-  function moveFocus(step) {
-    const { fields, index } = getCurrentIndex();
-    if (!fields.length) return;
-
-    if (index === -1) {
-      focusField(step > 0 ? fields[0] : fields[fields.length - 1]);
-      return;
-    }
-
-    let nextIndex = index + step;
-    if (nextIndex < 0) nextIndex = 0;
-    if (nextIndex >= fields.length) nextIndex = fields.length - 1;
-
-    focusField(fields[nextIndex]);
-  }
-
-  function doneFocus() {
-    const active = document.activeElement;
-    if (active && typeof active.blur === 'function') {
-      active.blur();
-    }
-  }
-
-  function updateNavVisibility() {
-    nav.hidden = !isIPadLike();
-  }
-
-  prevBtn.addEventListener('click', () => moveFocus(-1));
-  nextBtn.addEventListener('click', () => moveFocus(1));
-  doneBtn.addEventListener('click', doneFocus);
-
-  document.addEventListener('focusin', () => {
-    updateNavVisibility();
-  });
-
-  window.addEventListener('resize', updateNavVisibility);
-  window.addEventListener('orientationchange', updateNavVisibility);
-  updateNavVisibility();
-})();
-
-//スマホ用ナビゲーションボタン終了------------------------------------------------------------
-
-
-
 
 
 
@@ -10847,12 +10700,6 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="bhp-actions">
     <button type="button" class="bhp-confirm">決定</button>
   </div>
-</div>
-
-<div id="focusNav" class="focus-nav" hidden>
-  <button type="button" id="focusPrevBtn">← 前へ</button>
-  <button type="button" id="focusNextBtn">→ 次へ</button>
-  <button type="button" id="focusDoneBtn">確定</button>
 </div>
 
 </body>
