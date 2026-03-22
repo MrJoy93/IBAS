@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.4.6</title>
+<title>IBASD  Ver. 8.7.4.7</title>
 <style>
 
   html, body {
@@ -2372,6 +2372,33 @@ body[data-active-app="app3"] #maleAttendance {
   color: #eaf6ff;
 }
 
+/*テンキー用CSS*/
+.num-pad{
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  background: rgba(20,20,30,.95);
+  border: 1px solid #00f5ff55;
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.pad-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 8px;
+}
+
+.num-pad button{
+  height: 50px;
+  font-size: 20px;
+  border-radius: 10px;
+  background: #1f2633;
+  color: #fff;
+  border: 1px solid #00f5ff55;
+}
 
 
 
@@ -10717,6 +10744,70 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+(function(){
+
+  let currentInput = null;
+  const pad = document.getElementById('numPad');
+
+  function isTarget(el){
+    return el.matches('.num-only');
+  }
+
+  document.addEventListener('focusin', (e)=>{
+    if(isTarget(e.target)){
+      currentInput = e.target;
+
+      // OSキーボード潰す
+      setTimeout(()=>{
+        e.target.blur();
+        currentInput = e.target;
+      }, 0);
+
+      pad.hidden = false;
+    } else {
+      pad.hidden = true;
+    }
+  });
+
+  pad.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn || !currentInput) return;
+
+    const val = btn.dataset.v;
+    const fn = btn.dataset.fn;
+
+    if(val){
+      currentInput.value += val;
+      currentInput.dispatchEvent(new Event('input', {bubbles:true}));
+      return;
+    }
+
+    if(fn === 'back'){
+      currentInput.value = currentInput.value.slice(0, -1);
+      currentInput.dispatchEvent(new Event('input', {bubbles:true}));
+      return;
+    }
+
+    if(fn === 'next'){
+      moveNext(currentInput);
+    }
+  });
+
+  function moveNext(el){
+    const container = el.closest('#bulkGrid') || el.closest('#app1') || document;
+
+    const fields = Array.from(
+      container.querySelectorAll('input, select, textarea')
+    ).filter(n => !n.disabled && n.offsetParent !== null);
+
+    const i = fields.indexOf(el);
+    if(i >= 0 && i < fields.length - 1){
+      fields[i+1].focus();
+    }
+  }
+
+})();
+
 
 
 
@@ -10752,6 +10843,28 @@ document.addEventListener('keydown', function(e) {
 
   <div class="bhp-actions">
     <button type="button" class="bhp-confirm">決定</button>
+  </div>
+</div>
+
+
+
+<div id="numPad" class="num-pad" hidden>
+  <div class="pad-grid">
+    <button data-v="7">7</button>
+    <button data-v="8">8</button>
+    <button data-v="9">9</button>
+
+    <button data-v="4">4</button>
+    <button data-v="5">5</button>
+    <button data-v="6">6</button>
+
+    <button data-v="1">1</button>
+    <button data-v="2">2</button>
+    <button data-v="3">3</button>
+
+    <button data-v="0">0</button>
+    <button data-fn="back">⌫</button>
+    <button data-fn="next">→</button>
   </div>
 </div>
 
