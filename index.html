@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.1</title>
+<title>IBASD  Ver. 8.7.5.2</title>
 <style>
 
   html, body {
@@ -2373,79 +2373,93 @@ body[data-active-app="app3"] #maleAttendance {
 }
 
 /*テンキー用CSS*/
+:root{
+  --numpad-w: 360px;
+  --numpad-gap: 14px;
+}
+
+/* テンキー本体 */
 .num-pad{
   position: fixed;
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 99999;
-  background: rgba(16, 24, 40, 0.94);
-  border: 1.5px solid rgba(0, 245, 255, 0.35);
-  border-radius: 16px;
-  padding: 10px;
+  width: var(--numpad-w);
+  background: rgba(16, 24, 40, 0.96);
+  border: 1.5px solid rgba(0,245,255,.35);
+  border-radius: 18px;
+  padding: 14px;
   box-shadow:
-    0 8px 28px rgba(0,0,0,0.45),
-    0 0 20px rgba(0,245,255,0.18);
+    0 10px 30px rgba(0,0,0,.45),
+    0 0 24px rgba(0,245,255,.18);
   backdrop-filter: blur(10px);
 }
 
 .pad-grid{
   display: grid;
-  grid-template-columns: repeat(4, 62px);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--numpad-gap);
 }
 
 .num-pad button{
   appearance: none;
-  border: 1px solid rgba(0, 245, 255, 0.28);
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(32,48,78,.95), rgba(24,34,58,.95));
+  border: 1px solid rgba(0,245,255,.28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(32,48,78,.96), rgba(24,34,58,.96));
   color: #eaf6ff;
   font-size: 24px;
   line-height: 1;
-  height: 56px;
+  height: 68px;
   padding: 0;
   margin: 0;
   touch-action: manipulation;
 }
 
 .num-pad button:active{
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
+/* フォーカス可視化 */
 .input-active{
   outline: 3px solid #00f5ff !important;
   outline-offset: -1px !important;
-  background: rgba(0,245,255,0.14) !important;
+  background: rgba(0,245,255,.16) !important;
   box-shadow:
-    0 0 0 2px rgba(0,245,255,0.18) inset,
-    0 0 14px rgba(0,245,255,0.35) !important;
-  color: #ffffff !important;
+    0 0 0 2px rgba(0,245,255,.18) inset,
+    0 0 14px rgba(0,245,255,.35) !important;
+  color: #fff !important;
 }
 
 .row-active td,
 .row-active th{
-  background: rgba(0,245,255,0.07) !important;
+  background: rgba(0,245,255,.08) !important;
 }
 
 .group-active{
   box-shadow:
-    0 0 0 2px rgba(0,245,255,0.18) inset,
-    0 0 18px rgba(0,245,255,0.18) !important;
+    0 0 0 2px rgba(0,245,255,.18) inset,
+    0 0 18px rgba(0,245,255,.18) !important;
 }
 
-.num-pad button{
-  transition:
-    transform 0.06s ease,
-    box-shadow 0.08s ease,
-    background 0.08s ease;
+/* テンキー表示中は右下に逃げ幅を作る */
+body.numpad-open[data-active-app="app1"] #app1,
+body.numpad-open[data-active-app="app2"] #app2{
+  padding-right: calc(var(--numpad-w) + 28px) !important;
+  padding-bottom: 220px !important;
+  transition: padding .15s ease;
 }
 
-.num-pad button.pad-press{
-  transform: scale(0.94);
-  box-shadow:
-    0 0 0 2px rgba(0,245,255,0.20) inset,
-    0 0 18px rgba(0,245,255,0.35);
-  background: linear-gradient(180deg, rgba(40,68,110,.98), rgba(24,34,58,.98));
+/* iPad縦など狭い時は少し縮小 */
+@media (max-width: 1100px){
+  :root{
+    --numpad-w: 320px;
+    --numpad-gap: 12px;
+  }
+
+  .num-pad button{
+    height: 60px;
+    font-size: 22px;
+  }
 }
 
 
@@ -10789,20 +10803,13 @@ document.addEventListener('input', (e) => {
   }
 
   function clearActiveState() {
-    document.querySelectorAll('.input-active').forEach(el => {
-      el.classList.remove('input-active');
-    });
-    document.querySelectorAll('.row-active').forEach(el => {
-      el.classList.remove('row-active');
-    });
-    document.querySelectorAll('.group-active').forEach(el => {
-      el.classList.remove('group-active');
-    });
+    document.querySelectorAll('.input-active').forEach(el => el.classList.remove('input-active'));
+    document.querySelectorAll('.row-active').forEach(el => el.classList.remove('row-active'));
+    document.querySelectorAll('.group-active').forEach(el => el.classList.remove('group-active'));
   }
 
   function setActiveState(el) {
     clearActiveState();
-
     el.classList.add('input-active');
 
     const row = el.closest('tr');
@@ -10810,6 +10817,15 @@ document.addEventListener('input', (e) => {
 
     const group = el.closest('.group');
     if (group) group.classList.add('group-active');
+  }
+
+  function getMovementRoot(el) {
+    return el.closest('#bulkGrid') || el.closest('#app1 table') || el.closest('table');
+  }
+
+  function getRowFields(row) {
+    if (!row) return [];
+    return Array.from(row.querySelectorAll('input, select, textarea')).filter(isVisibleField);
   }
 
   function focusField(el) {
@@ -10821,9 +10837,11 @@ document.addEventListener('input', (e) => {
     if (isTarget(el)) {
       el.setAttribute('readonly', 'readonly');
       pad.hidden = false;
+      document.body.classList.add('numpad-open');
     } else {
       el.removeAttribute('readonly');
       pad.hidden = true;
+      document.body.classList.remove('numpad-open');
     }
 
     el.focus({ preventScroll: true });
@@ -10835,11 +10853,6 @@ document.addEventListener('input', (e) => {
         inline: 'nearest'
       });
     } catch (_) {}
-  }
-
-  function getRowFields(row) {
-    if (!row) return [];
-    return Array.from(row.querySelectorAll('input, select, textarea')).filter(isVisibleField);
   }
 
   function moveHorizontal(step) {
@@ -10865,15 +10878,12 @@ document.addEventListener('input', (e) => {
     const row = currentInput.closest('tr');
     if (!row) return;
 
-    const fields = getRowFields(row);
-    const colIndex = fields.indexOf(currentInput);
+    const rowFields = getRowFields(row);
+    const colIndex = rowFields.indexOf(currentInput);
     if (colIndex === -1) return;
 
-    const root =
-      currentInput.closest('#bulkGrid tbody') ||
-      currentInput.closest('#app1 tbody') ||
-      currentInput.closest('table') ||
-      document;
+    const root = getMovementRoot(currentInput);
+    if (!root) return;
 
     const rows = Array.from(root.querySelectorAll('tr')).filter(tr => getRowFields(tr).length > 0);
     const rowIndex = rows.indexOf(row);
@@ -10930,9 +10940,11 @@ document.addEventListener('input', (e) => {
     if (isTarget(el)) {
       el.setAttribute('readonly', 'readonly');
       pad.hidden = false;
+      document.body.classList.add('numpad-open');
     } else {
       el.removeAttribute('readonly');
       pad.hidden = true;
+      document.body.classList.remove('numpad-open');
     }
   });
 
@@ -10947,6 +10959,7 @@ document.addEventListener('input', (e) => {
     if (!pad.contains(el)) {
       if (!(el instanceof HTMLElement) || !isVisibleField(el)) {
         pad.hidden = true;
+        document.body.classList.remove('numpad-open');
         clearActiveState();
         currentInput = null;
       }
@@ -10960,40 +10973,13 @@ document.addEventListener('input', (e) => {
     const value = btn.dataset.v;
     const fn = btn.dataset.fn;
 
-    if (value) {
-      insertValue(value);
-      return;
-    }
-
-    if (fn === 'back') {
-      backspaceValue();
-      return;
-    }
-
-    if (fn === 'clear') {
-      clearValue();
-      return;
-    }
-
-    if (fn === 'prev') {
-      moveHorizontal(-1);
-      return;
-    }
-
-    if (fn === 'next') {
-      moveHorizontal(1);
-      return;
-    }
-
-    if (fn === 'up') {
-      moveVertical(-1);
-      return;
-    }
-
-    if (fn === 'down') {
-      moveVertical(1);
-      return;
-    }
+    if (value) return insertValue(value);
+    if (fn === 'back') return backspaceValue();
+    if (fn === 'clear') return clearValue();
+    if (fn === 'prev') return moveHorizontal(-1);
+    if (fn === 'next') return moveHorizontal(1);
+    if (fn === 'up') return moveVertical(-1);
+    if (fn === 'down') return moveVertical(1);
   });
 
   document.addEventListener('keydown', (e) => {
