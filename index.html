@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5</title>
+<title>IBASD  Ver. 8.7.5.1</title>
 <style>
 
   html, body {
@@ -3923,6 +3923,39 @@ function renumberRows() {
 
 //<app2 script---------------------------------------------------------------------------------------------------------------->
 
+function safeDecodeText(str) {
+  if (str == null) return '';
+  try {
+    return decodeURIComponent(str);
+  } catch (e) {
+    return String(str);
+  }
+}
+
+function normalizeBottleDetail(str) {
+  const s = safeDecodeText(String(str || '')).trim();
+  return s;
+}
+
+function getSelectedDetail(formOrRow) {
+  if (!formOrRow) return '';
+
+  const sel = formOrRow.querySelector('.bottleDetails');
+  if (!sel) return '';
+
+  const opt = sel.selectedOptions?.[0];
+  if (!opt) {
+    return normalizeBottleDetail(sel.value || '');
+  }
+
+  // 履歴候補は dataset.base を本体として扱う
+  if (opt.dataset?.base) {
+    return normalizeBottleDetail(opt.dataset.base);
+  }
+
+  return normalizeBottleDetail(sel.value || opt.value || '');
+}
+
 function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   const form = document.createElement('div');
   form.className = 'bottle-form';
@@ -3948,14 +3981,16 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
 
   // 初期値を反映
   if (detail) {
-  sel.value = detail;
+  detail = normalizeBottleDetail(detail);
 
+  sel.value = detail;
   if (sel.value !== detail) {
     const tmp = document.createElement('option');
     tmp.value = detail;
     tmp.textContent = detail;
-    tmp.dataset.base = detail;
-    sel.appendChild(tmp);
+    tmp.dataset.base = detail;   // ← これが重要
+    const etcGroup = Array.from(sel.children).find(n => n.tagName === 'OPTGROUP' && n.label === 'その他');
+    (etcGroup || sel).appendChild(tmp);
     sel.value = detail;
   }
 }
@@ -4451,6 +4486,18 @@ function requestRepositionBottleHierarchyPicker() {
 // 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
 let BOTTLE_HISTORY = {};
 
+function safeDecodeText(str) {
+  if (str == null) return '';
+  try {
+    return decodeURIComponent(str);
+  } catch (e) {
+    return String(str);
+  }
+}
+
+function normalizeBottleDetail(str) {
+  return safeDecodeText(String(str || '')).trim();
+}
 
 function buildBottleHistoryMap() {
   BOTTLE_HISTORY = {};
@@ -4465,23 +4512,36 @@ function buildBottleHistoryMap() {
   for (const li of items) {
     const html = li.innerHTML;
     let m;
+
     while ((m = re.exec(html)) !== null) {
-      const amount = parseInt(m[1].replace(/,/g, ''), 10) || 0;
-      const detail = (m[2] || '').trim();
-      const split  = (m[3] || '').trim();
-      const qty    = (m[4] || '').trim();
+      const amount = parseInt((m[1] || '').replace(/,/g, ''), 10) || 0;
+
+      const detail = normalizeBottleDetail(m[2] || '');
+      const split  = normalizeBottleDetail(m[3] || '');
+      const qty    = normalizeBottleDetail(m[4] || '');
+
       if (!detail) continue;
 
-      // バリアントID（品名＋割＋数量＋金額の組）
-      const id = encodeURIComponent(detail) + '|' +
-                 encodeURIComponent(split)  + '|' +
-                 encodeURIComponent(qty)    + '|' +
-                 amount;
+      // 重複判定用IDはエンコードしてOK
+      const id =
+        encodeURIComponent(detail) + '|' +
+        encodeURIComponent(split)  + '|' +
+        encodeURIComponent(qty)    + '|' +
+        amount;
 
       if (seen.has(id)) continue;
       seen.add(id);
 
-      (BOTTLE_HISTORY[detail] ||= []).push({ id, split, qty, amount });
+      if (!BOTTLE_HISTORY[detail]) {
+        BOTTLE_HISTORY[detail] = [];
+      }
+
+      BOTTLE_HISTORY[detail].push({
+        id,
+        split,
+        qty,
+        amount
+      });
     }
   }
 }
@@ -4517,30 +4577,30 @@ function refreshBottleDropdownsFromHistory() {
     grp.innerHTML = '';
 
     // 各品名の履歴を再構築
-    Object.entries(BOTTLE_HISTORY).forEach(([detail, variants]) => {
-      // 静的に存在しない品名だけ「（新規）」を追加
-      const hasBlank = Array.from(sel.options).some(o => o.value === detail);
-      if (!hasBlank) {
-        const blankOpt = document.createElement('option');
-        blankOpt.value = detail;
-        blankOpt.textContent = `${detail}（新規）`;
-        blankOpt.dataset.base = detail;
-        grp.appendChild(blankOpt);
-      }
+    Object.entries(BOTTLE_HISTORY).forEach(([rawDetail, variants]) => {
+  const detail = normalizeBottleDetail(rawDetail);
 
-      variants.forEach(v => {
-        // ここは基本そのままでOK
-const opt = document.createElement('option');
-opt.value = `__HIST__${v.id}`;
-opt.textContent = `${detail}（${v.split !== '' ? "割:" + v.split : "割:-"}/${v.qty !== '' ? "数量:" + v.qty : "数量:-"}/¥${v.amount.toLocaleString()}）`;
-opt.dataset.from = 'history';
-opt.dataset.base = detail;
-opt.dataset.split = v.split;
-opt.dataset.qty = v.qty;
-opt.dataset.amount = v.amount;
-        grp.appendChild(opt);
-      });
-    });
+  const hasBlank = Array.from(sel.options).some(o => normalizeBottleDetail(o.value) === detail);
+  if (!hasBlank) {
+    const blankOpt = document.createElement('option');
+    blankOpt.value = detail;
+    blankOpt.textContent = `${detail}（新規）`;
+    blankOpt.dataset.base = detail;
+    grp.appendChild(blankOpt);
+  }
+
+  variants.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = `__HIST__${v.id}`;
+    opt.textContent = `${detail}（${v.split !== '' ? "割:" + v.split : "割:-"}/${v.qty !== '' ? "数量:" + v.qty : "数量:-"}/¥${Number(v.amount || 0).toLocaleString()}）`;
+    opt.dataset.from = 'history';
+    opt.dataset.base = detail;
+    opt.dataset.split = v.split;
+    opt.dataset.qty = v.qty;
+    opt.dataset.amount = v.amount;
+    grp.appendChild(opt);
+  });
+});
 
     // 選択を復元。失敗したら退避の入力値を戻す
     sel.value = prevValue;
@@ -4568,8 +4628,6 @@ function saveBottleForms() {
   const bottleForms = [];
 
   document.querySelectorAll('.bottle-form').forEach(form => {
-    const sel = form.querySelector('.bottleDetails');
-
     const bottleDetails = getSelectedDetail(form);
     const splitCount = form.querySelector('.splitCount')?.value || '';
     const bottleQuantity = form.querySelector('.bottleQuantity')?.value || '';
@@ -4625,6 +4683,36 @@ function renumberHistory() {
   });
 }
 
+function safeDecodeText(str) {
+  if (str == null) return '';
+  try {
+    return decodeURIComponent(str);
+  } catch (e) {
+    return String(str);
+  }
+}
+
+function normalizeBottleDetail(str) {
+  return safeDecodeText(String(str || '')).trim();
+}
+
+function getSelectedDetail(formOrRow) {
+  if (!formOrRow) return '';
+
+  const sel = formOrRow.querySelector('.bottleDetails');
+  if (!sel) return '';
+
+  const opt = sel.selectedOptions?.[0];
+  if (!opt) {
+    return normalizeBottleDetail(sel.value || '');
+  }
+
+  if (opt.dataset?.base) {
+    return normalizeBottleDetail(opt.dataset.base);
+  }
+
+  return normalizeBottleDetail(sel.value || opt.value || '');
+}
 
 function calculate() {
    const historyList = document.getElementById('historyList');
@@ -4765,23 +4853,22 @@ if (fCount > 0) {
 }
 
   // 追加された全ボトル明細
-  bottleForms.forEach(form => {
-    const sel = form.querySelector('.bottleDetails');
-    const opt = sel?.selectedOptions?.[0];
-    const bottleDetail = (opt?.dataset?.base) || (sel?.value) || '詳細なし';
+  // 追加された全ボトル明細
+bottleForms.forEach(form => {
+  const bottleDetail = getSelectedDetail(form) || '詳細なし';
 
-    const split = form.querySelector('.splitCount')?.value || '';
-    const quantity = form.querySelector('.bottleQuantity')?.value || '';
-    const amountStr = (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '');
-    const bottleAmount = parseInt(amountStr, 10) || 0;
+  const split = form.querySelector('.splitCount')?.value || '';
+  const quantity = form.querySelector('.bottleQuantity')?.value || '';
+  const amountStr = (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '');
+  const bottleAmount = parseInt(amountStr, 10) || 0;
 
-    if (bottleAmount > 0 || bottleDetail || split || quantity) {
-      detailsHTML += `<div>ボトル:¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
-      if (split) detailsHTML +=`/割:${split}`;
-      if (quantity) detailsHTML +=`/数量:${quantity}`;
-      detailsHTML +=`）</div>`;
-    }
-  });
+  if (bottleAmount > 0 || bottleDetail || split || quantity) {
+    detailsHTML += `<div>ボトル:¥${bottleAmount.toLocaleString()}（${bottleDetail}`;
+    if (split) detailsHTML += `/割:${split}`;
+    if (quantity) detailsHTML += `/数量:${quantity}`;
+    detailsHTML += `）</div>`;
+  }
+});
 
   detailsHTML += '</div>';
 
@@ -4930,18 +5017,20 @@ function confirmAndCalculate(e) {
   });
 
   const bottles = [];
-  document.querySelectorAll('.bottle-form').forEach(form => {
-    const sel = form.querySelector('.bottleDetails');
-    const opt = sel?.selectedOptions?.[0];
-    const det = (opt?.dataset?.base) || (sel?.value) || '';
-    const spl = form.querySelector('.splitCount')?.value || '';
-    const qty = form.querySelector('.bottleQuantity')?.value || '';
-    const amtNum = parseInt((form.querySelector('.bottleAmount')?.value || '').replace(/,/g,''),10) || 0;
-    if (det || spl || qty || amtNum) {
-      const amt = amtNum.toLocaleString();
-      bottles.push(`${det}|${spl}|${qty}|${amt}`); // 構造的に保存
-    }
-  });
+document.querySelectorAll('.bottle-form').forEach(form => {
+  const det = getSelectedDetail(form);
+  const spl = form.querySelector('.splitCount')?.value || '';
+  const qty = form.querySelector('.bottleQuantity')?.value || '';
+  const amtNum = parseInt(
+    (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''),
+    10
+  ) || 0;
+
+  if (det || spl || qty || amtNum) {
+    const amt = amtNum.toLocaleString();
+    bottles.push(`${det}|${spl}|${qty}|${amt}`);
+  }
+});
 
   // === 手動登録時のみ確認ダイアログを表示 ===
   if (e) {
