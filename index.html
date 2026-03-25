@@ -2372,6 +2372,50 @@ body[data-active-app="app3"] #maleAttendance {
   color: #eaf6ff;
 }
 
+/*iPad Mini用CSS-----------*/
+/* 基本リセット */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* flex崩れ防止 */
+.flex,
+.row,
+[class*="row"] {
+  min-width: 0;
+}
+
+/* 入力系の暴走防止 */
+input, select, textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* コンテナのはみ出し防止 */
+.container, .panel, .card {
+  overflow: hidden;
+}
+
+/* iPad Safari専用対策 */
+@supports (-webkit-touch-callout: none) {
+  .flex, .row {
+    min-width: 0 !important;
+  }
+}
+
+.bulkGrid td,
+.bulkGrid th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.serial-number {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
 
 
 
