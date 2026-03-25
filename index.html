@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.1</title>
+<title>IBASD  Ver. 8.7.5.2</title>
 <style>
 
   html, body {
@@ -3932,29 +3932,6 @@ function safeDecodeText(str) {
   }
 }
 
-function normalizeBottleDetail(str) {
-  const s = safeDecodeText(String(str || '')).trim();
-  return s;
-}
-
-function getSelectedDetail(formOrRow) {
-  if (!formOrRow) return '';
-
-  const sel = formOrRow.querySelector('.bottleDetails');
-  if (!sel) return '';
-
-  const opt = sel.selectedOptions?.[0];
-  if (!opt) {
-    return normalizeBottleDetail(sel.value || '');
-  }
-
-  // 履歴候補は dataset.base を本体として扱う
-  if (opt.dataset?.base) {
-    return normalizeBottleDetail(opt.dataset.base);
-  }
-
-  return normalizeBottleDetail(sel.value || opt.value || '');
-}
 
 function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   const form = document.createElement('div');
@@ -4495,10 +4472,6 @@ function safeDecodeText(str) {
   }
 }
 
-function normalizeBottleDetail(str) {
-  return safeDecodeText(String(str || '')).trim();
-}
-
 function buildBottleHistoryMap() {
   BOTTLE_HISTORY = {};
   const list = document.getElementById('historyList');
@@ -4507,7 +4480,7 @@ function buildBottleHistoryMap() {
   const items = Array.from(list.querySelectorAll('li'));
   const re = /ボトル:\s*¥([\d,]+)（([^/（）]*?)(?:\/割:([^\s/（）]+))?(?:\/数量:([^\s/（）]+))?）/g;
 
-  const seen = new Set(); // 同一バリアント重複防止
+  const seen = new Set();
 
   for (const li of items) {
     const html = li.innerHTML;
@@ -4515,14 +4488,12 @@ function buildBottleHistoryMap() {
 
     while ((m = re.exec(html)) !== null) {
       const amount = parseInt((m[1] || '').replace(/,/g, ''), 10) || 0;
-
       const detail = normalizeBottleDetail(m[2] || '');
       const split  = normalizeBottleDetail(m[3] || '');
       const qty    = normalizeBottleDetail(m[4] || '');
 
       if (!detail) continue;
 
-      // 重複判定用IDはエンコードしてOK
       const id =
         encodeURIComponent(detail) + '|' +
         encodeURIComponent(split)  + '|' +
@@ -4536,12 +4507,7 @@ function buildBottleHistoryMap() {
         BOTTLE_HISTORY[detail] = [];
       }
 
-      BOTTLE_HISTORY[detail].push({
-        id,
-        split,
-        qty,
-        amount
-      });
+      BOTTLE_HISTORY[detail].push({ id, split, qty, amount });
     }
   }
 }
@@ -4693,7 +4659,20 @@ function safeDecodeText(str) {
 }
 
 function normalizeBottleDetail(str) {
-  return safeDecodeText(String(str || '')).trim();
+  let s = safeDecodeText(String(str || '')).trim();
+  if (!s) return '';
+
+  // __HIST__付きの内部値が来たら、本来の品名へ戻す
+  if (s.startsWith('__HIST__')) {
+    s = s.replace(/^__HIST__/, '');
+
+    const parts = s.split('|');
+    const rawDetail = parts[0] || '';
+
+    return safeDecodeText(rawDetail).trim();
+  }
+
+  return s;
 }
 
 function getSelectedDetail(formOrRow) {
