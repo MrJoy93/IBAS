@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.3</title>
+<title>IBASD  Ver. 8.7.6</title>
 <style>
 
   html, body {
@@ -2372,6 +2372,12 @@ body[data-active-app="app3"] #maleAttendance {
   color: #eaf6ff;
 }
 
+/* APP1 キャンセル伝票グレーアウト */
+#app1 tr.gray-out td {
+  background: rgba(120,120,120,0.25) !important;
+  color: #888 !important;
+}
+
 
 
 
@@ -3546,6 +3552,29 @@ function scheduleTotals(){
 })();
 
 
+//キャンセル伝票グレーアウト
+function updateRowGrayOut() {
+  const rows = document.querySelectorAll('#app1 tr.row');
+
+  rows.forEach(row => {
+    const cSelect = row.querySelector('.c');
+    const totalInput = row.querySelector('.total');
+
+    const cVal = cSelect?.value || '';
+    const rawVal = totalInput?.value || '';
+    const totalVal = rawVal.replace(/,/g, '');
+
+    const isZero = totalVal === '0';     // ← 明示的に0だけ判定
+    const isEmpty = totalVal === '';     // ← 未入力
+
+    if (cVal === '' && isZero) {
+      row.classList.add('gray-out');
+    } else {
+      row.classList.remove('gray-out');
+    }
+  });
+}
+
 function updateTotals() {
   let totalCustomers = 0;
   let cardTotal = 0;
@@ -3629,9 +3658,9 @@ function updateTotals() {
   if (totalSalesInput) totalSalesInput.value = formatNumber(totalAmount);
 
   if (!window.catchbackDetails) window.catchbackDetails = {};
-window.catchbackDetails = {}; // 初期化
+ window.catchbackDetails = {}; // 初期化
 
-document.querySelectorAll('#formRows tr').forEach(row => {
+ document.querySelectorAll('#formRows tr').forEach(row => {
   const c = row.querySelector('.c')?.value || '';
   if (!c) return;
 
@@ -3647,10 +3676,17 @@ document.querySelectorAll('#formRows tr').forEach(row => {
     amount,      // 金額（unit × count）
     detail
   });
-});
 
+  
+ });
+
+  updateRowGrayOut();
   saveForm();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateRowGrayOut();
+});
 
 
 
@@ -4448,14 +4484,6 @@ function requestRepositionBottleHierarchyPicker() {
 // 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
 let BOTTLE_HISTORY = {};
 
-function safeDecodeText(str) {
-  if (str == null) return '';
-  try {
-    return decodeURIComponent(str);
-  } catch (e) {
-    return String(str);
-  }
-}
 
 function buildBottleHistoryMap() {
   BOTTLE_HISTORY = {};
@@ -4497,13 +4525,6 @@ function buildBottleHistoryMap() {
   }
 }
 
-function safeDecodeText(str) {
-  try {
-    return decodeURIComponent(str);
-  } catch (e) {
-    return str;
-  }
-}
 
 function refreshBottleDropdownsFromHistory() {
   buildBottleHistoryMap();
@@ -4648,14 +4669,6 @@ function renumberHistory() {
   });
 }
 
-function safeDecodeText(str) {
-  if (str == null) return '';
-  try {
-    return decodeURIComponent(str);
-  } catch (e) {
-    return String(str);
-  }
-}
 
 function normalizeBottleDetail(str) {
   let s = safeDecodeText(String(str || '')).trim();
