@@ -4077,38 +4077,6 @@ function intSafe(v, d = 0){ const n = parseInt(String(v ?? '').toString().replac
 // 100円未満切り捨て（例: 3750 → 3700）
 function floor100(yen){ return Math.floor(intSafe(yen)/100)*100; }
 
-function setBottleDetailValue(selectEl, detail) {
-  if (!selectEl) return;
-
-  const normalized = normalizeBottleDetail(detail || '');
-  if (!normalized) {
-    selectEl.value = '';
-    return;
-  }
-
-  // 既存 option にあればそれを使う
-  let hit = Array.from(selectEl.options).find(opt => {
-    return normalizeBottleDetail(opt.value) === normalized
-        || normalizeBottleDetail(opt.dataset?.base || '') === normalized;
-  });
-
-  // 無ければ仮 option を追加
-  if (!hit) {
-    hit = document.createElement('option');
-    hit.value = normalized;
-    hit.textContent = normalized;
-    hit.dataset.base = normalized;
-
-    const etcGroup = Array.from(selectEl.children).find(n =>
-      n.tagName === 'OPTGROUP' && n.label === 'その他'
-    );
-
-    (etcGroup || selectEl).appendChild(hit);
-  }
-
-  selectEl.value = hit.value;
-}
-
 // 登録金額・割・数量から金額を計算
 // ルール: (登録金額/割) の “10円未満切り捨て” を単価とし、単価×数量
 function computeBottleAmount(detail, split, qty){
@@ -4543,12 +4511,26 @@ function refreshBottleDropdownsFromHistory() {
   BOTTLE_REFRESHING = true; // ←開始
 
   document.querySelectorAll('select.bottleDetails').forEach(sel => {
-    // 退避
-    const prevValue = sel.value;
-    const form = sel.closest('.bottle-form');
-    const prevSplit = form?.querySelector('.splitCount')?.value ?? '';
-    const prevQty   = form?.querySelector('.bottleQuantity')?.value ?? '';
-    const prevAmt   = form?.querySelector('.bottleAmount')?.value ?? '';
+  // 退避
+  const prevValue = sel.value;
+  const form = sel.closest('.bottle-form');
+  const prevSplit = form?.querySelector('.splitCount')?.value ?? '';
+  const prevQty   = form?.querySelector('.bottleQuantity')?.value ?? '';
+  const prevAmt   = form?.querySelector('.bottleAmount')?.value ?? '';
+
+  // 壊れた __HIST__ option を掃除
+  Array.from(sel.querySelectorAll('option')).forEach(opt => {
+    const v = String(opt.value || '').trim();
+    const t = String(opt.textContent || '').trim();
+
+    const brokenValue = v.startsWith('__HIST__') && !opt.dataset?.from;
+    const brokenText  = t.startsWith('__HIST__');
+    const brokenBase  = String(opt.dataset?.base || '').trim().startsWith('__HIST__');
+
+    if (brokenValue || brokenText || brokenBase) {
+      opt.remove();
+    }
+  });
 
     // 履歴グループを先頭に
     let grp = Array.from(sel.children).find(n => n.tagName === 'OPTGROUP' && n.label === '履歴');
@@ -4714,7 +4696,12 @@ function setBottleDetailValue(selectEl, detail) {
     hit.textContent = normalized;
     hit.dataset.base = normalized;
     hit.dataset.customBottle = '1';
-    selectEl.appendChild(hit);
+
+    const etcGroup = Array.from(selectEl.children).find(n =>
+      n.tagName === 'OPTGROUP' && n.label === 'その他'
+    );
+
+    (etcGroup || selectEl).appendChild(hit);
   }
 
   selectEl.value = hit.value;
