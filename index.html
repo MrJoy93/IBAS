@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 8.7.5.2</title>
+<title>IBASD  Ver. 8.7.5.3</title>
 <style>
 
   html, body {
@@ -4077,18 +4077,36 @@ function intSafe(v, d = 0){ const n = parseInt(String(v ?? '').toString().replac
 // 100円未満切り捨て（例: 3750 → 3700）
 function floor100(yen){ return Math.floor(intSafe(yen)/100)*100; }
 
-// sel(=select)から“品名”を取り出す（履歴選択時は base 名）
-function getSelectedDetail(form) {
-  const sel = form?.querySelector('.bottleDetails');
-  if (!sel) return '';
+function setBottleDetailValue(selectEl, detail) {
+  if (!selectEl) return;
 
-  const opt = sel.selectedOptions?.[0];
-  if (!opt) return sel.value || '';
+  const normalized = normalizeBottleDetail(detail || '');
+  if (!normalized) {
+    selectEl.value = '';
+    return;
+  }
 
-  // 履歴候補なら dataset.base を優先
-  if (opt.dataset?.base) return opt.dataset.base;
+  // 既存 option にあればそれを使う
+  let hit = Array.from(selectEl.options).find(opt => {
+    return normalizeBottleDetail(opt.value) === normalized
+        || normalizeBottleDetail(opt.dataset?.base || '') === normalized;
+  });
 
-  return sel.value || '';
+  // 無ければ仮 option を追加
+  if (!hit) {
+    hit = document.createElement('option');
+    hit.value = normalized;
+    hit.textContent = normalized;
+    hit.dataset.base = normalized;
+
+    const etcGroup = Array.from(selectEl.children).find(n =>
+      n.tagName === 'OPTGROUP' && n.label === 'その他'
+    );
+
+    (etcGroup || selectEl).appendChild(hit);
+  }
+
+  selectEl.value = hit.value;
 }
 
 // 登録金額・割・数量から金額を計算
@@ -4103,12 +4121,11 @@ function computeBottleAmount(detail, split, qty){
 
 // フォーム1行の金額を再計算して反映
 function updateBottleAmountForForm(form){
-  const sel   = form.querySelector('.bottleDetails');
   const split = form.querySelector('.splitCount')?.value;
   const qty   = form.querySelector('.bottleQuantity')?.value;
-  const amt   = computeBottleAmount(getSelectedDetail(sel), split, qty);
+  const amt   = computeBottleAmount(getSelectedDetail(form), split, qty);
   const out   = form.querySelector('.bottleAmount');
-  out.value = amt ? String(amt) : ''; // 未登録(0)は空に
+  out.value = amt ? String(amt) : '';
 }
 
 // ===============================
@@ -4675,6 +4692,34 @@ function normalizeBottleDetail(str) {
   return s;
 }
 
+function setBottleDetailValue(selectEl, detail) {
+  if (!selectEl) return;
+
+  const normalized = normalizeBottleDetail(detail || '');
+  if (!normalized) {
+    selectEl.value = '';
+    return;
+  }
+
+  // 既存 option を優先
+  let hit = Array.from(selectEl.options).find(opt => {
+    return normalizeBottleDetail(opt.value) === normalized
+        || normalizeBottleDetail(opt.dataset?.base || '') === normalized;
+  });
+
+  // 無ければ仮 option を作る
+  if (!hit) {
+    hit = document.createElement('option');
+    hit.value = normalized;
+    hit.textContent = normalized;
+    hit.dataset.base = normalized;
+    hit.dataset.customBottle = '1';
+    selectEl.appendChild(hit);
+  }
+
+  selectEl.value = hit.value;
+}
+
 function getSelectedDetail(formOrRow) {
   if (!formOrRow) return '';
 
@@ -4733,7 +4778,7 @@ for (let key in values) {
     const bottleAmount = parseInt(
    (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''), 10
    ) || 0;
-    const bottleDetails = form.querySelector('.bottleDetails').value || '詳細なし';
+    const bottleDetails = getSelectedDetail(form) || '詳細なし';
     total += bottleAmount;
   });
 
@@ -7148,12 +7193,12 @@ function collectApp2State(){
   });
 
   // 既存: ボトル明細
-  const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
-    details: form.querySelector('.bottleDetails')?.value ?? "",
-    split:   form.querySelector('.splitCount')?.value ?? "",
-    qty:     form.querySelector('.bottleQuantity')?.value ?? "",
-    amount:  form.querySelector('.bottleAmount')?.value ?? ""
-  }));
+const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
+  details: getSelectedDetail(form) || "",
+  split:   form.querySelector('.splitCount')?.value ?? "",
+  qty:     form.querySelector('.bottleQuantity')?.value ?? "",
+  amount:  form.querySelector('.bottleAmount')?.value ?? ""
+}));
 
   // ★追加: 履歴（HTMLそのまま）
   const historyRoot = document.getElementById('historyList');
@@ -7183,7 +7228,8 @@ function applyApp2State(state){
         // 既存の追加関数があればそれを使う
         if(typeof window.addBottleForm === "function"){
           const el = window.addBottleForm();
-          (el?.querySelector('.bottleDetails')||{}).value = b.details ?? "";
+          const sel = el?.querySelector('.bottleDetails');
+          if (sel) setBottleDetailValue(sel, b.details ?? "");
           (el?.querySelector('.splitCount')||{}).value    = b.split ?? "";
           (el?.querySelector('.bottleQuantity')||{}).value= b.qty ?? "";
           (el?.querySelector('.bottleAmount')||{}).value  = b.amount ?? "";
@@ -7200,7 +7246,7 @@ function applyApp2State(state){
             <input class="bottleQuantity" type="text"/>
             <input class="bottleAmount" type="text"/>`;
           container.appendChild(row);
-          row.querySelector('.bottleDetails').value = b.details ?? "";
+          setBottleDetailValue(row.querySelector('.bottleDetails'), b.details ?? "");
           row.querySelector('.splitCount').value    = b.split ?? "";
           row.querySelector('.bottleQuantity').value= b.qty ?? "";
           row.querySelector('.bottleAmount').value  = b.amount ?? "";
@@ -8634,10 +8680,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let n = tr.nextElementSibling;
     while (n && n.classList.contains('btl-subrow')) {
       row.bottles.push({
-        detail: n.querySelector('.bottleDetails')?.value || '',
-        split: n.querySelector('.splitCount')?.value || '',
-        qty: n.querySelector('.bottleQuantity')?.value || '',
-        amount: n.querySelector('.bottleAmount')?.value || ''
+      detail: getSelectedDetail(n) || '',
+      split: n.querySelector('.splitCount')?.value || '',
+      qty: n.querySelector('.bottleQuantity')?.value || '',
+      amount: n.querySelector('.bottleAmount')?.value || ''
       });
       n = n.nextElementSibling;
     }
@@ -8707,7 +8753,8 @@ window.saveBulkGridState = saveBulkGridState;
         addBottleSubrow(tr);
         const last = tr.nextElementSibling;
         if (last?.classList.contains('btl-subrow')) {
-          last.querySelector('.bottleDetails').value = b.detail || '';
+          setBottleDetailValue(last.querySelector('.bottleDetails'), b.detail || '');
+          last.querySelector('.bottleDetails')?.dispatchEvent(new Event('change', { bubbles: true }));
           last.querySelector('.splitCount').value = norm(b.split);
           last.querySelector('.bottleQuantity').value = norm(b.qty);
           last.querySelector('.bottleAmount').value = norm(b.amount);
@@ -9473,19 +9520,32 @@ document.addEventListener('click', async (e) => {
 
       clearSubrows(row);
       const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
-      for (const f of forms) {
-        const d = f.querySelector('.bottleDetails')?.value || '';
-        const s = f.querySelector('.splitCount')?.value  || '';
-        const q = f.querySelector('.bottleQuantity')?.value || '';
-        const a = f.querySelector('.bottleAmount')?.value || '';
-        if (!d && !s && !q && !a) continue;
-        const sub = addAndGetSubrow(row); if (!sub) continue;
-        const sel = sub.querySelector('.bottleDetails'); if (sel) sel.value = d;
-        setVal(sub.querySelector('.splitCount'), s, 'input');
-        setVal(sub.querySelector('.bottleQuantity'), q, 'input');
-        setVal(sub.querySelector('.bottleAmount'), a, 'input');
-        if (typeof updateBottleAmountForRow === 'function') updateBottleAmountForRow(sub);
-      }
+for (const f of forms) {
+  // 履歴候補でも __HIST__... ではなく実品名を取る
+  const d = getSelectedDetail(f) || '';
+  const s = f.querySelector('.splitCount')?.value || '';
+  const q = f.querySelector('.bottleQuantity')?.value || '';
+  const a = f.querySelector('.bottleAmount')?.value || '';
+
+  if (!d && !s && !q && !a) continue;
+
+  const sub = addAndGetSubrow(row);
+  if (!sub) continue;
+
+  const sel = sub.querySelector('.bottleDetails');
+  if (sel) {
+    setBottleDetailValue(sel, d);
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  setVal(sub.querySelector('.splitCount'), s, 'input');
+  setVal(sub.querySelector('.bottleQuantity'), q, 'input');
+  setVal(sub.querySelector('.bottleAmount'), a, 'input');
+
+  if (typeof updateBottleAmountForRow === 'function') {
+    updateBottleAmountForRow(sub);
+  }
+}
 
       rowIndex++; done++;
       updateProgress();
@@ -9676,7 +9736,7 @@ function addAndGetSubrow(mainRow){
       // 一括サブ行を走査
       let anchor = mainRow.nextElementSibling;
       while (anchor && anchor.classList.contains('btl-subrow')) {
-        const detail = anchor.querySelector('.bottleDetails')?.value ?? '';
+        const detail = getSelectedDetail(anchor) || '';
         const split  = anchor.querySelector('.splitCount')?.value ?? '';
         const qty    = anchor.querySelector('.bottleQuantity')?.value ?? '';
         const amt    = anchor.querySelector('.bottleAmount')?.value ?? '';
@@ -9699,10 +9759,13 @@ function addAndGetSubrow(mainRow){
         const qEl = form.querySelector('.bottleQuantity');
         const aEl = form.querySelector('.bottleAmount');
 
-        if (sel) { sel.value = detail; sel.dispatchEvent(new Event('change', {bubbles:true})); }
-        if (sEl) { sEl.value = split;  sEl.dispatchEvent(new Event('input',  {bubbles:true})); }
-        if (qEl) { qEl.value = qty;    qEl.dispatchEvent(new Event('input',  {bubbles:true})); }
-        if (aEl) { aEl.value = amt;    aEl.dispatchEvent(new Event('input',  {bubbles:true})); }
+        if (sel) {
+          setBottleDetailValue(sel, detail);
+          sel.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+        if (sEl) { sEl.value = split;  sEl.dispatchEvent(new Event('input', { bubbles:true })); }
+        if (qEl) { qEl.value = qty;    qEl.dispatchEvent(new Event('input', { bubbles:true })); }
+        if (aEl) { aEl.value = amt;    aEl.dispatchEvent(new Event('input', { bubbles:true })); }
 
         anchor = anchor.nextElementSibling;
       }
@@ -9863,7 +9926,7 @@ function isBulkRowEmpty(mainRow){
   let anchor = mainRow.nextElementSibling;
   let anyBottle = false;
   while (anchor && anchor.classList.contains('btl-subrow')) {
-    const d = anchor.querySelector('.bottleDetails')?.value?.trim() || '';
+    const d = getSelectedDetail(anchor) || '';
     const s = norm(anchor.querySelector('.splitCount')?.value);
     const q = norm(anchor.querySelector('.bottleQuantity')?.value);
     const a = norm(anchor.querySelector('.bottleAmount')?.value);
