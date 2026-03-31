@@ -5096,9 +5096,11 @@ body[data-active-app="app2"] #bulkGrid {
   border-radius: 10px;
 }
 
-#bulkGrid input.bulk-custom-keypad-active{
+input.bulk-custom-keypad-active {
   outline: 2px solid #00f5ff !important;
-  box-shadow: 0 0 0 2px rgba(0,245,255,0.18), 0 0 10px rgba(0,245,255,0.35) !important;
+  box-shadow:
+    0 0 0 2px rgba(0,245,255,0.18),
+    0 0 10px rgba(0,245,255,0.35) !important;
 }
 
 /* ===== 強制上書き：テンキー右下固定 ===== */
@@ -5144,4 +5146,69 @@ body[data-active-app="app2"] #bulkGrid {
   -webkit-appearance: none;
   appearance: none;
   border-radius: 12px;
+}
+
+/* =========================================================
+   APP3：iPad mini / タブレット横向きでの崩れ対策
+========================================================= */
+@media (min-width: 900px) and (max-width: 1100px) and (max-height: 820px) {
+
+  /* APP3本体の横余白を削る */
+  body[data-active-app="app3"] #app3,
+  body[data-active-app="app3"] #app3.content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* groupの左右余白を少し詰める */
+  body[data-active-app="app3"] #app3 .group {
+    padding: 16px 12px 12px 12px !important;
+  }
+
+  /* ラベル文字幅を少し短くする */
+  body[data-active-app="app3"] #app3 .group label > span,
+  body[data-active-app="app3"] #app3 .group label > strong,
+  body[data-active-app="app3"] #app3 .group label > b {
+    min-width: 110px !important;
+    max-width: 150px !important;
+    font-size: 15px !important;
+  }
+
+  /* 入力欄をPC固定幅240pxから縮める */
+  body[data-active-app="app3"] #app3 .group label input,
+  body[data-active-app="app3"] #app3 .group label select,
+  body[data-active-app="app3"] #app3 .group label button {
+    width: 160px !important;
+    min-width: 160px !important;
+    max-width: 160px !important;
+    flex: 0 0 160px !important;
+    font-size: 15px !important;
+  }
+
+  /* ドライバー代まわりはさらに専用調整 */
+  body[data-active-app="app3"] #driverExtra1,
+  body[data-active-app="app3"] #driverExtra2 {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+    flex: 0 0 60px !important;
+    padding-inline: 4px !important;
+  }
+
+  body[data-active-app="app3"] #driverFee {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+    flex: 0 0 150px !important;
+  }
+
+  /* 横幅が厳しい箇所は縦積み許可 */
+  body[data-active-app="app3"] #app3 .group label {
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+  }
 }

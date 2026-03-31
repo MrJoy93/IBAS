@@ -79,8 +79,8 @@
     <tr class="row">
       <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
       <td class="rowNumber" contenteditable="true">1</td>
-      <td><input class="table-number" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
-      <td><input class="honshi" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
+      <td><input class="table-number bulk-custom-keypad-target" type="text" inputmode="numeric" pattern="\d*" placeholder="卓番" oninput="updateTotals()" /></td>
+<td><input class="honshi bulk-custom-keypad-target" type="text" inputmode="numeric" pattern="\d*" placeholder="本指" oninput="updateTotals()" /></td>
       <td>
         <select class="c" oninput="updateRowColor(this); updateTotals()">
           <option value="">-</option>
@@ -104,11 +104,11 @@
         
 
       </td>
-      <td><input class="amount" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
-      <td><input class="num" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
+      <td><input class="amount bulk-custom-keypad-target" type="text" inputmode="numeric" pattern="\d*" placeholder="金額" oninput="updateTotals()" /></td>
+      <td><input class="num bulk-custom-keypad-target" type="text" inputmode="numeric" pattern="\d*" placeholder="人数" oninput="updateTotals()" /></td>
       <td><input class="detail" type="text" placeholder="詳細" /></td>
-      <td><input class="card" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
-      <td><input class="total" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
+      <td><input class="card bulk-custom-keypad-target" type="text" inputmode="numeric" pattern="\d*" placeholder="カード" oninput="updateTotals()" /></td>
+      <td><input class="total bulk-custom-keypad-target" type="text" inputmode="numeric" pattern="\d*" placeholder="総合計" oninput="updateTotals()" /></td>
     </tr>
   </tbody>
 </table>
@@ -491,40 +491,92 @@
       </div>
 
       <div class="group" id="laborGroup">
-        <label><span>女子給与:</span> <input type="text" id="femaleSalary" disabled></label>
-        <label><span>男子給与:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" oninput="scheduleApp3Update('app3:maleSalary')">
-        </label>
-        <label><span>キャッチバック:</span> <input type="text" id="catchBack" disabled></label>
-        <label><span>スカウトバック:</span> <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" oninput="scheduleApp3Update('app3:maleSalary')">
-        </label>
-        <label><span>顧問料:</span> <input type="text" id="adviserFee" disabled></label>
-        <label>
-        <span>ドライバー代:</span>
-        <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
-        <input type="text" id="driverExtra2" inputmode="numeric" pattern="\d*" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
-        <input type="text" id="driverFee" disabled placeholder="合計">
-        </label>
-        </label>
-        <label><span>人件費合計:</span> <input type="text" id="totalLaborCosts" disabled>
-        </label>
-      </div>
+  <label>
+    <span>女子給与:</span>
+    <input type="text" id="femaleSalary" disabled>
+  </label>
+
+  <label>
+    <span>男子給与:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="maleSalary" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>キャッチバック:</span>
+    <input type="text" id="catchBack" disabled>
+  </label>
+
+  <label>
+    <span>スカウトバック:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="scoutBack" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>顧問料:</span>
+    <input type="text" id="adviserFee" disabled>
+  </label>
+
+  <label>
+    <span>ドライバー代:</span>
+    <input type="text" id="driverExtra1" placeholder="店舗負担分" disabled>
+    <input type="text" inputmode="numeric" pattern="\d*" id="driverExtra2" class="bulk-custom-keypad-target" placeholder="ドライバー代" oninput="scheduleApp3Update('app3:maleSalary')">
+    <input type="text" id="driverFee" disabled placeholder="合計">
+  </label>
+
+  <label>
+    <span>人件費合計:</span>
+    <input type="text" id="totalLaborCosts" disabled>
+  </label>
+</div>
 
       <div class="group" id="taxGroup">
-        <label><span>女子源泉費:</span> <input type="text" id="femaleTax" disabled></label>
-        <label><span>男子源泉費:</span> <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>源泉費合計:</span> <input type="text" id="totalTax" disabled></label>
-      </div>
+  <label>
+    <span>女子源泉費:</span>
+    <input type="text" id="femaleTax" disabled>
+  </label>
+
+  <label>
+    <span>男子源泉費:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="maleTax" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>源泉費合計:</span>
+    <input type="text" id="totalTax" disabled>
+  </label>
+</div>
 
       <div class="group" id="expensesGroup">
-        <label><span>酒代:</span> <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書①:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書②:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書③:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書④:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書⑤:</span> <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-        <label><span>領収書合計:</span> <input type="text" id="receipt6" disabled></label>
-        <label><span>経費合計:</span> <input type="text" id="totalExpenses" disabled></label>
-      </div>
+  <label>
+    <span>酒代:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="alcohol" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>領収書1:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="receipt1" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>領収書2:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="receipt2" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>領収書3:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="receipt3" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>領収書4:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="receipt4" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+
+  <label>
+    <span>領収書5:</span>
+    <input type="text" inputmode="numeric" pattern="\d*" id="receipt5" class="bulk-custom-keypad-target" oninput="scheduleApp3Update('app3:maleSalary')">
+  </label>
+</div>
       </section>
 
       <section id="app3-profitSection">
@@ -560,8 +612,8 @@
  </table>
 
   <div class="group no-bg">
-    <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
-    <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
+  <label><span>集計提出前金庫金:</span> <input type="text" inputmode="numeric" pattern="\d*" id="finalCash" oninput="scheduleApp3Update('app3:maleSalary')"></label>
+  <label><span>現金誤差:</span> <input type="text" id="cashDifference" disabled></label>
   </div>
 
   <button type="button" onclick="resetApp('app3')" class="red-btn">リセット</button>

@@ -7718,13 +7718,13 @@ function installBulkCustomKeypad() {
   const keypad = document.getElementById('bulkCustomKeypad');
   const keypadTitle = document.getElementById('bulkCustomKeypadTitle');
 
-  console.log('[bulk keypad] init', {
+  console.log('[custom keypad] init', {
     isIOSLike,
     keypadExists: !!keypad
   });
 
   if (!isIOSLike || !keypad) {
-    console.log('[bulk keypad] stopped', {
+    console.log('[custom keypad] stopped', {
       reason: !isIOSLike ? 'isIOSLike=false' : 'keypad not found'
     });
     return;
@@ -7735,8 +7735,8 @@ function installBulkCustomKeypad() {
   function isTarget(el) {
     return el instanceof HTMLInputElement
       && el.classList.contains('bulk-custom-keypad-target')
-      && !!el.closest('#bulkGrid')
-      && !el.disabled;
+      && !el.disabled
+      && el.type !== 'hidden';
   }
 
   function stripCommas(v) {
@@ -7752,10 +7752,10 @@ function installBulkCustomKeypad() {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function applyReadonlyToBulkGrid() {
-    const inputs = document.querySelectorAll('#bulkGrid input.bulk-custom-keypad-target');
+  function applyReadonlyToCustomKeypadTargets() {
+    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
 
-    console.log('[bulk keypad] applyReadonlyToBulkGrid', {
+    console.log('[custom keypad] applyReadonlyToCustomKeypadTargets', {
       count: inputs.length
     });
 
@@ -7772,16 +7772,23 @@ function installBulkCustomKeypad() {
   function getLabel(input) {
     return input.getAttribute('placeholder')
       || input.dataset.k
+      || input.id
       || input.className
       || '数値入力';
   }
 
-  function showKeypad(input) {
-    console.log('[bulk keypad] SHOW', input);
-
+  function clearActiveState() {
     document
-      .querySelectorAll('#bulkGrid input.bulk-custom-keypad-active')
+      .querySelectorAll('input.bulk-custom-keypad-active')
       .forEach(el => el.classList.remove('bulk-custom-keypad-active'));
+  }
+
+  function showKeypad(input) {
+    if (!input) return;
+
+    console.log('[custom keypad] SHOW', input);
+
+    clearActiveState();
 
     activeInput = input;
     activeInput.classList.add('bulk-custom-keypad-active');
@@ -7792,7 +7799,7 @@ function installBulkCustomKeypad() {
 
     keypad.hidden = false;
 
-    console.log('[bulk keypad] visible', {
+    console.log('[custom keypad] visible', {
       hidden: keypad.hidden,
       display: getComputedStyle(keypad).display,
       visibility: getComputedStyle(keypad).visibility,
@@ -7801,14 +7808,11 @@ function installBulkCustomKeypad() {
   }
 
   function hideKeypad() {
-    document
-      .querySelectorAll('#bulkGrid input.bulk-custom-keypad-active')
-      .forEach(el => el.classList.remove('bulk-custom-keypad-active'));
-
+    clearActiveState();
     activeInput = null;
     keypad.hidden = true;
 
-    console.log('[bulk keypad] HIDE');
+    console.log('[custom keypad] HIDE');
   }
 
   function setRawValue(input, raw) {
@@ -7862,10 +7866,38 @@ function installBulkCustomKeypad() {
     setRawValue(input, raw);
   }
 
-  function focusNextTarget(current) {
-    const all = Array.from(document.querySelectorAll('#bulkGrid input.bulk-custom-keypad-target'))
-      .filter(el => !el.disabled);
+  function getTargetScope(input) {
+    if (!input) return document.body;
 
+    if (input.closest('#bulkGrid')) {
+      return document.getElementById('bulkGrid') || document.body;
+    }
+
+    if (input.closest('#app1')) {
+      return document.getElementById('app1') || document.body;
+    }
+
+    if (input.closest('#app3')) {
+      return document.getElementById('app3') || document.body;
+    }
+
+    return document.body;
+  }
+
+  function getScopedTargets(input) {
+    const scope = getTargetScope(input);
+
+    return Array.from(scope.querySelectorAll('input.bulk-custom-keypad-target'))
+      .filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
+  }
+
+  function focusTargetInput(next) {
+    if (!next) return;
+    showKeypad(next);
+  }
+
+  function focusNextTarget(current) {
+    const all = getScopedTargets(current);
     const idx = all.indexOf(current);
     if (idx === -1) return;
 
@@ -7877,99 +7909,186 @@ function installBulkCustomKeypad() {
     }
   }
 
-    function getBulkTargets() {
-    return Array.from(document.querySelectorAll('#bulkGrid input.bulk-custom-keypad-target'))
-      .filter(el => !el.disabled);
-  }
-
-  function focusTargetInput(next) {
-    if (!next) return;
-    showKeypad(next);
-  }
-
   function moveHorizontal(current, direction) {
-    const all = getBulkTargets();
+    const all = getScopedTargets(current);
     const idx = all.indexOf(current);
     if (idx === -1) return;
 
     const currentRow = current.closest('tr');
-    if (!currentRow) return;
-
-    if (direction === 'left') {
-      for (let i = idx - 1; i >= 0; i--) {
-        const el = all[i];
-        if (el.closest('tr') === currentRow) {
-          focusTargetInput(el);
-          return;
+    if (currentRow) {
+      if (direction === 'left') {
+        for (let i = idx - 1; i >= 0; i--) {
+          const el = all[i];
+          if (el.closest('tr') === currentRow) {
+            focusTargetInput(el);
+            return;
+          }
         }
+        return;
       }
+
+      if (direction === 'right') {
+        for (let i = idx + 1; i < all.length; i++) {
+          const el = all[i];
+          if (el.closest('tr') === currentRow) {
+            focusTargetInput(el);
+            return;
+          }
+        }
+        return;
+      }
+    }
+
+    const currentGroup =
+      current.closest('.app3-row') ||
+      current.closest('.app3-line') ||
+      current.closest('.row') ||
+      current.parentElement;
+
+    if (!currentGroup) return;
+
+    const rowInputs = Array.from(
+      currentGroup.querySelectorAll('input.bulk-custom-keypad-target')
+    ).filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
+
+    const localIdx = rowInputs.indexOf(current);
+    if (localIdx === -1) return;
+
+    if (direction === 'left' && rowInputs[localIdx - 1]) {
+      focusTargetInput(rowInputs[localIdx - 1]);
       return;
     }
 
-    if (direction === 'right') {
-      for (let i = idx + 1; i < all.length; i++) {
-        const el = all[i];
-        if (el.closest('tr') === currentRow) {
-          focusTargetInput(el);
-          return;
+    if (direction === 'right' && rowInputs[localIdx + 1]) {
+      focusTargetInput(rowInputs[localIdx + 1]);
+    }
+  }
+
+  function moveVerticalInBulkGrid(current, direction) {
+    const currentRow = current.closest('tr.bulk-mainrow');
+    const currentCell = current.closest('td');
+    if (!currentRow || !currentCell) return false;
+
+    const rowList = Array.from(
+      document.querySelectorAll('#bulkGrid tbody tr.bulk-mainrow')
+    );
+
+    const rowIndex = rowList.indexOf(currentRow);
+    if (rowIndex === -1) return false;
+
+    const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
+
+    let targetRow = null;
+
+    if (direction === 'up') {
+      for (let i = rowIndex - 1; i >= 0; i--) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
         }
       }
+    }
+
+    if (direction === 'down') {
+      for (let i = rowIndex + 1; i < rowList.length; i++) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (!targetRow) return true;
+
+    const cells = targetRow.children;
+    const targetCell = cells[cellIndex];
+    if (!targetCell) return true;
+
+    const next = targetCell.querySelector('input.bulk-custom-keypad-target');
+    if (next && !next.disabled) {
+      focusTargetInput(next);
+    }
+
+    return true;
+  }
+
+  function moveVerticalInApp1(current, direction) {
+    const currentRow = current.closest('#formRows tr.row');
+    const currentCell = current.closest('td');
+    if (!currentRow || !currentCell) return false;
+
+    const rowList = Array.from(document.querySelectorAll('#formRows tr.row'));
+    const rowIndex = rowList.indexOf(currentRow);
+    if (rowIndex === -1) return false;
+
+    const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
+
+    let targetRow = null;
+
+    if (direction === 'up') {
+      for (let i = rowIndex - 1; i >= 0; i--) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (direction === 'down') {
+      for (let i = rowIndex + 1; i < rowList.length; i++) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (!targetRow) return true;
+
+    const cells = targetRow.children;
+    const targetCell = cells[cellIndex];
+    if (!targetCell) return true;
+
+    const next = targetCell.querySelector('input.bulk-custom-keypad-target');
+    if (next && !next.disabled) {
+      focusTargetInput(next);
+    }
+
+    return true;
+  }
+
+  function moveVerticalFallback(current, direction) {
+    const all = getScopedTargets(current);
+    const idx = all.indexOf(current);
+    if (idx === -1) return;
+
+    if (direction === 'up' && all[idx - 1]) {
+      focusTargetInput(all[idx - 1]);
+      return;
+    }
+
+    if (direction === 'down' && all[idx + 1]) {
+      focusTargetInput(all[idx + 1]);
     }
   }
 
   function moveVertical(current, direction) {
-  const currentRow = current.closest('tr.bulk-mainrow');
-  const currentCell = current.closest('td');
-  if (!currentRow || !currentCell) return;
+    if (!current) return;
 
-  // ↓↑移動は「メイン行だけ」を対象にする
-  const rowList = Array.from(
-    document.querySelectorAll('#bulkGrid tbody tr.bulk-mainrow')
-  );
+    if (moveVerticalInBulkGrid(current, direction)) return;
+    if (moveVerticalInApp1(current, direction)) return;
 
-  const rowIndex = rowList.indexOf(currentRow);
-  if (rowIndex === -1) return;
-
-  const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
-
-  let targetRow = null;
-
-  if (direction === 'up') {
-    for (let i = rowIndex - 1; i >= 0; i--) {
-      const row = rowList[i];
-      if (row) {
-        targetRow = row;
-        break;
-      }
-    }
+    moveVerticalFallback(current, direction);
   }
 
-  if (direction === 'down') {
-    for (let i = rowIndex + 1; i < rowList.length; i++) {
-      const row = rowList[i];
-      if (row) {
-        targetRow = row;
-        break;
-      }
-    }
-  }
-
-  if (!targetRow) return;
-
-  const cells = targetRow.children;
-  const targetCell = cells[cellIndex];
-  if (!targetCell) return;
-
-  const next = targetCell.querySelector('input.bulk-custom-keypad-target');
-  if (next && !next.disabled) {
-    focusTargetInput(next);
-  }
-}
-
-  applyReadonlyToBulkGrid();
+  applyReadonlyToCustomKeypadTargets();
 
   const mo = new MutationObserver(() => {
-    applyReadonlyToBulkGrid();
+    applyReadonlyToCustomKeypadTargets();
   });
   mo.observe(document.body, {
     childList: true,
@@ -7979,17 +8098,17 @@ function installBulkCustomKeypad() {
   document.addEventListener('pointerdown', (e) => {
     const target = e.target;
 
-    console.log('[bulk keypad] pointerdown', target);
+    console.log('[custom keypad] pointerdown', target);
 
     if (isTarget(target)) {
-      console.log('[bulk keypad] TARGET OK', target);
+      console.log('[custom keypad] TARGET OK', target);
       e.preventDefault();
       showKeypad(target);
       return;
     }
 
     if (keypad.contains(target)) {
-      console.log('[bulk keypad] keypad click area');
+      console.log('[custom keypad] keypad click area');
       return;
     }
 
@@ -8001,7 +8120,7 @@ function installBulkCustomKeypad() {
 
     if (!isTarget(target)) return;
 
-    console.log('[bulk keypad] focusin target', target);
+    console.log('[custom keypad] focusin target', target);
 
     target.readOnly = true;
     showKeypad(target);
@@ -8018,7 +8137,7 @@ function installBulkCustomKeypad() {
     const key = btn.dataset.key;
     const action = btn.dataset.action;
 
-    console.log('[bulk keypad] button', {
+    console.log('[custom keypad] button', {
       key,
       action,
       activeInput
@@ -8044,7 +8163,7 @@ function installBulkCustomKeypad() {
       return;
     }
 
-        if (action === 'moveUp') {
+    if (action === 'moveUp') {
       moveVertical(activeInput, 'up');
       return;
     }
@@ -8078,7 +8197,7 @@ function installBulkCustomKeypad() {
     focusNextTarget(activeInput);
   });
 
-    /* =========================
+  /* =========================
      iPadダブルタップ拡大防止（テンキー限定）
      ========================= */
 
@@ -8088,7 +8207,7 @@ function installBulkCustomKeypad() {
     const now = Date.now();
 
     if (now - lastTouchEnd <= 300) {
-      e.preventDefault(); // ←これが本体
+      e.preventDefault();
     }
 
     lastTouchEnd = now;
@@ -8110,5 +8229,5 @@ function installBulkCustomKeypad() {
     e.preventDefault();
   });
 
-  window.applyReadonlyToBulkGridCustomKeypad = applyReadonlyToBulkGrid;
+  window.applyReadonlyToBulkGridCustomKeypad = applyReadonlyToCustomKeypadTargets;
 }
