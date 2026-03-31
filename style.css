@@ -5079,3 +5079,24 @@ body[data-active-app="app3"] #maleAttendance {
     box-sizing: border-box !important;
   }
 }
+
+/* iPad mini / iPad横対策 */
+@media (min-width: 769px) and (max-width: 1180px) {
+  body[data-active-app="app2"] #app2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-right: 12px !important;
+    margin-right: 0 !important;
+  }
+
+  body[data-active-app="app2"] #app2-sideNav {
+    display: none !important;
+  }
+
+  body[data-active-app="app2"] .bulk-grid-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-right: 0 !important;
+    overflow-x: auto !important;
+  }
+}
