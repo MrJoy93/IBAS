@@ -826,15 +826,6 @@ html, body { overflow-x: hidden; }
 }
 
 
-/* サイドナビのぶん app2 コンテンツを縮小 */
-#app2 {
-  width: calc(100% - 140px) !important;
-  max-width: none !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  box-sizing: border-box;
-}
-
 /* 既定は非表示にする */
 #app2-sideNav { display: none; }
 
@@ -1772,12 +1763,6 @@ body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
     right: var(--side-nav-gap-pc) !important;
     width: var(--side-nav-w-pc) !important; z-index: 1200;
   }
-  body[data-active-app="app2"]:not(.bulk-wide) #app2,
-  body[data-active-app="app2"]:not(.bulk-wide) #app2.content{
-    width: 100% !important; max-width: none !important;
-    padding-right: calc(var(--side-nav-w-pc) + var(--side-nav-gap-pc) + var(--side-nav-between-pc)) !important;
-    box-sizing: border-box !important; margin-right: 0 !important;
-  }
 }
 
 /* ========== PC：bulk-wide 時の左右ガター統一 ========== */
@@ -1799,7 +1784,6 @@ body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
 }
 
 /* ========== 保険：どこかで幅を上書きしていても守る ========== */
-body[data-active-app="app2"] #app2-sideNav{ width: var(--side-nav-w-pc) !important; }
 body[data-active-app="app2"] #app2 table,
 body[data-active-app="app2"] #app2 .group{ max-width: 100% !important; overflow: visible; }
 
@@ -3462,15 +3446,6 @@ html, body { overflow-x: hidden; }
 }
 
 
-/* サイドナビのぶん app2 コンテンツを縮小 */
-#app2 {
-  width: calc(100% - 140px) !important;
-  max-width: none !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  box-sizing: border-box;
-}
-
 /* 既定は非表示にする */
 #app2-sideNav { display: none; }
 
@@ -4408,12 +4383,6 @@ body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
     right: var(--side-nav-gap-pc) !important;
     width: var(--side-nav-w-pc) !important; z-index: 1200;
   }
-  body[data-active-app="app2"]:not(.bulk-wide) #app2,
-  body[data-active-app="app2"]:not(.bulk-wide) #app2.content{
-    width: 100% !important; max-width: none !important;
-    padding-right: calc(var(--side-nav-w-pc) + var(--side-nav-gap-pc) + var(--side-nav-between-pc)) !important;
-    box-sizing: border-box !important; margin-right: 0 !important;
-  }
 }
 
 /* ========== PC：bulk-wide 時の左右ガター統一 ========== */
@@ -4435,7 +4404,6 @@ body[data-active-app="app2"].bulk-wide [class*="side-nav"]{
 }
 
 /* ========== 保険：どこかで幅を上書きしていても守る ========== */
-body[data-active-app="app2"] #app2-sideNav{ width: var(--side-nav-w-pc) !important; }
 body[data-active-app="app2"] #app2 table,
 body[data-active-app="app2"] #app2 .group{ max-width: 100% !important; overflow: visible; }
 
