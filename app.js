@@ -8078,5 +8078,37 @@ function installBulkCustomKeypad() {
     focusNextTarget(activeInput);
   });
 
+    /* =========================
+     iPadダブルタップ拡大防止（テンキー限定）
+     ========================= */
+
+  let lastTouchEnd = 0;
+
+  keypad.addEventListener('touchend', function (e) {
+    const now = Date.now();
+
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault(); // ←これが本体
+    }
+
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  keypad.addEventListener('dblclick', function (e) {
+    e.preventDefault();
+  });
+
+  keypad.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
+  });
+
+  keypad.addEventListener('gesturechange', function (e) {
+    e.preventDefault();
+  });
+
+  keypad.addEventListener('gestureend', function (e) {
+    e.preventDefault();
+  });
+
   window.applyReadonlyToBulkGridCustomKeypad = applyReadonlyToBulkGrid;
 }

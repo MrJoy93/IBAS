@@ -5122,3 +5122,26 @@ body[data-active-app="app2"] #bulkGrid {
   border: 1px solid rgba(0,245,255,0.45);
   box-shadow: 0 10px 30px rgba(0,0,0,0.45);
 }
+
+/* =========================
+   自作テンキー：iPadでの拡大・選択・ハイライト抑止
+   ========================= */
+
+#bulkCustomKeypad,
+#bulkCustomKeypad * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#bulkCustomKeypad {
+  touch-action: manipulation;
+}
+
+#bulkCustomKeypad button {
+  touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 12px;
+}
