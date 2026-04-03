@@ -7537,7 +7537,6 @@ const COLMAP_PA = {
   totalCustomers:  "B",
   historyIndexCount: "C",
   maleAttendance: "D",
-  cashSales: "E",
   cardSales: "F",
   totalSales: "G",
   femaleSalary: "H",
@@ -7546,15 +7545,10 @@ const COLMAP_PA = {
   scoutBack: "K",
   adviserFee: "L",
   driverFee: "M",
-  totalLaborCosts: "N",
   femaleTax: "O",
   maleTax: "P",
-  totalTax: "Q",
   alcohol: "R",
   receipt6: "S",
-  totalExpenses: "T",
-  grossProfit: "U",
-  remainingCash:"V"
 };
 
 
