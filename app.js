@@ -7741,19 +7741,54 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function installBulkCustomKeypad() {
-  const isIOSLike = true; // デバッグ用
-
   const keypad = document.getElementById('bulkCustomKeypad');
   const keypadTitle = document.getElementById('bulkCustomKeypadTitle');
 
+  // ===== 端末判定 =====
+  // PCでは無効
+  // タッチ主体端末（iPhone / iPad / Android / Surfaceタブレット系）でのみ有効
+  function isCustomKeypadDevice() {
+    const ua = navigator.userAgent || '';
+    const isIOS =
+      /iPhone|iPad|iPod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const isAndroid = /Android/i.test(ua);
+
+    const hasTouch =
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0);
+
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const desktopWidth = window.matchMedia('(min-width: 1024px)').matches;
+
+    // 「PC幅かつマウス主体」は無効
+    if (desktopWidth && !coarsePointer) return false;
+
+    return isIOS || isAndroid || (hasTouch && coarsePointer);
+  }
+
+  const isMobileLike = isCustomKeypadDevice();
+
   console.log('[custom keypad] init', {
-    isIOSLike,
+    isMobileLike,
     keypadExists: !!keypad
   });
 
-  if (!isIOSLike || !keypad) {
+  // PC時はテンキー完全無効化
+  if (!isMobileLike || !keypad) {
+    document.querySelectorAll('input.bulk-custom-keypad-target').forEach(input => {
+      input.readOnly = false;
+      input.removeAttribute('inputmode');
+      input.classList.remove('bulk-custom-keypad-active');
+    });
+
+    if (keypad) {
+      keypad.hidden = true;
+    }
+
     console.log('[custom keypad] stopped', {
-      reason: !isIOSLike ? 'isIOSLike=false' : 'keypad not found'
+      reason: !isMobileLike ? 'desktop mode' : 'keypad not found'
     });
     return;
   }

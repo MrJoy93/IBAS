@@ -5212,3 +5212,10 @@ input.bulk-custom-keypad-active {
     row-gap: 6px !important;
   }
 }
+
+/* PCでは自作テンキーを表示しない */
+@media screen and (min-width: 1024px) and (pointer: fine) {
+  #bulkCustomKeypad {
+    display: none !important;
+  }
+}
