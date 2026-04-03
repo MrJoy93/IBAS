@@ -1,3 +1,31 @@
+// rowNumber専用：Enterで改行禁止＆確定処理
+document.addEventListener('keydown', function (e) {
+  const target = e.target;
+
+  if (!(target instanceof HTMLElement)) return;
+
+  // rowNumberセルだけ対象
+  if (target.classList.contains('rowNumber')) {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // ← 改行を完全に潰す
+
+      // 不要な <br> を削除（今回の現象対策）
+      target.innerHTML = target.textContent.trim();
+
+      // 次の入力へフォーカス移動（任意）
+      const tr = target.closest('tr');
+      const nextInput = tr?.querySelector('input, select, textarea');
+      if (nextInput) {
+        nextInput.focus();
+        if (nextInput.select) nextInput.select();
+      }
+
+      // 保存（必要なら）
+      if (typeof saveForm === 'function') saveForm();
+    }
+  }
+});
+
 /*** ==== 収集＆復元（あなたのUIに合わせ済み） ==== ***/
 /* app1（伝票）：行とカテゴリチェックを保存 */
 function collectApp1State() {
