@@ -3302,7 +3302,7 @@ html, body { overflow-x: hidden; }
 #categorySection td:nth-child(3),
 #categorySection th:nth-child(4),
 #categorySection td:nth-child(4){
-  width: calc((100% - 40px) / 4);      /* ← 40px はチェック列の幅と一致させる */
+  width: calc((100% - 40px) / 3);      /* ← 40px はチェック列の幅と一致させる */
 }
 
 /* 体裁：カテゴリは左、数値は右で揃える */
