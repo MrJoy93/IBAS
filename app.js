@@ -1,32 +1,1158 @@
-// rowNumber専用：Enterで改行禁止＆確定処理
-document.addEventListener('keydown', function (e) {
-  const target = e.target;
+/************************************************************
+ * 0. 定数・グローバル状態
+ ************************************************************/
+// const ...
+// let ...
+// window.xxx = ...
 
-  if (!(target instanceof HTMLElement)) return;
+let _scrolling = false;
 
-  // rowNumberセルだけ対象
-  if (target.classList.contains('rowNumber')) {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // ← 改行を完全に潰す
+let rowNumber = 2;
 
-      // 不要な <br> を削除（今回の現象対策）
-      target.innerHTML = target.textContent.trim();
+// グローバルにキャッチバック内訳を保持するオブジェクト
+let catchbackDetails = {};
 
-      // 次の入力へフォーカス移動（任意）
-      const tr = target.closest('tr');
-      const nextInput = tr?.querySelector('input, select, textarea');
-      if (nextInput) {
-        nextInput.focus();
-        if (nextInput.select) nextInput.select();
+let _raf = 0;
+
+window.totalStoreCovered = 0;
+
+/************************************************************
+ * 1. 共通ユーティリティ
+ ************************************************************/
+
+// ---- 固定ヘッダ(タブ+可視サブナビ)込みで目的地へスクロール ----
+function scrollToFixed(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  const tabsH = document.querySelector('.tabs')?.offsetHeight || 0;
+  const visibleSub = Array.from(document.querySelectorAll('nav.subnav'))
+    .find(n => getComputedStyle(n).display !== 'none');
+  const subH = visibleSub?.offsetHeight || 0;
+
+  // 念のためサブナビの top も加味（CSSでtop:80px）
+  const subTop = visibleSub ? parseInt(getComputedStyle(visibleSub).top || '0', 10) : 0;
+
+  const offset = tabsH + subH + subTop + 20;     // 余白+20
+  const y = target.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+
+  // 入力欄があるならフォーカス（任意）
+  const focusable = target.matches('input,select,textarea,button')
+      ? target
+      : target.querySelector('input,select,textarea,button');
+  focusable?.focus();
+}
+
+// 共通スクロール関数（ID文字列 / 要素の両対応）
+function scrollWithOffset(target) {
+  let el = null;
+
+  if (typeof target === 'string') {
+    el = document.getElementById(target);
+  } else if (target instanceof HTMLElement) {
+    el = target;
+  }
+
+  if (!el) return;
+
+  const navHeight =
+    (typeof getNavOffsetPx === 'function')
+      ? getNavOffsetPx()
+      : 140; // フォールバック
+
+  const y = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
+
+  window.scrollTo({
+    top: y,
+    behavior: 'smooth'
+  });
+}
+
+window.navScrollTo = function(targetId, behavior='smooth'){
+  const el = document.getElementById(targetId);
+  if (!el) return;
+
+  const top = window.pageYOffset + el.getBoundingClientRect().top - _scrollOffset();
+  const finalTop = Math.max(0, Math.floor(top));
+
+  if (_scrolling) return;
+  _scrolling = true;
+
+  window.scrollTo({ top: finalTop, behavior: _behavior(behavior) });
+
+  setTimeout(() => { _scrolling = false; }, 600);
+};
+
+// 履歴スクロールも navScrollTo に統一
+document.getElementById('side-scroll-history')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  navScrollTo('app2-historySection', 'smooth');
+});
+
+function saveForm() {
+  const formData = [];
+  document.querySelectorAll(".row").forEach((row, index) => {
+    const rowNumber = parseInt(row.querySelector(".rowNumber")?.textContent) || index + 1;
+
+    const rowData = {
+      rowNumber: rowNumber,
+      honshi: row.querySelector(".honshi")?.value || "",
+      category: row.querySelector(".c")?.value || "",
+      amount: row.querySelector(".amount")?.value || "",
+      num: row.querySelector(".num")?.value || "",
+      detail: row.querySelector(".detail")?.value || "",
+      card: row.querySelector(".card")?.value || "",
+      total: row.querySelector(".total")?.value || "",
+      checkboxes: {}
+    };
+
+    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      rowData.checkboxes[checkbox.parentElement.textContent.trim()] = checkbox.checked;
+    });
+
+    formData.push(rowData);
+  });
+
+  localStorage.setItem("formData", JSON.stringify(formData));
+}
+
+function restoreForm() {
+  const savedData = localStorage.getItem("formData");
+  if (savedData) {
+    const formData = JSON.parse(savedData);
+    const table = document.getElementById("formRows");
+
+    // 最初の行以外を削除
+    while (table.rows.length > 1) {
+      table.deleteRow(1);
+    }
+
+    formData.forEach((data, index) => {
+      let row;
+      if (index === 0) {
+        row = table.rows[0];
+      } else {
+        row = table.rows[0].cloneNode(true);
+        table.appendChild(row);
       }
 
-      // 保存（必要なら）
-      if (typeof saveForm === 'function') saveForm();
+      // セルの復元
+      row.querySelector(".rowNumber").textContent = data.rowNumber || index + 1;
+      row.querySelector(".honshi").value = data.honshi || "";
+      row.querySelector(".c").value = data.category || "";
+      row.querySelector(".amount").value = data.amount || "";
+      row.querySelector(".num").value = data.num || "";
+      row.querySelector(".detail").value = data.detail || "";
+      row.querySelector(".card").value = data.card || "";
+      row.querySelector(".total").value = data.total || "";
+
+      updateRowColor(row.querySelector(".c"));
+
+      // 削除ボタンが存在しない場合は追加
+      if (!row.querySelector(".delete-btn")) {
+        const deleteCell = document.createElement("td");
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "削除";
+        deleteButton.className = "delete-btn";
+        deleteButton.onclick = function () {
+          deleteRow(this);
+        };
+        deleteCell.appendChild(deleteButton);
+        row.appendChild(deleteCell);
+      }
+    });
+
+    // 最大行番号を更新
+    const maxRowNum = formData.reduce((max, data) => {
+      const num = parseInt(data.rowNumber, 10);
+      return (!isNaN(num) && num > max) ? num : max;
+    }, 0);
+    rowNumber = maxRowNum + 1;
+
+    updateTotals();
+  } else {
+    rowNumber = 2; // データなしなら初期値に戻す
+  }
+}
+
+// CSS変数からタブ/サブナビ高さ(px)を取得
+function _pxVar(name, fallback = 0){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v.endsWith('px') ? parseFloat(v) : (parseFloat(v) || fallback);
+}
+
+function _currentSubnavH(){
+  const nav = document.querySelector(
+    'body[data-active-app="app1"] #app1-nav,'+
+    'body[data-active-app="app2"] #app2-nav,'+
+    'body[data-active-app="app3"] #app3-nav'
+  );
+  return nav ? nav.offsetHeight : _pxVar('--subnav-h', 50);
+}
+
+function _scrollOffset(){
+  return Math.round(_pxVar('--tabs-h', 56) + _currentSubnavH() + 70);
+}
+
+function _behavior(want='smooth'){
+  return matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : want;
+}
+
+// クリック時のハンドラ（サブナビ・サイドナビ）
+['#app1-nav', '#app2-nav', '#app3-nav', '#app2-sideNav'].forEach(sel => {
+  const nav = document.querySelector(sel);
+  if (!nav) return;
+  nav.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-target]');
+    if (!btn) return;
+    e.preventDefault();
+    navScrollTo(btn.getAttribute('data-target'), 'smooth');
+  }, { passive:false });
+});
+
+// アンカー直飛び防止
+(() => {
+  const style = document.createElement('style');
+  style.textContent = `html { scroll-behavior: auto !important; }`;
+  document.head.appendChild(style);
+})();
+
+function addComma(numStr) {
+  if (!numStr) return '';
+  // 数字とマイナス以外は除去
+  let val = numStr.replace(/[^\d\-]/g, '');
+  val = val.replace(/(?!^)-/g, '');
+  if (val === '' || val === '-') return val;
+  return parseInt(val, 10).toLocaleString('ja-JP');
+}
+
+// APP2 一括入力グリッド専用 iPad自作テンキー
+function installBulkCustomKeypad() {
+  const keypad = document.getElementById('bulkCustomKeypad');
+  const keypadTitle = document.getElementById('bulkCustomKeypadTitle');
+
+  // ===== 端末判定 =====
+  // PCでは無効
+  // タッチ主体端末（iPhone / iPad / Android / Surfaceタブレット系）でのみ有効
+  function isCustomKeypadDevice() {
+    const ua = navigator.userAgent || '';
+    const isIOS =
+      /iPhone|iPad|iPod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    const isAndroid = /Android/i.test(ua);
+
+    const hasTouch =
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0);
+
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const desktopWidth = window.matchMedia('(min-width: 1024px)').matches;
+
+    // 「PC幅かつマウス主体」は無効
+    if (desktopWidth && !coarsePointer) return false;
+
+    return isIOS || isAndroid || (hasTouch && coarsePointer);
+  }
+
+  const isMobileLike = isCustomKeypadDevice();
+
+  console.log('[custom keypad] init', {
+    isMobileLike,
+    keypadExists: !!keypad
+  });
+
+  // PC時はテンキー完全無効化
+  if (!isMobileLike || !keypad) {
+    document.querySelectorAll('input.bulk-custom-keypad-target').forEach(input => {
+      input.readOnly = false;
+      input.removeAttribute('inputmode');
+      input.classList.remove('bulk-custom-keypad-active');
+    });
+
+    if (keypad) {
+      keypad.hidden = true;
     }
+
+    console.log('[custom keypad] stopped', {
+      reason: !isMobileLike ? 'desktop mode' : 'keypad not found'
+    });
+    return;
+  }
+
+  let activeInput = null;
+
+  function isTarget(el) {
+    return el instanceof HTMLInputElement
+      && el.classList.contains('bulk-custom-keypad-target')
+      && !el.disabled
+      && el.type !== 'hidden';
+  }
+
+  function stripCommas(v) {
+    return String(v ?? '').replace(/,/g, '');
+  }
+
+  function normalizeNumericString(v) {
+    return stripCommas(v).replace(/[^\d-]/g, '');
+  }
+
+  function dispatchInput(input) {
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function applyReadonlyToCustomKeypadTargets() {
+    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
+
+    console.log('[custom keypad] applyReadonlyToCustomKeypadTargets', {
+      count: inputs.length
+    });
+
+    inputs.forEach(input => {
+      if (input.disabled) return;
+      input.readOnly = true;
+      input.setAttribute('inputmode', 'none');
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+    });
+  }
+
+  function getLabel(input) {
+    return input.getAttribute('placeholder')
+      || input.dataset.k
+      || input.id
+      || input.className
+      || '数値入力';
+  }
+
+  function clearActiveState() {
+    document
+      .querySelectorAll('input.bulk-custom-keypad-active')
+      .forEach(el => el.classList.remove('bulk-custom-keypad-active'));
+  }
+
+  function showKeypad(input) {
+    if (!input) return;
+
+    console.log('[custom keypad] SHOW', input);
+
+    clearActiveState();
+
+    activeInput = input;
+    activeInput.classList.add('bulk-custom-keypad-active');
+
+    if (keypadTitle) {
+      keypadTitle.textContent = `入力中: ${getLabel(input)}`;
+    }
+
+    keypad.hidden = false;
+
+    console.log('[custom keypad] visible', {
+      hidden: keypad.hidden,
+      display: getComputedStyle(keypad).display,
+      visibility: getComputedStyle(keypad).visibility,
+      opacity: getComputedStyle(keypad).opacity
+    });
+  }
+
+  function hideKeypad() {
+    clearActiveState();
+    activeInput = null;
+    keypad.hidden = true;
+
+    console.log('[custom keypad] HIDE');
+  }
+
+  function setRawValue(input, raw) {
+    input.value = raw;
+    dispatchInput(input);
+  }
+
+  function appendText(input, text) {
+    if (!input) return;
+
+    let raw = normalizeNumericString(input.value);
+
+    if (text === '00' || text === '000') {
+      if (raw === '' || raw === '-') {
+        raw = raw === '-' ? '-0' : '0';
+      }
+      raw += text;
+      setRawValue(input, raw);
+      return;
+    }
+
+    raw += text;
+
+    if (!/^-?\d*$/.test(raw)) return;
+
+    setRawValue(input, raw);
+  }
+
+  function backspace(input) {
+    if (!input) return;
+    const raw = normalizeNumericString(input.value).slice(0, -1);
+    setRawValue(input, raw);
+  }
+
+  function clearValue(input) {
+    if (!input) return;
+    setRawValue(input, '');
+  }
+
+  function toggleMinus(input) {
+    if (!input) return;
+
+    let raw = normalizeNumericString(input.value);
+
+    if (raw.startsWith('-')) {
+      raw = raw.slice(1);
+    } else {
+      raw = '-' + raw;
+    }
+
+    setRawValue(input, raw);
+  }
+
+  function getTargetScope(input) {
+    if (!input) return document.body;
+
+    if (input.closest('#bulkGrid')) {
+      return document.getElementById('bulkGrid') || document.body;
+    }
+
+    if (input.closest('#app1')) {
+      return document.getElementById('app1') || document.body;
+    }
+
+    if (input.closest('#app3')) {
+      return document.getElementById('app3') || document.body;
+    }
+
+    return document.body;
+  }
+
+  function getScopedTargets(input) {
+    const scope = getTargetScope(input);
+
+    return Array.from(scope.querySelectorAll('input.bulk-custom-keypad-target'))
+      .filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
+  }
+
+  function focusTargetInput(next) {
+    if (!next) return;
+    showKeypad(next);
+  }
+
+  function focusNextTarget(current) {
+    const all = getScopedTargets(current);
+    const idx = all.indexOf(current);
+    if (idx === -1) return;
+
+    const next = all[idx + 1];
+    if (next) {
+      showKeypad(next);
+    } else {
+      hideKeypad();
+    }
+  }
+
+  function moveHorizontal(current, direction) {
+    const all = getScopedTargets(current);
+    const idx = all.indexOf(current);
+    if (idx === -1) return;
+
+    const currentRow = current.closest('tr');
+    if (currentRow) {
+      if (direction === 'left') {
+        for (let i = idx - 1; i >= 0; i--) {
+          const el = all[i];
+          if (el.closest('tr') === currentRow) {
+            focusTargetInput(el);
+            return;
+          }
+        }
+        return;
+      }
+
+      if (direction === 'right') {
+        for (let i = idx + 1; i < all.length; i++) {
+          const el = all[i];
+          if (el.closest('tr') === currentRow) {
+            focusTargetInput(el);
+            return;
+          }
+        }
+        return;
+      }
+    }
+
+    const currentGroup =
+      current.closest('.app3-row') ||
+      current.closest('.app3-line') ||
+      current.closest('.row') ||
+      current.parentElement;
+
+    if (!currentGroup) return;
+
+    const rowInputs = Array.from(
+      currentGroup.querySelectorAll('input.bulk-custom-keypad-target')
+    ).filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
+
+    const localIdx = rowInputs.indexOf(current);
+    if (localIdx === -1) return;
+
+    if (direction === 'left' && rowInputs[localIdx - 1]) {
+      focusTargetInput(rowInputs[localIdx - 1]);
+      return;
+    }
+
+    if (direction === 'right' && rowInputs[localIdx + 1]) {
+      focusTargetInput(rowInputs[localIdx + 1]);
+    }
+  }
+
+  function moveVerticalInBulkGrid(current, direction) {
+    const currentRow = current.closest('tr.bulk-mainrow');
+    const currentCell = current.closest('td');
+    if (!currentRow || !currentCell) return false;
+
+    const rowList = Array.from(
+      document.querySelectorAll('#bulkGrid tbody tr.bulk-mainrow')
+    );
+
+    const rowIndex = rowList.indexOf(currentRow);
+    if (rowIndex === -1) return false;
+
+    const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
+
+    let targetRow = null;
+
+    if (direction === 'up') {
+      for (let i = rowIndex - 1; i >= 0; i--) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (direction === 'down') {
+      for (let i = rowIndex + 1; i < rowList.length; i++) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (!targetRow) return true;
+
+    const cells = targetRow.children;
+    const targetCell = cells[cellIndex];
+    if (!targetCell) return true;
+
+    const next = targetCell.querySelector('input.bulk-custom-keypad-target');
+    if (next && !next.disabled) {
+      focusTargetInput(next);
+    }
+
+    return true;
+  }
+
+  function moveVerticalInApp1(current, direction) {
+    const currentRow = current.closest('#formRows tr.row');
+    const currentCell = current.closest('td');
+    if (!currentRow || !currentCell) return false;
+
+    const rowList = Array.from(document.querySelectorAll('#formRows tr.row'));
+    const rowIndex = rowList.indexOf(currentRow);
+    if (rowIndex === -1) return false;
+
+    const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
+
+    let targetRow = null;
+
+    if (direction === 'up') {
+      for (let i = rowIndex - 1; i >= 0; i--) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (direction === 'down') {
+      for (let i = rowIndex + 1; i < rowList.length; i++) {
+        const row = rowList[i];
+        if (row) {
+          targetRow = row;
+          break;
+        }
+      }
+    }
+
+    if (!targetRow) return true;
+
+    const cells = targetRow.children;
+    const targetCell = cells[cellIndex];
+    if (!targetCell) return true;
+
+    const next = targetCell.querySelector('input.bulk-custom-keypad-target');
+    if (next && !next.disabled) {
+      focusTargetInput(next);
+    }
+
+    return true;
+  }
+
+  function moveVerticalFallback(current, direction) {
+    const all = getScopedTargets(current);
+    const idx = all.indexOf(current);
+    if (idx === -1) return;
+
+    if (direction === 'up' && all[idx - 1]) {
+      focusTargetInput(all[idx - 1]);
+      return;
+    }
+
+    if (direction === 'down' && all[idx + 1]) {
+      focusTargetInput(all[idx + 1]);
+    }
+  }
+
+  function moveVertical(current, direction) {
+    if (!current) return;
+
+    if (moveVerticalInBulkGrid(current, direction)) return;
+    if (moveVerticalInApp1(current, direction)) return;
+
+    moveVerticalFallback(current, direction);
+  }
+
+  applyReadonlyToCustomKeypadTargets();
+
+  const mo = new MutationObserver(() => {
+    applyReadonlyToCustomKeypadTargets();
+  });
+  mo.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    const target = e.target;
+
+    console.log('[custom keypad] pointerdown', target);
+
+    if (isTarget(target)) {
+      console.log('[custom keypad] TARGET OK', target);
+      e.preventDefault();
+      showKeypad(target);
+      return;
+    }
+
+    if (keypad.contains(target)) {
+      console.log('[custom keypad] keypad click area');
+      return;
+    }
+
+    hideKeypad();
+  }, true);
+
+  document.addEventListener('focusin', (e) => {
+    const target = e.target;
+
+    if (!isTarget(target)) return;
+
+    console.log('[custom keypad] focusin target', target);
+
+    target.readOnly = true;
+    showKeypad(target);
+
+    try {
+      target.blur();
+    } catch (_) {}
+  });
+
+  keypad.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || !activeInput) return;
+
+    const key = btn.dataset.key;
+    const action = btn.dataset.action;
+
+    console.log('[custom keypad] button', {
+      key,
+      action,
+      activeInput
+    });
+
+    if (key != null) {
+      appendText(activeInput, key);
+      return;
+    }
+
+    if (action === 'backspace') {
+      backspace(activeInput);
+      return;
+    }
+
+    if (action === 'clear') {
+      clearValue(activeInput);
+      return;
+    }
+
+    if (action === 'minus') {
+      toggleMinus(activeInput);
+      return;
+    }
+
+    if (action === 'moveUp') {
+      moveVertical(activeInput, 'up');
+      return;
+    }
+
+    if (action === 'moveDown') {
+      moveVertical(activeInput, 'down');
+      return;
+    }
+
+    if (action === 'moveLeft') {
+      moveHorizontal(activeInput, 'left');
+      return;
+    }
+
+    if (action === 'moveRight') {
+      moveHorizontal(activeInput, 'right');
+      return;
+    }
+
+    if (action === 'done') {
+      focusNextTarget(activeInput);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!activeInput) return;
+    if (!isTarget(activeInput)) return;
+    if (e.key !== 'Enter') return;
+
+    e.preventDefault();
+    focusNextTarget(activeInput);
+  });
+
+  /* =========================
+     iPadダブルタップ拡大防止（テンキー限定）
+     ========================= */
+
+  let lastTouchEnd = 0;
+
+  keypad.addEventListener('touchend', function (e) {
+    const now = Date.now();
+
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  keypad.addEventListener('dblclick', function (e) {
+    e.preventDefault();
+  });
+
+  keypad.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
+  });
+
+  keypad.addEventListener('gesturechange', function (e) {
+    e.preventDefault();
+  });
+
+  keypad.addEventListener('gestureend', function (e) {
+    e.preventDefault();
+  });
+
+  window.applyReadonlyToBulkGridCustomKeypad = applyReadonlyToCustomKeypadTargets;
+}
+
+
+/************************************************************
+ * 2. 共通DOM制御・共通イベント
+ ************************************************************/
+
+function updateAdviserFeeFromTotalCount() {
+ const countEl = document.getElementById('totalCountValue');
+ const adviserFeeInput = document.getElementById('adviserFee');
+
+ if (!countEl || !adviserFeeInput) return;
+
+ const count = parseInt(countEl.textContent.replace(/,/g, ''), 10) || 0;
+ const fee = count * 1000;
+ adviserFeeInput.value = fee;
+
+ updateCalculations(); // 必要に応じて再計算
+}
+
+function observeTotalCountForAdviserFee() {
+ const target = document.getElementById('totalCountValue');
+ if (!target) return;
+
+ const observer = new MutationObserver(() => {
+    updateAdviserFeeFromTotalCount();
+ });
+
+ observer.observe(target, {
+  childList: true,
+  characterData: true,
+  subtree: true,
+ });
+}
+
+// app1/app3内だけカンマ付与
+function attachCommaFormatApp1and3() {
+  // app1対象
+  document.querySelectorAll(
+    '#app1 input.amount, #app1 input.num, #app1 input.card, #app1 input.total, #app1 input.honshi, #app1 input.table-number'
+  ).forEach(input => {
+    if (input._commaFormatApplied) return;
+    input._commaFormatApplied = true;
+
+    input.addEventListener('input', function () {
+      let val = this.value.replace(/,/g, '');
+      if (val === '' || !/^-?\d*$/.test(val)) {
+        this.value = '';
+        return;
+      }
+      this.value = addComma(val);
+    });
+    input.addEventListener('focus', function () {
+      this.value = this.value.replace(/,/g, '');
+    });
+    input.addEventListener('blur', function () {
+      this.value = addComma(this.value);
+    });
+    // 初期値にも即時カンマ
+    if (input.value) input.value = addComma(input.value);
+  });
+
+  // app3対象（#app3直下でinput[type="text"]の全部/disabled除外）
+  document.querySelectorAll('#app3 input[type="text"]:not([disabled])')
+    .forEach(input => {
+      if (input._commaFormatApplied) return;
+      input._commaFormatApplied = true;
+
+      input.addEventListener('input', function () {
+        let val = this.value.replace(/,/g, '');
+        if (val === '' || !/^-?\d*$/.test(val)) {
+          this.value = '';
+          return;
+        }
+        this.value = addComma(val);
+      });
+      input.addEventListener('focus', function () {
+        this.value = this.value.replace(/,/g, '');
+      });
+      input.addEventListener('blur', function () {
+        this.value = addComma(this.value);
+      });
+      if (input.value) input.value = addComma(input.value);
+    });
+}
+
+/* ========= タブ切替 + 各APPのスクロール記憶 =============================================================================== */
+(function () {
+  const tabsRoot = document.querySelector('.tabs');
+  if (!tabsRoot) return;
+
+  const pagesById = new Map(['app1','app2','app3'].map(id => [id, document.getElementById(id)]));
+
+  const SCROLL_KEY = 'appScrollMap';
+  const loadMap = () => { try { return JSON.parse(localStorage.getItem(SCROLL_KEY)) || {}; } catch(_) { return {}; } };
+  const saveMap = (m) => { try { localStorage.setItem(SCROLL_KEY, JSON.stringify(m)); } catch(_) {} };
+  let scrollMap = loadMap();
+
+  const getY = () => window.pageYOffset || document.documentElement.scrollTop || 0;
+  const restoreY = (id) => {
+    const y = Number(scrollMap[id] ?? 0);
+    // レイアウト確定後に復帰
+    requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'auto' }));
+  };
+
+  // スクロールのたびに「現在のAPP」の位置を保存（rAFスロットル）
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const id = document.body.getAttribute('data-active-app');
+      if (!id) return;
+      scrollMap[id] = getY();
+      saveMap(scrollMap);
+    });
+  }, { passive: true });
+
+  function apply(targetId) {
+    // 切替前に現在の位置を保存
+    const prevId = document.body.getAttribute('data-active-app');
+    if (prevId) {
+      scrollMap[prevId] = getY();
+      saveMap(scrollMap);
+    }
+
+    // ページ表示/非表示
+    pagesById.forEach((el, id) => {
+      const on = id === targetId;
+      if (!el) return;
+      el.style.display = on ? '' : 'none';
+      el.classList.toggle('active', on);
+      el.toggleAttribute('hidden', !on);
+    });
+
+    // タブの見た目/ARIA
+    tabsRoot.querySelectorAll('.tab').forEach(t => {
+      const on = t.dataset.target === targetId;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', on ? '0' : '-1');
+      t.setAttribute('role', 'tab');
+    });
+
+    document.body.setAttribute('data-active-app', targetId);
+    try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
+
+    // そのAPPの以前の位置へ復帰
+    restoreY(targetId);
+  }
+
+  // 外からも呼べるように
+  window.showApp = apply;
+
+  // スクロール記憶を完全クリア（ローカル/メモリ両方）
+window.clearTabScrollMemory = () => {
+  scrollMap = {};
+  saveMap(scrollMap);
+};
+
+  // クリック＆Enter/Spaceでタブ切替
+  tabsRoot.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab || !tabsRoot.contains(tab)) return;
+    const id = tab.dataset.target;
+    if (id) apply(id);
+  });
+
+  tabsRoot.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    e.preventDefault();
+    const id = tab.dataset.target;
+    if (id) apply(id);
+  });
+
+  // 初期表示（保存 > 既存active > 先頭 > app1）
+  const saved = localStorage.getItem('selectedTab');
+  const fallbackTab = tabsRoot.querySelector('.tab.active') || tabsRoot.querySelector('.tab');
+  const fallback = fallbackTab?.dataset.target || 'app1';
+  apply(saved || fallback);
+
+  // ページ離脱時の保険
+  window.addEventListener('beforeunload', () => {
+    const id = document.body.getAttribute('data-active-app');
+    if (!id) return;
+    scrollMap[id] = getY();
+    saveMap(scrollMap);
+  });
+})();
+
+// APPの日付読み取り（既存処理）
+function readWorkDate(){
+  const el =
+    document.getElementById('workDate') ||
+    document.querySelector('input[name="workDate"]') ||
+    document.querySelector('#dateGroup input[type="date"]');
+  if (!el) return '';
+
+  if ('valueAsDate' in el && el.valueAsDate instanceof Date && !isNaN(el.valueAsDate)) {
+    const d = el.valueAsDate;
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+
+  let v = (el.value || el.getAttribute('value') || el.textContent || '').trim();
+  if (!v) return '';
+  v = v.replace(/\./g,'/').replace(/-/g,'/');
+  const m = v.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+  if (!m) return '';
+  const y = m[1];
+  const mm = String(parseInt(m[2],10)).padStart(2,'0');
+  const dd = String(parseInt(m[3],10)).padStart(2,'0');
+  return `${y}-${mm}-${dd}`;
+}
+
+/* 合計ユーティリティ（存在しなければ定義） */
+if (typeof window.subtotal !== 'function') {
+  window.subtotal = function(values){
+    let s = 0; for (const v of (values||[])) s += (Number(v)||0); return s;
+  };
+}
+
+// === 入力フォームを選択した瞬間に中の文字を全選択する ===
+document.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+
+  if (el.classList?.contains('use-custom-keypad')) {
+    return;
+  }
+
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+    el.select?.();
   }
 });
 
-/*** ==== 収集＆復元（あなたのUIに合わせ済み） ==== ***/
+// 退行などで data-readonly="1" の <select> はキー操作でも値を変えさせない
+document.addEventListener('keydown', (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+  if (el.tagName !== 'SELECT') return;
+  if (el.dataset.readonly !== '1') return;
+
+  // 値が変わり得るキーをブロック（上下/左右/確定など）
+  const k = e.key;
+  const block = [
+    'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+    'PageUp','PageDown','Home','End','Enter',' '
+  ];
+  if (block.includes(k)) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+
+//Enterキー移動
+function handleEnterNavigation(e) {
+  if (e.key !== 'Enter') return;
+
+  const target = e.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  // --------------------------------------------------
+  // 1) rowNumber 専用
+  // --------------------------------------------------
+  if (target.classList.contains('rowNumber')) {
+    e.preventDefault();
+
+    // contenteditable で混入した不要な <br> を除去
+    target.innerHTML = target.textContent.trim();
+
+    // 同じ行の次入力へ
+    const tr = target.closest('tr');
+    const nextInput = tr?.querySelector('input, select, textarea');
+    if (nextInput) {
+      nextInput.focus();
+      if (typeof nextInput.select === 'function') {
+        nextInput.select();
+      }
+    }
+
+    // 必要なら保存
+    if (typeof saveForm === 'function') {
+      saveForm();
+    }
+    return;
+  }
+
+  // --------------------------------------------------
+  // 2) 通常フォーム専用
+  // --------------------------------------------------
+  if (!target.matches('input, select, textarea')) return;
+
+  e.preventDefault();
+
+  // 現在アクティブな APP を基準にスコープ決定
+  const activeAppId = document.body.getAttribute('data-active-app') || '';
+  const scope =
+    target.closest('.content') ||
+    document.getElementById(activeAppId) ||
+    document.body;
+
+  // 表示中かつ有効なフォーム要素のみ対象
+  const formElements = Array.from(
+    scope.querySelectorAll(
+      'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+    )
+  ).filter(el => el.offsetParent !== null);
+
+  const index = formElements.indexOf(target);
+  const next = formElements[index + 1];
+
+  if (next) {
+    next.focus();
+    if (typeof next.select === 'function') {
+      next.select();
+    }
+  }
+}
+
+document.addEventListener('keydown', handleEnterNavigation);
+
+document.addEventListener('gesturestart', function (e) {
+  e.preventDefault();
+});
+
+let startY = 0;
+
+document.addEventListener('touchstart', function (e) {
+  startY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchmove', function (e) {
+  const currentY = e.touches[0].clientY;
+
+  // 上方向へスクロールしようとしていて、ページが一番上にいるとき
+  if (currentY > startY && window.scrollY === 0) {
+    e.preventDefault(); // iOS Safari でPull-to-Refreshを防止
+  }
+}, { passive: false });
+
+// ============================================================
+// APP1/APP2 の入力・選択操作でも APP3 更新を予約（保険）
+// ============================================================
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t) return;
+  if (t.closest('#app1') || t.closest('#app2') || t.closest('#app3')) {
+  scheduleApp3Update('input(app1/app2/app3)');
+}
+}, true);
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (!t) return;
+  if (t.closest('#app1') || t.closest('#app2')) {
+    scheduleApp3Update('change(app1/app2)');
+  }
+}, true);
+
+
+
+/************************************************************
+ * 3. APP1
+ ************************************************************/
+
 /* app1（伝票）：行とカテゴリチェックを保存 */
 function collectApp1State() {
   const tbody = document.getElementById('formRows');
@@ -147,309 +1273,44 @@ function applyApp1State(state) {
   }
 }
 
-
-/* app2（報酬計算）：id を持つ input/select/textarea を丸ごと保存/復元＋ボトル明細 */
-function collectApp2State(){
-  const root = document.getElementById('app2');
-  if(!root) return {};
-
-  const fields = {};
-  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
-    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
-  });
-
-  // 既存: ボトル明細
-const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
-  details: getSelectedDetail(form) || "",
-  split:   form.querySelector('.splitCount')?.value ?? "",
-  qty:     form.querySelector('.bottleQuantity')?.value ?? "",
-  amount:  form.querySelector('.bottleAmount')?.value ?? ""
-}));
-
-  // ★追加: 履歴（HTMLそのまま）
-  const historyRoot = document.getElementById('historyList');
-  const historyHTML = historyRoot ? historyRoot.innerHTML : "";
-
-  return { fields, bottles, historyHTML };
+function createEmptyRow(number) {
+  const tr = document.createElement('tr');
+  tr.className = "row";
+  tr.innerHTML = `
+    <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+    <td class="rowNumber" contenteditable="true">${number}</td>
+    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
+    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
+    <td>
+      <select class="c" oninput="updateRowColor(this); updateTotals()">
+        <option value="">-</option>
+        <option value="UK">UK</option>
+        <option value="K">K</option>
+        <option value="AB">AB</option>
+        <option value="LA">LA</option>
+        <option value="PA">PA</option>
+        <option value="BB">BB</option>
+        <option value="MS">MS</option>
+        <option value="GM">GM</option>
+        <option value="B">B</option>
+        <option value="JOE">JOE</option>
+        <option value="KOSE">KOSE</option>
+        <option value="HE">HE</option>
+        <option value="PB">PB</option>
+        <option value="X">X</option>
+        <option value="Z">Z</option>
+      </select>
+    </td>
+    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
+    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
+    <td><input class="detail" type="text" placeholder="詳細" /></td>
+    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
+    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
+  `;
+  return tr;
 }
 
-function applyApp2State(state){
-  const root = document.getElementById('app2');
-  if(!root || !state) return;
-
-  if(state.fields){
-    Object.entries(state.fields).forEach(([id, val])=>{
-      const el = root.querySelector('#'+CSS.escape(id));
-      if(!el) return;
-      if(el.type === 'checkbox'){ el.checked = !!val; }
-      else { el.value = val ?? ""; }
-    });
-  }
-
-  if(Array.isArray(state.bottles)){
-    const container = root.querySelector('#bottleFormsContainer');
-    if(container){
-      container.innerHTML = "";
-      state.bottles.forEach(b=>{
-        // 既存の追加関数があればそれを使う
-        if(typeof window.addBottleForm === "function"){
-          const el = window.addBottleForm();
-          const sel = el?.querySelector('.bottleDetails');
-          if (sel) setBottleDetailValue(sel, b.details ?? "");
-          (el?.querySelector('.splitCount')||{}).value    = b.split ?? "";
-          (el?.querySelector('.bottleQuantity')||{}).value= b.qty ?? "";
-          (el?.querySelector('.bottleAmount')||{}).value  = b.amount ?? "";
-        }else{
-          // フォールバック生成（既存実装に合わせる）
-          const row = document.createElement('div');
-          row.className = 'bottle-form';
-          row.innerHTML = `
-            <div class="left-group">
-              <button type="button" class="delete-btn" onclick="this.closest('.bottle-form')?.remove()">×</button>
-              <select class="bottleDetails"><option value=""></option></select>
-            </div>
-            <input class="splitCount" type="text"/>
-            <input class="bottleQuantity" type="text"/>
-            <input class="bottleAmount" type="text"/>`;
-          container.appendChild(row);
-          setBottleDetailValue(row.querySelector('.bottleDetails'), b.details ?? "");
-          row.querySelector('.splitCount').value    = b.split ?? "";
-          row.querySelector('.bottleQuantity').value= b.qty ?? "";
-          row.querySelector('.bottleAmount').value  = b.amount ?? "";
-        }
-      });
-    }
-  }
-
-  // ★追加: 履歴HTMLの反映＋派生処理
-  if (typeof state.historyHTML === "string") {
-    const historyRoot = document.getElementById('historyList');
-    if (historyRoot && historyRoot.innerHTML !== state.historyHTML) {
-      historyRoot.innerHTML = state.historyHTML;
-      try { localStorage.setItem('historyList', state.historyHTML); } catch(e){}
-      if (typeof window.renumberHistory === "function") renumberHistory();
-      if (typeof window.refreshBottleDropdownsFromHistory === "function") refreshBottleDropdownsFromHistory();
-      if (typeof window.updateSummary === "function") updateSummary();
-    }
-  }
-}
-
-
-/* app3（ざっくり）：id付きの要素を一括保存/復元 */
-function collectApp3State(){
-  const root = document.getElementById('app3');
-  if(!root) return {};
-  const fields = {};
-  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
-    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
-  });
-  return { fields };
-}
-function applyApp3State(state){
-  const root = document.getElementById('app3');
-  if(!root || !state || !state.fields) return;
-  Object.entries(state.fields).forEach(([id, val])=>{
-    const el = root.querySelector('#'+CSS.escape(id));
-    if(!el) return;
-    if(el.type === 'checkbox'){ el.checked = !!val; }
-    else { el.value = val ?? ""; }
-  });
-}
-
-
-
-//<base script---------------------------------------------------------------------------------------------------------------->
-  function updateAdviserFeeFromTotalCount() {
-    const countEl = document.getElementById('totalCountValue');
-    const adviserFeeInput = document.getElementById('adviserFee');
-
-    if (!countEl || !adviserFeeInput) return;
-
-    const count = parseInt(countEl.textContent.replace(/,/g, ''), 10) || 0;
-    const fee = count * 1000;
-    adviserFeeInput.value = fee;
-
-    updateCalculations(); // 必要に応じて再計算
-  }
-
-  function observeTotalCountForAdviserFee() {
-    const target = document.getElementById('totalCountValue');
-    if (!target) return;
-
-    const observer = new MutationObserver(() => {
-      updateAdviserFeeFromTotalCount();
-    });
-
-    observer.observe(target, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-document.addEventListener('gesturestart', function (e) {
-  e.preventDefault();
-});
-
-let startY = 0;
-
-document.addEventListener('touchstart', function (e) {
-  startY = e.touches[0].clientY;
-}, { passive: false });
-
-document.addEventListener('touchmove', function (e) {
-  const currentY = e.touches[0].clientY;
-
-  // 上方向へスクロールしようとしていて、ページが一番上にいるとき
-  if (currentY > startY && window.scrollY === 0) {
-    e.preventDefault(); // iOS Safari でPull-to-Refreshを防止
-  }
-}, { passive: false });
-
-// ---- 固定ヘッダ(タブ+可視サブナビ)込みで目的地へスクロール ----
-function scrollToFixed(targetId) {
-  const target = document.getElementById(targetId);
-  if (!target) return;
-
-  const tabsH = document.querySelector('.tabs')?.offsetHeight || 0;
-  const visibleSub = Array.from(document.querySelectorAll('nav.subnav'))
-    .find(n => getComputedStyle(n).display !== 'none');
-  const subH = visibleSub?.offsetHeight || 0;
-
-  // 念のためサブナビの top も加味（CSSでtop:80px）
-  const subTop = visibleSub ? parseInt(getComputedStyle(visibleSub).top || '0', 10) : 0;
-
-  const offset = tabsH + subH + subTop + 20;     // 余白+20
-  const y = target.getBoundingClientRect().top + window.pageYOffset - offset;
-  window.scrollTo({ top: y, behavior: 'smooth' });
-
-  // 入力欄があるならフォーカス（任意）
-  const focusable = target.matches('input,select,textarea,button')
-      ? target
-      : target.querySelector('input,select,textarea,button');
-  focusable?.focus();
-}
-
-// 共通スクロール関数（サイド／サブナビ用）
-function scrollWithOffset(targetId) {
-  const target = document.getElementById(targetId);
-  if (target) {
-    const navHeight = 140; // タブ(80px) + サブナビ(50px) + 余白10px
-    const y = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
-    window.scrollTo({ top: y, behavior: 'smooth' });
-  }
-}
-
-/* ========= ナビスクロールを統一 ========= */
-
-// CSS変数からタブ/サブナビ高さ(px)を取得
-function _pxVar(name, fallback = 0){
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v.endsWith('px') ? parseFloat(v) : (parseFloat(v) || fallback);
-}
-function _currentSubnavH(){
-  const nav = document.querySelector(
-    'body[data-active-app="app1"] #app1-nav,'+
-    'body[data-active-app="app2"] #app2-nav,'+
-    'body[data-active-app="app3"] #app3-nav'
-  );
-  return nav ? nav.offsetHeight : _pxVar('--subnav-h', 50);
-}
-function _scrollOffset(){
-  return Math.round(_pxVar('--tabs-h', 56) + _currentSubnavH() + 70);
-}
-
-function _behavior(want='smooth'){
-  return matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : want;
-}
-
-let _scrolling = false;
-window.navScrollTo = function(targetId, behavior='smooth'){
-  const el = document.getElementById(targetId);
-  if (!el) return;
-
-  const top = window.pageYOffset + el.getBoundingClientRect().top - _scrollOffset();
-  const finalTop = Math.max(0, Math.floor(top));
-
-  if (_scrolling) return;
-  _scrolling = true;
-
-  window.scrollTo({ top: finalTop, behavior: _behavior(behavior) });
-
-  setTimeout(() => { _scrolling = false; }, 600);
-};
-
-// クリック時のハンドラ（サブナビ・サイドナビ）
-['#app1-nav', '#app2-nav', '#app3-nav', '#app2-sideNav'].forEach(sel => {
-  const nav = document.querySelector(sel);
-  if (!nav) return;
-  nav.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-target]');
-    if (!btn) return;
-    e.preventDefault();
-    navScrollTo(btn.getAttribute('data-target'), 'smooth');
-  }, { passive:false });
-});
-
-// 履歴スクロールも navScrollTo に統一
-document.getElementById('side-scroll-history')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  navScrollTo('app2-historySection', 'smooth');
-});
-
-// アンカー直飛び防止
-(() => {
-  const style = document.createElement('style');
-  style.textContent = `html { scroll-behavior: auto !important; }`;
-  document.head.appendChild(style);
-})();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//<app1 script---------------------------------------------------------------------------------------------------------------->
-//伝票検索機能
-
-/* =====================================================
-   APP1：伝票テーブル内 十字キー移動
-   ↑↓→←キーでセル間移動
-===================================================== */
+// APP1：伝票テーブル内 十字キー移動
 function enableArrowNavigationApp1(){
   const table = document.querySelector('#app1 #formRows');
   if (!table) return;
@@ -531,10 +1392,6 @@ function enableArrowNavigationApp1(){
   });
 }
 
-// ページロード時に有効化
-window.addEventListener('DOMContentLoaded', enableArrowNavigationApp1);
-
-
 function searchByAmount() {
   const input = document.getElementById('searchAmount').value.replace(/,/g, '').trim();
   const rows = document.querySelectorAll('#formRows tr');
@@ -581,7 +1438,6 @@ function searchByAmount() {
   }
 }
 
-
 function resetSearch() {
   document.getElementById('searchAmount').value = '';
   const rows = document.querySelectorAll('#formRows tr');
@@ -596,61 +1452,6 @@ function resetSearch() {
     }
   });
 }
-
-function saveCheckboxStates() {
-  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
-  const states = Array.from(checkboxes).map(cb => cb.checked);
-  localStorage.setItem("checkboxStates", JSON.stringify(states));
-}
-
-function restoreCheckboxStates() {
-  const states = JSON.parse(localStorage.getItem("checkboxStates"));
-  if (!states) return;
-  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
-  checkboxes.forEach((cb, index) => {
-    cb.checked = states[index];
-  });
-}
-
-let rowNumber = 2;
-
-function createEmptyRow(number) {
-  const tr = document.createElement('tr');
-  tr.className = "row";
-  tr.innerHTML = `
-    <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
-    <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
-    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
-    <td>
-      <select class="c" oninput="updateRowColor(this); updateTotals()">
-        <option value="">-</option>
-        <option value="UK">UK</option>
-        <option value="K">K</option>
-        <option value="AB">AB</option>
-        <option value="LA">LA</option>
-        <option value="PA">PA</option>
-        <option value="BB">BB</option>
-        <option value="MS">MS</option>
-        <option value="GM">GM</option>
-        <option value="B">B</option>
-        <option value="JOE">JOE</option>
-        <option value="KOSE">KOSE</option>
-        <option value="HE">HE</option>
-        <option value="PB">PB</option>
-        <option value="X">X</option>
-        <option value="Z">Z</option>
-      </select>
-    </td>
-    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
-    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
-    <td><input class="detail" type="text" placeholder="詳細" /></td>
-    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
-    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
-  `;
-  return tr;
-}
-
 
 function addRow() {
   const table = document.getElementById("formRows");
@@ -685,6 +1486,30 @@ function addRow() {
   // renumberRows();
 }
 
+function deleteRow(button) {
+  const row = button.closest('tr');
+  const formRows = document.getElementById('formRows');
+
+  if (formRows.rows.length <= 1) {
+    alert("これ以上削除できません");
+    return;
+  }
+
+  if (confirm("この伝票を削除しますか？")) {
+    // まずアニメーション用クラスを付ける
+    row.classList.add('slide-out-left');
+
+    // アニメーション終了後にDOMから削除
+    row.addEventListener('animationend', function onAnimEnd() {
+      row.removeEventListener('animationend', onAnimEnd); // 多重登録防止
+      formRows.removeChild(row);
+      renumberRows();
+      updateTotals();
+      saveForm();
+    });
+  }
+}
+
 function sortRowsByNumber() {
   const tbody = document.getElementById("formRows");
   const rows = Array.from(tbody.querySelectorAll("tr"));
@@ -714,125 +1539,19 @@ function sortRowsByNumber() {
   flashSorted();
 }
 
-function flashSorted() {
-  const tbody = document.getElementById("formRows");
-  tbody.style.transition = "box-shadow .4s";
-  tbody.style.boxShadow = "0 0 20px #00f5ff77";
+function renumberRows() {
+  const table = document.getElementById("formRows");
+  const cells = table.querySelectorAll(".rowNumber");
 
-  setTimeout(() => {
-    tbody.style.boxShadow = "0 0 0px transparent";
-  }, 500);
-}
-
-
-
-/*app1 Enterで次のフォーム移動ロジック開始*/
-
-// Enter → 次フィールド（現在アクティブなAPP内で、表示要素のみ）
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Enter') return;
-
-  const target = e.target;
-  if (!(target instanceof HTMLElement)) return;
-  if (!target.matches('input, select, textarea')) return;
-
-  e.preventDefault();
-
-  // いまのAPP ID（app1/app2/app3）を body 属性から取得
-  const activeAppId = document.body.getAttribute('data-active-app') || '';
-  // スコープは「その入力が属する .content」> それが無ければ activeApp > それも無ければ document
-  const scope =
-    target.closest('.content') ||
-    document.getElementById(activeAppId) ||
-    document.body;
-
-  // 非表示(=offsetParentがnull)は除外して並び順どおりに移動
-  const formElements = Array.from(
-    scope.querySelectorAll('input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled])')
-  ).filter(el => el.offsetParent !== null);
-
-  const index = formElements.indexOf(target);
-  const next = formElements[index + 1];
-  if (next) {
-    next.focus();
-    if (typeof next.select === 'function') next.select();
-  }
-});
-
-/*app1 Enterで次のフォーム移動ロジック終了*/
-
-
-function updateRowColor(select) {
-  const row = select.closest("tr");
-  row.className = "row";
-  if (select.value) {
-    row.classList.add("category-" + select.value);
-  }
-}
-
-// グローバルにキャッチバック内訳を保持するオブジェクト
-let catchbackDetails = {};
-
-let _raf = 0;
-function scheduleTotals(){
-  if (_raf) return;
-  _raf = requestAnimationFrame(()=>{ _raf = 0; updateTotals(); });
-}
-
-// ============================================================
-// APP3 更新を「次フレームにまとめる」グローバル関数（必須）
-// updateTotals() などから呼ばれても落ちないように window に生やす
-// ============================================================
-(function(){
-  let pending = false;
-
-  window.scheduleApp3Update = function(reason = '') {
-    if (pending) return;
-    pending = true;
-
-    requestAnimationFrame(() => {
-      pending = false;
-
-      // APP3 側の更新関数が存在する場合だけ呼ぶ（存在しない環境でも落とさない）
-      try {
-        if (typeof window.updateAttendanceMiniForm === 'function') {
-          window.updateAttendanceMiniForm();
-        }
-      } catch(e){}
-
-      try {
-        if (typeof window.updateCalculations === 'function') {
-          window.updateCalculations();
-        }
-      } catch(e){
-        console.warn('scheduleApp3Update failed:', reason, e);
-      }
-    });
-  };
-})();
-
-
-//キャンセル伝票グレーアウト
-function updateRowGrayOut() {
-  const rows = document.querySelectorAll('#app1 tr.row');
-
-  rows.forEach(row => {
-    const cSelect = row.querySelector('.c');
-    const totalInput = row.querySelector('.total');
-
-    const cVal = cSelect?.value || '';
-    const rawVal = totalInput?.value || '';
-    const totalVal = rawVal.replace(/,/g, '');
-
-    const isZero = totalVal === '0';     // ← 明示的に0だけ判定
-    const isEmpty = totalVal === '';     // ← 未入力
-
-    if (cVal === '' && isZero) {
-      row.classList.add('gray-out');
-    } else {
-      row.classList.remove('gray-out');
-    }
+  let maxNo = 0;
+  cells.forEach(cell => {
+    const raw = (cell.textContent || '').trim();
+    const v = parseInt(raw, 10);
+    if (!Number.isNaN(v) && v > maxNo) maxNo = v;
   });
+
+  // 次回用の rowNumber を更新するだけ
+  rowNumber = maxNo + 1;
 }
 
 function updateTotals() {
@@ -944,98 +1663,42 @@ function updateTotals() {
   saveForm();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  updateRowGrayOut();
-});
-
-
-
-function saveForm() {
-  const formData = [];
-  document.querySelectorAll(".row").forEach((row, index) => {
-    const rowNumber = parseInt(row.querySelector(".rowNumber")?.textContent) || index + 1;
-
-    const rowData = {
-      rowNumber: rowNumber,
-      honshi: row.querySelector(".honshi")?.value || "",
-      category: row.querySelector(".c")?.value || "",
-      amount: row.querySelector(".amount")?.value || "",
-      num: row.querySelector(".num")?.value || "",
-      detail: row.querySelector(".detail")?.value || "",
-      card: row.querySelector(".card")?.value || "",
-      total: row.querySelector(".total")?.value || "",
-      checkboxes: {}
-    };
-
-    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-      rowData.checkboxes[checkbox.parentElement.textContent.trim()] = checkbox.checked;
-    });
-
-    formData.push(rowData);
-  });
-
-  localStorage.setItem("formData", JSON.stringify(formData));
+function saveCheckboxStates() {
+  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
+  const states = Array.from(checkboxes).map(cb => cb.checked);
+  localStorage.setItem("checkboxStates", JSON.stringify(states));
 }
 
+function restoreCheckboxStates() {
+  const states = JSON.parse(localStorage.getItem("checkboxStates"));
+  if (!states) return;
+  const checkboxes = document.querySelectorAll("table input[type='checkbox']");
+  checkboxes.forEach((cb, index) => {
+    cb.checked = states[index];
+  });
+}
 
-function restoreForm() {
-  const savedData = localStorage.getItem("formData");
-  if (savedData) {
-    const formData = JSON.parse(savedData);
-    const table = document.getElementById("formRows");
+function flashSorted() {
+  const tbody = document.getElementById("formRows");
+  tbody.style.transition = "box-shadow .4s";
+  tbody.style.boxShadow = "0 0 20px #00f5ff77";
 
-    // 最初の行以外を削除
-    while (table.rows.length > 1) {
-      table.deleteRow(1);
-    }
+  setTimeout(() => {
+    tbody.style.boxShadow = "0 0 0px transparent";
+  }, 500);
+}
 
-    formData.forEach((data, index) => {
-      let row;
-      if (index === 0) {
-        row = table.rows[0];
-      } else {
-        row = table.rows[0].cloneNode(true);
-        table.appendChild(row);
-      }
-
-      // セルの復元
-      row.querySelector(".rowNumber").textContent = data.rowNumber || index + 1;
-      row.querySelector(".honshi").value = data.honshi || "";
-      row.querySelector(".c").value = data.category || "";
-      row.querySelector(".amount").value = data.amount || "";
-      row.querySelector(".num").value = data.num || "";
-      row.querySelector(".detail").value = data.detail || "";
-      row.querySelector(".card").value = data.card || "";
-      row.querySelector(".total").value = data.total || "";
-
-      updateRowColor(row.querySelector(".c"));
-
-      // 削除ボタンが存在しない場合は追加
-      if (!row.querySelector(".delete-btn")) {
-        const deleteCell = document.createElement("td");
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "削除";
-        deleteButton.className = "delete-btn";
-        deleteButton.onclick = function () {
-          deleteRow(this);
-        };
-        deleteCell.appendChild(deleteButton);
-        row.appendChild(deleteCell);
-      }
-    });
-
-    // 最大行番号を更新
-    const maxRowNum = formData.reduce((max, data) => {
-      const num = parseInt(data.rowNumber, 10);
-      return (!isNaN(num) && num > max) ? num : max;
-    }, 0);
-    rowNumber = maxRowNum + 1;
-
-    updateTotals();
-  } else {
-    rowNumber = 2; // データなしなら初期値に戻す
+function updateRowColor(select) {
+  const row = select.closest("tr");
+  row.className = "row";
+  if (select.value) {
+    row.classList.add("category-" + select.value);
   }
+}
+
+function scheduleTotals(){
+  if (_raf) return;
+  _raf = requestAnimationFrame(()=>{ _raf = 0; updateTotals(); });
 }
 
 function filterCategory(category) {
@@ -1139,85 +1802,203 @@ function filterCardInputRows() {
   document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
 }
 
-function deleteRow(button) {
-  const row = button.closest('tr');
-  const formRows = document.getElementById('formRows');
+//キャンセル伝票グレーアウト
+function updateRowGrayOut() {
+  const rows = document.querySelectorAll('#app1 tr.row');
 
-  if (formRows.rows.length <= 1) {
-    alert("これ以上削除できません");
-    return;
-  }
+  rows.forEach(row => {
+    const cSelect = row.querySelector('.c');
+    const totalInput = row.querySelector('.total');
 
-  if (confirm("この伝票を削除しますか？")) {
-    // まずアニメーション用クラスを付ける
-    row.classList.add('slide-out-left');
+    const cVal = cSelect?.value || '';
+    const rawVal = totalInput?.value || '';
+    const totalVal = rawVal.replace(/,/g, '');
 
-    // アニメーション終了後にDOMから削除
-    row.addEventListener('animationend', function onAnimEnd() {
-      row.removeEventListener('animationend', onAnimEnd); // 多重登録防止
-      formRows.removeChild(row);
-      renumberRows();
-      updateTotals();
-      saveForm();
-    });
-  }
+    const isZero = totalVal === '0';     // ← 明示的に0だけ判定
+    const isEmpty = totalVal === '';     // ← 未入力
+
+    if (cVal === '' && isZero) {
+      row.classList.add('gray-out');
+    } else {
+      row.classList.remove('gray-out');
+    }
+  });
 }
 
-function renumberRows() {
-  const table = document.getElementById("formRows");
-  const cells = table.querySelectorAll(".rowNumber");
+window.collectApp1State = collectApp1State;
+window.applyApp1State   = applyApp1State;
 
-  let maxNo = 0;
-  cells.forEach(cell => {
-    const raw = (cell.textContent || '').trim();
-    const v = parseInt(raw, 10);
-    if (!Number.isNaN(v) && v > maxNo) maxNo = v;
+
+
+
+
+
+/************************************************************
+ * 4. APP2
+ ************************************************************/
+// 4-1. APP2 state collect/apply
+// 4-2. ボトル定数・計算
+// 4-3. ボトル履歴
+// 4-4. ボトルフォーム生成/削除/保存復元
+// 4-5. 履歴表示/復元/削除
+// 4-6. calculate / confirmAndCalculate
+// 4-7. APP2 ナビゲーション・十字キー
+
+// ===== app2 履歴のローカル状態 =====
+let app2History = [];
+
+let BOTTLE_REFRESHING = false;
+
+const BOTTLE_PICKER_CONFIG = {
+  defaultSplits: makeRangeButtons(1, 15),
+  defaultQtys: makeRangeButtons(1, 10)
+};
+
+// APP2 一括入力グリッド用：追加ボトル候補の学習
+const APP2_CUSTOM_BOTTLE_KEY = 'app2_custom_bottle_memory_v1';
+const APP2_CUSTOM_BOTTLE_MAX = 120;
+
+let BOTTLE_PICKER_STATE = {
+  tr: null,
+  anchorEl: null,
+  detail: '',
+  split: '',
+  qty: '',
+  rafId: 0
+};
+
+// 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
+let BOTTLE_HISTORY = {};
+
+/* app2（報酬計算）：id を持つ input/select/textarea を丸ごと保存/復元＋ボトル明細 */
+function collectApp2State(){
+  const root = document.getElementById('app2');
+  if(!root) return {};
+
+  const fields = {};
+  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
+    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
   });
 
-  // 次回用の rowNumber を更新するだけ
-  rowNumber = maxNo + 1;
+  // 既存: ボトル明細
+const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
+  details: getSelectedDetail(form) || "",
+  split:   form.querySelector('.splitCount')?.value ?? "",
+  qty:     form.querySelector('.bottleQuantity')?.value ?? "",
+  amount:  form.querySelector('.bottleAmount')?.value ?? ""
+}));
+
+  // ★追加: 履歴（HTMLそのまま）
+  const historyRoot = document.getElementById('historyList');
+  const historyHTML = historyRoot ? historyRoot.innerHTML : "";
+
+  return { fields, bottles, historyHTML };
 }
 
+function applyApp2State(state){
+  const root = document.getElementById('app2');
+  if(!root || !state) return;
+
+  if(state.fields){
+    Object.entries(state.fields).forEach(([id, val])=>{
+      const el = root.querySelector('#'+CSS.escape(id));
+      if(!el) return;
+      if(el.type === 'checkbox'){ el.checked = !!val; }
+      else { el.value = val ?? ""; }
+    });
+  }
+
+  if(Array.isArray(state.bottles)){
+    const container = root.querySelector('#bottleFormsContainer');
+    if(container){
+      container.innerHTML = "";
+      state.bottles.forEach(b=>{
+        // 既存の追加関数があればそれを使う
+        if(typeof window.addBottleForm === "function"){
+          const el = window.addBottleForm();
+          const sel = el?.querySelector('.bottleDetails');
+          if (sel) setBottleDetailValue(sel, b.details ?? "");
+          (el?.querySelector('.splitCount')||{}).value    = b.split ?? "";
+          (el?.querySelector('.bottleQuantity')||{}).value= b.qty ?? "";
+          (el?.querySelector('.bottleAmount')||{}).value  = b.amount ?? "";
+        }else{
+          // フォールバック生成（既存実装に合わせる）
+          const row = document.createElement('div');
+          row.className = 'bottle-form';
+          row.innerHTML = `
+            <div class="left-group">
+              <button type="button" class="delete-btn" onclick="this.closest('.bottle-form')?.remove()">×</button>
+              <select class="bottleDetails"><option value=""></option></select>
+            </div>
+            <input class="splitCount" type="text"/>
+            <input class="bottleQuantity" type="text"/>
+            <input class="bottleAmount" type="text"/>`;
+          container.appendChild(row);
+          setBottleDetailValue(row.querySelector('.bottleDetails'), b.details ?? "");
+          row.querySelector('.splitCount').value    = b.split ?? "";
+          row.querySelector('.bottleQuantity').value= b.qty ?? "";
+          row.querySelector('.bottleAmount').value  = b.amount ?? "";
+        }
+      });
+    }
+  }
+
+  // ★追加: 履歴HTMLの反映＋派生処理
+  if (typeof state.historyHTML === "string") {
+    const historyRoot = document.getElementById('historyList');
+    if (historyRoot && historyRoot.innerHTML !== state.historyHTML) {
+      historyRoot.innerHTML = state.historyHTML;
+      try { localStorage.setItem('historyList', state.historyHTML); } catch(e){}
+      if (typeof window.renumberHistory === "function") renumberHistory();
+      if (typeof window.refreshBottleDropdownsFromHistory === "function") refreshBottleDropdownsFromHistory();
+      if (typeof window.updateSummary === "function") updateSummary();
+    }
+  }
+}
+
+// === APP2: ボトルの登録バック金額（ユーザー指定版） ===
+const BOTTLE_BASE = Object.freeze({
+  'リステル': 6000,
+  'パリ': 7500,
+  'マバム': 17500,
+  'モエ白': 15000,
+  'モエロゼ': 17500,
+  'モエネク': 20000,
+  'モエピカ': 22500,
+  'ヴーヴ': 16000,
+  'ヴーヴホワイト': 17500,
+  'ヴーヴローズ': 19000,
+  'ベルエ': 70000,
+  'ベルエロゼ': 140000,
+  'ソウメイ': 60000,
+  'ドンペリ': 50000,
+  'ドンペリルミナス': 60000,
+  'ドンペリロゼ': 70000,
+  'ドンペリルミナスロゼ': 85000,
+  'ドンペリP2': 150000,
+  'ドンペリゴールド': 250000,
+  'アルマンド': 85000,
+  'アルマンドロゼ': 140000,
+  'アルマンドグリーン': 200000,
+  'オリシャンR': 12500,
+  'オリシャンB': 30000,
+  '柚子小町': 5000,
+  '黒霧島': 7500,
+  '吉四六': 7500,
+  '富乃宝山': 8500,
+  '赤霧島': 10000,
+  '知多': 20000,
+  '山崎': 35000,
+  'ベリンジャー': 10000,
+  'テキカン': 35000,
+  '枝': 500,
+
+  // 空白（自動金額なしにしたい項目は 0 にしておく）
+  'その他': 0,
+  '保障補正': 0
+});
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//<app2 script---------------------------------------------------------------------------------------------------------------->
 
 function safeDecodeText(str) {
   if (str == null) return '';
@@ -1228,30 +2009,6 @@ function safeDecodeText(str) {
   }
 }
 
-function rememberBottleSelectionFromForm(form) {
-  if (!form) return false;
-
-  const detail = normalizeBottleText(getSelectedDetail(form) || '');
-  const split  = normalizeBottleNum(form.querySelector('.splitCount')?.value, '');
-  const qty    = normalizeBottleNum(form.querySelector('.bottleQuantity')?.value, '');
-
-  // 品名が空なら何もしない
-  if (!detail) return false;
-
-  // 途中入力のゴミを減らすため、割と数量がそろった時だけ学習
-  if (!split || !qty) return false;
-
-  upsertCustomBottleMemory({
-    detail,
-    split: split || '1',
-    qty: qty || '1'
-  });
-
-  ensureBottleOptionExists(detail);
-  hydrateAllBottleSelectsWithCustomOptions();
-
-  return true;
-}
 
 function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   const form = document.createElement('div');
@@ -1341,55 +2098,6 @@ function createBottleForm(detail = '', split = '', quantity = '', amount = '') {
   return form;
 }
 
-let BOTTLE_REFRESHING = false;
-
-// === APP2: ボトルの登録バック金額（ユーザー指定版） ===
-const BOTTLE_BASE = Object.freeze({
-  'リステル': 6000,
-  'パリ': 7500,
-  'マバム': 17500,
-  'モエ白': 15000,
-  'モエロゼ': 17500,
-  'モエネク': 20000,
-  'モエピカ': 22500,
-  'ヴーヴ': 16000,
-  'ヴーヴホワイト': 17500,
-  'ヴーヴローズ': 19000,
-  'ベルエ': 70000,
-  'ベルエロゼ': 140000,
-  'ソウメイ': 60000,
-  'ドンペリ': 50000,
-  'ドンペリルミナス': 60000,
-  'ドンペリロゼ': 70000,
-  'ドンペリルミナスロゼ': 85000,
-  'ドンペリP2': 150000,
-  'ドンペリゴールド': 250000,
-  'アルマンド': 85000,
-  'アルマンドロゼ': 140000,
-  'アルマンドグリーン': 200000,
-  'オリシャンR': 12500,
-  'オリシャンB': 30000,
-  '柚子小町': 5000,
-  '黒霧島': 7500,
-  '吉四六': 7500,
-  '富乃宝山': 8500,
-  '赤霧島': 10000,
-  '知多': 20000,
-  '山崎': 35000,
-  'ベリンジャー': 10000,
-  'テキカン': 35000,
-  '枝': 500,
-
-  // 空白（自動金額なしにしたい項目は 0 にしておく）
-  'その他': 0,
-  '保障補正': 0
-});
-
-// 入力→数値(,除去)の安全変換
-function intSafe(v, d = 0){ const n = parseInt(String(v ?? '').toString().replace(/,/g,''),10); return Number.isFinite(n)? n : d; }
-// 100円未満切り捨て（例: 3750 → 3700）
-function floor100(yen){ return Math.floor(intSafe(yen)/100)*100; }
-
 // 登録金額・割・数量から金額を計算
 // ルール: (登録金額/割) の “10円未満切り捨て” を単価とし、単価×数量
 function computeBottleAmount(detail, split, qty){
@@ -1400,153 +2108,18 @@ function computeBottleAmount(detail, split, qty){
   return unit * q;
 }
 
-// フォーム1行の金額を再計算して反映
-function updateBottleAmountForForm(form){
-  const split = form.querySelector('.splitCount')?.value;
-  const qty   = form.querySelector('.bottleQuantity')?.value;
-  const amt   = computeBottleAmount(getSelectedDetail(form), split, qty);
-  const out   = form.querySelector('.bottleAmount');
-  out.value = amt ? String(amt) : '';
-}
+function rememberBottleSelectionFromForm(form) {
+  if (!form) return false;
 
-// ===============================
-// 一括入力グリッド用 ボトル階層選択（クリック完結版）
-// ===============================
-function makeRangeButtons(min, max) {
-  return Array.from({ length: max - min + 1 }, (_, i) => min + i);
-}
+  const detail = normalizeBottleText(getSelectedDetail(form) || '');
+  const split  = normalizeBottleNum(form.querySelector('.splitCount')?.value, '');
+  const qty    = normalizeBottleNum(form.querySelector('.bottleQuantity')?.value, '');
 
-const BOTTLE_PICKER_CONFIG = {
-  defaultSplits: makeRangeButtons(1, 15),
-  defaultQtys: makeRangeButtons(1, 10)
-};
+  // 品名が空なら何もしない
+  if (!detail) return false;
 
-// ===============================
-// APP2 一括入力グリッド用：追加ボトル候補の学習
-// ===============================
-const APP2_CUSTOM_BOTTLE_KEY = 'app2_custom_bottle_memory_v1';
-const APP2_CUSTOM_BOTTLE_MAX = 120;
-
-function normalizeBottleText(v) {
-  return String(v ?? '').replace(/\s+/g, ' ').trim();
-}
-
-function normalizeBottleNum(v, fallback = '') {
-  const n = parseInt(String(v ?? '').replace(/[^\d.-]/g, ''), 10);
-  return Number.isFinite(n) && n > 0 ? String(n) : fallback;
-}
-
-function loadCustomBottleMemory() {
-  try {
-    const raw = localStorage.getItem(APP2_CUSTOM_BOTTLE_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveCustomBottleMemory(list) {
-  try {
-    localStorage.setItem(APP2_CUSTOM_BOTTLE_KEY, JSON.stringify(list));
-  } catch (e) {}
-}
-
-function upsertCustomBottleMemory(entry) {
-  const detail = normalizeBottleText(entry?.detail);
-  const split  = normalizeBottleNum(entry?.split, '1');
-  const qty    = normalizeBottleNum(entry?.qty, '1');
-
-  if (!detail) return;
-
-  let list = loadCustomBottleMemory();
-
-  // 同一 detail / split / qty は重複させない
-  list = list.filter(x => !(
-    normalizeBottleText(x.detail) === detail &&
-    normalizeBottleNum(x.split, '1') === split &&
-    normalizeBottleNum(x.qty, '1') === qty
-  ));
-
-  list.unshift({
-    detail,
-    split,
-    qty,
-    updatedAt: Date.now()
-  });
-
-  // detail 重複は新しいもの優先で整理
-  const seenVariant = new Set();
-  const compact = [];
-  for (const item of list) {
-    const key = [
-      normalizeBottleText(item.detail),
-      normalizeBottleNum(item.split, '1'),
-      normalizeBottleNum(item.qty, '1')
-    ].join('||');
-
-    if (seenVariant.has(key)) continue;
-    seenVariant.add(key);
-    compact.push(item);
-    if (compact.length >= APP2_CUSTOM_BOTTLE_MAX) break;
-  }
-
-  saveCustomBottleMemory(compact);
-}
-
-function getCustomBottleMemory() {
-  return loadCustomBottleMemory()
-    .filter(x => normalizeBottleText(x.detail))
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-}
-
-function getCustomBottleNames() {
-  const out = [];
-  const seen = new Set();
-
-  getCustomBottleMemory().forEach(x => {
-    const name = normalizeBottleText(x.detail);
-    if (!name || seen.has(name)) return;
-    seen.add(name);
-    out.push(name);
-  });
-
-  return out;
-}
-
-function ensureBottleOptionExists(detail) {
-  const name = normalizeBottleText(detail);
-  if (!name) return;
-
-  document.querySelectorAll('select.bottleDetails').forEach(select => {
-    const exists = Array.from(select.options).some(opt => opt.value === name);
-    if (exists) return;
-
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = `${name} *`;
-    opt.dataset.customBottle = '1';
-    select.appendChild(opt);
-  });
-}
-
-function hydrateAllBottleSelectsWithCustomOptions() {
-  getCustomBottleNames().forEach(name => ensureBottleOptionExists(name));
-}
-
-function rememberBottleSelectionFromRow(row) {
-  if (!row || !row.classList.contains('btl-subrow')) return;
-
-  const detail = normalizeBottleText(
-    row.querySelector('.bottleDetails')?.value ||
-    row.querySelector('.bottleFreeText')?.value ||
-    ''
-  );
-  const split = normalizeBottleNum(row.querySelector('.splitCount')?.value, '');
-  const qty   = normalizeBottleNum(row.querySelector('.bottleQuantity')?.value, '');
-
-  if (!detail) return;
+  // 途中入力のゴミを減らすため、割と数量がそろった時だけ学習
+  if (!split || !qty) return false;
 
   upsertCustomBottleMemory({
     detail,
@@ -1555,253 +2128,55 @@ function rememberBottleSelectionFromRow(row) {
   });
 
   ensureBottleOptionExists(detail);
+  hydrateAllBottleSelectsWithCustomOptions();
+
+  return true;
 }
 
+function saveBottleForms() {
+  const bottleForms = [];
 
-let BOTTLE_PICKER_STATE = {
-  tr: null,
-  anchorEl: null,
-  detail: '',
-  split: '',
-  qty: '',
-  rafId: 0
-};
+  document.querySelectorAll('.bottle-form').forEach(form => {
+    const bottleDetails = getSelectedDetail(form);
+    const splitCount = form.querySelector('.splitCount')?.value || '';
+    const bottleQuantity = form.querySelector('.bottleQuantity')?.value || '';
+    const bottleAmount = parseInt(
+      (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''),
+      10
+    ) || 0;
 
-function getBottlePickerNames() {
-  const base = [];
-  try {
-    if (typeof bottleRules === 'object' && bottleRules) {
-      base.push(...Object.keys(bottleRules).filter(Boolean));
-    }
-  } catch (e) {}
-
-  const custom = getCustomBottleNames();
-
-  const seen = new Set();
-  return [...base, ...custom].filter(name => {
-    const key = normalizeBottleText(name);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    bottleForms.push({
+      bottleDetails,
+      splitCount,
+      bottleQuantity,
+      bottleAmount
+    });
   });
+
+  localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
 }
 
-function applyBottleHierarchySelection(tr, detail, split, qty) {
-  if (!tr) return;
+function loadBottleForms() {
+  const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms') || '[]');
+  const container = document.getElementById('bottleFormsContainer');
+  if (!container) return;
 
-  const normalizedDetail = normalizeBottleText(detail);
-  const normalizedSplit  = normalizeBottleNum(split, '1');
-  const normalizedQty    = normalizeBottleNum(qty, '1');
+  container.innerHTML = '';
+  window.BOTTLE_REFRESHING = true;
 
-  const detailEl = tr.querySelector('.bottleDetails');
-  const splitEl  = tr.querySelector('.splitCount');
-  const qtyEl    = tr.querySelector('.bottleQuantity');
-
-  if (normalizedDetail) {
-    ensureBottleOptionExists(normalizedDetail);
-  }
-
-  if (detailEl) detailEl.value = normalizedDetail ?? '';
-  if (splitEl)  splitEl.value  = normalizedSplit ?? '';
-  if (qtyEl)    qtyEl.value    = normalizedQty ?? '';
-
-  if (detailEl) detailEl.dispatchEvent(new Event('change', { bubbles: true }));
-  if (splitEl)  splitEl.dispatchEvent(new Event('input',  { bubbles: true }));
-  if (splitEl)  splitEl.dispatchEvent(new Event('change', { bubbles: true }));
-  if (qtyEl)    qtyEl.dispatchEvent(new Event('input',  { bubbles: true }));
-  if (qtyEl)    qtyEl.dispatchEvent(new Event('change', { bubbles: true }));
-
-  rememberBottleSelectionFromRow(tr);
-
-  if (typeof updateBottleAmountForRow === 'function') {
-    updateBottleAmountForRow(tr);
-  }
-}
-
-function getBottleHierarchyPickerEl() {
-  return document.getElementById('bottleHierarchyPicker');
-}
-
-function renderBottleHierarchyPicker() {
-  const picker = getBottleHierarchyPickerEl();
-  if (!picker) return;
-
-  const names = getBottlePickerNames();
-
-  const detailGrid = picker.querySelector('.bhp-detail-grid');
-  const splitGrid  = picker.querySelector('.bhp-split-grid');
-  const qtyGrid    = picker.querySelector('.bhp-qty-grid');
-
-  const curDetail = picker.querySelector('.bhp-current-detail');
-  const curSplit  = picker.querySelector('.bhp-current-split');
-  const curQty    = picker.querySelector('.bhp-current-qty');
-
-  curDetail.textContent = BOTTLE_PICKER_STATE.detail || '-';
-  curSplit.textContent  = BOTTLE_PICKER_STATE.split || '-';
-  curQty.textContent    = BOTTLE_PICKER_STATE.qty || '-';
-
-  detailGrid.innerHTML = names.map(name => `
-    <button type="button"
-            class="bhp-btn ${BOTTLE_PICKER_STATE.detail === name ? 'active' : ''}"
-            data-bhp-kind="detail"
-            data-bhp-value="${escapeHtml(name)}">${escapeHtml(name)}</button>
-  `).join('');
-
-  splitGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultSplits.map(v => `
-  <button type="button"
-          class="bhp-btn ${String(BOTTLE_PICKER_STATE.split) === String(v) ? 'active' : ''}"
-          data-bhp-kind="split"
-          data-bhp-value="${v}">${v}</button>
-`).join('');
-
-qtyGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultQtys.map(v => `
-  <button type="button"
-          class="bhp-btn ${String(BOTTLE_PICKER_STATE.qty) === String(v) ? 'active' : ''}"
-          data-bhp-kind="qty"
-          data-bhp-value="${v}">${v}</button>
-`).join('');
-}
-
-function positionBottleHierarchyPicker(anchorEl) {
-  const picker = getBottleHierarchyPickerEl();
-  if (!picker || !anchorEl || picker.hidden) return;
-
-  const rect = anchorEl.getBoundingClientRect();
-  const pickerRect = picker.getBoundingClientRect();
-
-  const pickerWidth = pickerRect.width || 420;
-  const pickerHeight = pickerRect.height || 320;
-
-  let left = rect.left;
-  left = Math.max(8, Math.min(left, window.innerWidth - pickerWidth - 8));
-
-  let top = rect.bottom + 6;
-  if (top + pickerHeight > window.innerHeight - 8) {
-    top = rect.top - pickerHeight - 6;
-  }
-  top = Math.max(8, top);
-
-  picker.style.left = `${left}px`;
-  picker.style.top = `${top}px`;
-}
-
-function openBottleHierarchyPicker(tr, anchorEl = null) {
-  if (!tr) return;
-
-  const picker = getBottleHierarchyPickerEl();
-  if (!picker) return;
-
-  const resolvedAnchor = anchorEl || tr.querySelector('.bottle-hierarchy-btn') || tr.querySelector('.bottleDetails');
-
-  BOTTLE_PICKER_STATE.tr = tr;
-  BOTTLE_PICKER_STATE.anchorEl = resolvedAnchor;
-  BOTTLE_PICKER_STATE.detail = tr.querySelector('.bottleDetails')?.value || '';
-  BOTTLE_PICKER_STATE.split  = tr.querySelector('.splitCount')?.value || '';
-  BOTTLE_PICKER_STATE.qty    = tr.querySelector('.bottleQuantity')?.value || '';
-
-  renderBottleHierarchyPicker();
-
-  picker.hidden = false;
-  positionBottleHierarchyPicker(resolvedAnchor);
-}
-
-function closeBottleHierarchyPicker() {
-  const picker = getBottleHierarchyPickerEl();
-  if (!picker) return;
-
-  picker.hidden = true;
-  BOTTLE_PICKER_STATE.anchorEl = null;
-}
-
-function confirmBottleHierarchyPicker() {
-  const { tr, detail, split, qty } = BOTTLE_PICKER_STATE;
-  if (!tr || !detail) return;
-
-  applyBottleHierarchySelection(
-    tr,
-    detail,
-    String(parseInt(split, 10) || 1),
-    String(parseInt(qty, 10) || 1)
-  );
-
-  closeBottleHierarchyPicker();
-}
-
-function escapeHtml(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function repositionBottleHierarchyPickerNow() {
-  const picker = getBottleHierarchyPickerEl();
-  if (!picker || picker.hidden) return;
-
-  const anchorEl = BOTTLE_PICKER_STATE.anchorEl;
-  if (!anchorEl || !document.body.contains(anchorEl)) {
-    closeBottleHierarchyPicker();
-    return;
-  }
-
-  positionBottleHierarchyPicker(anchorEl);
-}
-
-function requestRepositionBottleHierarchyPicker() {
-  if (BOTTLE_PICKER_STATE.rafId) return;
-
-  BOTTLE_PICKER_STATE.rafId = requestAnimationFrame(() => {
-    BOTTLE_PICKER_STATE.rafId = 0;
-    repositionBottleHierarchyPickerNow();
+  bottleFormsData.forEach(data => {
+    const form = createBottleForm(
+      data.bottleDetails ?? '',
+      data.splitCount ?? '',
+      data.bottleQuantity ?? '',
+      data.bottleAmount ?? ''
+    );
+    if (form) container.appendChild(form);
   });
+
+  window.BOTTLE_REFRESHING = false;
+  refreshBottleDropdownsFromHistory();
 }
-
-
-// 履歴 → { 詳細名: [ { id, split, qty, amount }, ... ] }
-let BOTTLE_HISTORY = {};
-
-function buildBottleHistoryMap() {
-  BOTTLE_HISTORY = {};
-  const list = document.getElementById('historyList');
-  if (!list) return;
-
-  const items = Array.from(list.querySelectorAll('li'));
-  const re = /ボトル:\s*¥([\d,]+)（([^/（）]*?)(?:\/割:([^\s/（）]+))?(?:\/数量:([^\s/（）]+))?）/g;
-
-  const seen = new Set();
-
-  for (const li of items) {
-    const html = li.innerHTML;
-    let m;
-
-    while ((m = re.exec(html)) !== null) {
-      const amount = parseInt((m[1] || '').replace(/,/g, ''), 10) || 0;
-      const detail = normalizeBottleDetail(m[2] || '');
-      const split  = normalizeBottleDetail(m[3] || '');
-      const qty    = normalizeBottleDetail(m[4] || '');
-
-      if (!detail) continue;
-
-      const id =
-        encodeURIComponent(detail) + '|' +
-        encodeURIComponent(split)  + '|' +
-        encodeURIComponent(qty)    + '|' +
-        amount;
-
-      if (seen.has(id)) continue;
-      seen.add(id);
-
-      if (!BOTTLE_HISTORY[detail]) {
-        BOTTLE_HISTORY[detail] = [];
-      }
-
-      BOTTLE_HISTORY[detail].push({ id, split, qty, amount });
-    }
-  }
-}
-
 
 function refreshBottleDropdownsFromHistory() {
   buildBottleHistoryMap();
@@ -1875,193 +2250,6 @@ function refreshBottleDropdownsFromHistory() {
   });
 
   BOTTLE_REFRESHING = false; // ←終了
-}
-
-
-
-function addBottleForm() {
-  const container = document.getElementById('bottleFormsContainer');
-  const newForm = createBottleForm(); // ←空のフォームを追加
-  container.appendChild(newForm);
-  refreshBottleDropdownsFromHistory();
-  saveBottleForms(); // 保存
-}
-
-function autoLearnBottleHistoryFromForm(form) {
-  if (!form) return;
-
-  const detail = normalizeBottleDetail(getSelectedDetail(form) || '');
-  const split  = String(form.querySelector('.splitCount')?.value || '').trim();
-  const qty    = String(form.querySelector('.bottleQuantity')?.value || '').trim();
-  const amountRaw = String(form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '').trim();
-
-  // 品名が空なら何もしない
-  if (!detail) return;
-
-  // 途中入力のゴミ登録を減らすため、最低限の形だけ登録
-  // 例: 品名だけ選んだ時は登録しない
-  if (!split && !qty && !amountRaw) return;
-
-  // amount は数値化。空なら 0
-  const amount = parseInt(amountRaw, 10) || 0;
-
-  // 保存フォーマットは既存の登録処理に合わせる
-  const record = `${detail}|${split}|${qty}|${amount}`;
-
-  let bottleHistory = [];
-  try {
-    bottleHistory = JSON.parse(localStorage.getItem('BOTTLE_HISTORY') || '[]');
-    if (!Array.isArray(bottleHistory)) bottleHistory = [];
-  } catch (e) {
-    bottleHistory = [];
-  }
-
-  // 完全一致があれば追加しない
-  if (bottleHistory.includes(record)) {
-    return;
-  }
-
-  // 先頭追加
-  bottleHistory.unshift(record);
-
-  // 履歴肥大化防止
-  if (bottleHistory.length > 300) {
-    bottleHistory = bottleHistory.slice(0, 300);
-  }
-
-  localStorage.setItem('BOTTLE_HISTORY', JSON.stringify(bottleHistory));
-
-  if (typeof refreshBottleDropdownsFromHistory === 'function') {
-    refreshBottleDropdownsFromHistory();
-  }
-}
-
-function saveBottleForms() {
-  const bottleForms = [];
-
-  document.querySelectorAll('.bottle-form').forEach(form => {
-    const bottleDetails = getSelectedDetail(form);
-    const splitCount = form.querySelector('.splitCount')?.value || '';
-    const bottleQuantity = form.querySelector('.bottleQuantity')?.value || '';
-    const bottleAmount = parseInt(
-      (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''),
-      10
-    ) || 0;
-
-    bottleForms.push({
-      bottleDetails,
-      splitCount,
-      bottleQuantity,
-      bottleAmount
-    });
-  });
-
-  localStorage.setItem('bottleForms', JSON.stringify(bottleForms));
-}
-
-
-
-function loadBottleForms() {
-  const bottleFormsData = JSON.parse(localStorage.getItem('bottleForms') || '[]');
-  const container = document.getElementById('bottleFormsContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-  window.BOTTLE_REFRESHING = true;
-
-  bottleFormsData.forEach(data => {
-    const form = createBottleForm(
-      data.bottleDetails ?? '',
-      data.splitCount ?? '',
-      data.bottleQuantity ?? '',
-      data.bottleAmount ?? ''
-    );
-    if (form) container.appendChild(form);
-  });
-
-  window.BOTTLE_REFRESHING = false;
-  refreshBottleDropdownsFromHistory();
-}
-
-function renumberHistory() {
-  const items = Array.from(document.querySelectorAll('#historyList li')).reverse(); // 下から順に1,2,3
-  items.forEach((item, index) => {
-    const castElem = item.querySelector('.castName');
-    if (castElem) {
-      let text = castElem.textContent.replace(/^\s*\d+\.\s*/, ' '); // 旧番号を削除
-      const nameOnly = text.replace(/^\s*/, '').trim();
-      castElem.innerHTML = `<strong></strong> ${index + 1}. ${nameOnly}`;
-    }
-  });
-}
-
-
-function normalizeBottleDetail(str) {
-  let s = safeDecodeText(String(str || '')).trim();
-  if (!s) return '';
-
-  // __HIST__付きの内部値が来たら、本来の品名へ戻す
-  if (s.startsWith('__HIST__')) {
-    s = s.replace(/^__HIST__/, '');
-
-    const parts = s.split('|');
-    const rawDetail = parts[0] || '';
-
-    return safeDecodeText(rawDetail).trim();
-  }
-
-  return s;
-}
-
-function setBottleDetailValue(selectEl, detail) {
-  if (!selectEl) return;
-
-  const normalized = normalizeBottleDetail(detail || '');
-  if (!normalized) {
-    selectEl.value = '';
-    return;
-  }
-
-  // 既存 option を優先
-  let hit = Array.from(selectEl.options).find(opt => {
-    return normalizeBottleDetail(opt.value) === normalized
-        || normalizeBottleDetail(opt.dataset?.base || '') === normalized;
-  });
-
-  // 無ければ仮 option を作る
-  if (!hit) {
-    hit = document.createElement('option');
-    hit.value = normalized;
-    hit.textContent = normalized;
-    hit.dataset.base = normalized;
-    hit.dataset.customBottle = '1';
-
-    const etcGroup = Array.from(selectEl.children).find(n =>
-      n.tagName === 'OPTGROUP' && n.label === 'その他'
-    );
-
-    (etcGroup || selectEl).appendChild(hit);
-  }
-
-  selectEl.value = hit.value;
-}
-
-function getSelectedDetail(formOrRow) {
-  if (!formOrRow) return '';
-
-  const sel = formOrRow.querySelector('.bottleDetails');
-  if (!sel) return '';
-
-  const opt = sel.selectedOptions?.[0];
-  if (!opt) {
-    return normalizeBottleDetail(sel.value || '');
-  }
-
-  if (opt.dataset?.base) {
-    return normalizeBottleDetail(opt.dataset.base);
-  }
-
-  return normalizeBottleDetail(sel.value || opt.value || '');
 }
 
 function calculate() {
@@ -2340,8 +2528,522 @@ if (resultElem) {
 }
 }
 
-  // === 全キャスト共通 店舗負担合計 =================================
-  window.totalStoreCovered = 0;
+// 入力→数値(,除去)の安全変換
+function intSafe(v, d = 0){ const n = parseInt(String(v ?? '').toString().replace(/,/g,''),10); return Number.isFinite(n)? n : d; }
+// 100円未満切り捨て（例: 3750 → 3700）
+function floor100(yen){ return Math.floor(intSafe(yen)/100)*100; }
+
+// フォーム1行の金額を再計算して反映
+function updateBottleAmountForForm(form){
+  const split = form.querySelector('.splitCount')?.value;
+  const qty   = form.querySelector('.bottleQuantity')?.value;
+  const amt   = computeBottleAmount(getSelectedDetail(form), split, qty);
+  const out   = form.querySelector('.bottleAmount');
+  out.value = amt ? String(amt) : '';
+}
+
+// 一括入力グリッド用 ボトル階層選択（クリック完結版）
+function makeRangeButtons(min, max) {
+  return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+}
+
+function normalizeBottleText(v) {
+  return String(v ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeBottleNum(v, fallback = '') {
+  const n = parseInt(String(v ?? '').replace(/[^\d.-]/g, ''), 10);
+  return Number.isFinite(n) && n > 0 ? String(n) : fallback;
+}
+
+function loadCustomBottleMemory() {
+  try {
+    const raw = localStorage.getItem(APP2_CUSTOM_BOTTLE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCustomBottleMemory(list) {
+  try {
+    localStorage.setItem(APP2_CUSTOM_BOTTLE_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+function upsertCustomBottleMemory(entry) {
+  const detail = normalizeBottleText(entry?.detail);
+  const split  = normalizeBottleNum(entry?.split, '1');
+  const qty    = normalizeBottleNum(entry?.qty, '1');
+
+  if (!detail) return;
+
+  let list = loadCustomBottleMemory();
+
+  // 同一 detail / split / qty は重複させない
+  list = list.filter(x => !(
+    normalizeBottleText(x.detail) === detail &&
+    normalizeBottleNum(x.split, '1') === split &&
+    normalizeBottleNum(x.qty, '1') === qty
+  ));
+
+  list.unshift({
+    detail,
+    split,
+    qty,
+    updatedAt: Date.now()
+  });
+
+  // detail 重複は新しいもの優先で整理
+  const seenVariant = new Set();
+  const compact = [];
+  for (const item of list) {
+    const key = [
+      normalizeBottleText(item.detail),
+      normalizeBottleNum(item.split, '1'),
+      normalizeBottleNum(item.qty, '1')
+    ].join('||');
+
+    if (seenVariant.has(key)) continue;
+    seenVariant.add(key);
+    compact.push(item);
+    if (compact.length >= APP2_CUSTOM_BOTTLE_MAX) break;
+  }
+
+  saveCustomBottleMemory(compact);
+}
+
+function getCustomBottleMemory() {
+  return loadCustomBottleMemory()
+    .filter(x => normalizeBottleText(x.detail))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
+function getCustomBottleNames() {
+  const out = [];
+  const seen = new Set();
+
+  getCustomBottleMemory().forEach(x => {
+    const name = normalizeBottleText(x.detail);
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    out.push(name);
+  });
+
+  return out;
+}
+
+function ensureBottleOptionExists(detail) {
+  const name = normalizeBottleText(detail);
+  if (!name) return;
+
+  document.querySelectorAll('select.bottleDetails').forEach(select => {
+    const exists = Array.from(select.options).some(opt => opt.value === name);
+    if (exists) return;
+
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = `${name} *`;
+    opt.dataset.customBottle = '1';
+    select.appendChild(opt);
+  });
+}
+
+function getBottlePickerNames() {
+  const base = [];
+  try {
+    if (typeof bottleRules === 'object' && bottleRules) {
+      base.push(...Object.keys(bottleRules).filter(Boolean));
+    }
+  } catch (e) {}
+
+  const custom = getCustomBottleNames();
+
+  const seen = new Set();
+  return [...base, ...custom].filter(name => {
+    const key = normalizeBottleText(name);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function applyBottleHierarchySelection(tr, detail, split, qty) {
+  if (!tr) return;
+
+  const normalizedDetail = normalizeBottleText(detail);
+  const normalizedSplit  = normalizeBottleNum(split, '1');
+  const normalizedQty    = normalizeBottleNum(qty, '1');
+
+  const detailEl = tr.querySelector('.bottleDetails');
+  const splitEl  = tr.querySelector('.splitCount');
+  const qtyEl    = tr.querySelector('.bottleQuantity');
+
+  if (normalizedDetail) {
+    ensureBottleOptionExists(normalizedDetail);
+  }
+
+  if (detailEl) detailEl.value = normalizedDetail ?? '';
+  if (splitEl)  splitEl.value  = normalizedSplit ?? '';
+  if (qtyEl)    qtyEl.value    = normalizedQty ?? '';
+
+  if (detailEl) detailEl.dispatchEvent(new Event('change', { bubbles: true }));
+  if (splitEl)  splitEl.dispatchEvent(new Event('input',  { bubbles: true }));
+  if (splitEl)  splitEl.dispatchEvent(new Event('change', { bubbles: true }));
+  if (qtyEl)    qtyEl.dispatchEvent(new Event('input',  { bubbles: true }));
+  if (qtyEl)    qtyEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+  rememberBottleSelectionFromRow(tr);
+
+  if (typeof updateBottleAmountForRow === 'function') {
+    updateBottleAmountForRow(tr);
+  }
+}
+
+function getBottleHierarchyPickerEl() {
+  return document.getElementById('bottleHierarchyPicker');
+}
+
+function renderBottleHierarchyPicker() {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker) return;
+
+  const names = getBottlePickerNames();
+
+  const detailGrid = picker.querySelector('.bhp-detail-grid');
+  const splitGrid  = picker.querySelector('.bhp-split-grid');
+  const qtyGrid    = picker.querySelector('.bhp-qty-grid');
+
+  const curDetail = picker.querySelector('.bhp-current-detail');
+  const curSplit  = picker.querySelector('.bhp-current-split');
+  const curQty    = picker.querySelector('.bhp-current-qty');
+
+  curDetail.textContent = BOTTLE_PICKER_STATE.detail || '-';
+  curSplit.textContent  = BOTTLE_PICKER_STATE.split || '-';
+  curQty.textContent    = BOTTLE_PICKER_STATE.qty || '-';
+
+  detailGrid.innerHTML = names.map(name => `
+    <button type="button"
+            class="bhp-btn ${BOTTLE_PICKER_STATE.detail === name ? 'active' : ''}"
+            data-bhp-kind="detail"
+            data-bhp-value="${escapeHtml(name)}">${escapeHtml(name)}</button>
+  `).join('');
+
+  splitGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultSplits.map(v => `
+  <button type="button"
+          class="bhp-btn ${String(BOTTLE_PICKER_STATE.split) === String(v) ? 'active' : ''}"
+          data-bhp-kind="split"
+          data-bhp-value="${v}">${v}</button>
+`).join('');
+
+qtyGrid.innerHTML = BOTTLE_PICKER_CONFIG.defaultQtys.map(v => `
+  <button type="button"
+          class="bhp-btn ${String(BOTTLE_PICKER_STATE.qty) === String(v) ? 'active' : ''}"
+          data-bhp-kind="qty"
+          data-bhp-value="${v}">${v}</button>
+`).join('');
+}
+
+function positionBottleHierarchyPicker(anchorEl) {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker || !anchorEl || picker.hidden) return;
+
+  const rect = anchorEl.getBoundingClientRect();
+  const pickerRect = picker.getBoundingClientRect();
+
+  const pickerWidth = pickerRect.width || 420;
+  const pickerHeight = pickerRect.height || 320;
+
+  let left = rect.left;
+  left = Math.max(8, Math.min(left, window.innerWidth - pickerWidth - 8));
+
+  let top = rect.bottom + 6;
+  if (top + pickerHeight > window.innerHeight - 8) {
+    top = rect.top - pickerHeight - 6;
+  }
+  top = Math.max(8, top);
+
+  picker.style.left = `${left}px`;
+  picker.style.top = `${top}px`;
+}
+
+function openBottleHierarchyPicker(tr, anchorEl = null) {
+  if (!tr) return;
+
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker) return;
+
+  const resolvedAnchor = anchorEl || tr.querySelector('.bottle-hierarchy-btn') || tr.querySelector('.bottleDetails');
+
+  BOTTLE_PICKER_STATE.tr = tr;
+  BOTTLE_PICKER_STATE.anchorEl = resolvedAnchor;
+  BOTTLE_PICKER_STATE.detail = tr.querySelector('.bottleDetails')?.value || '';
+  BOTTLE_PICKER_STATE.split  = tr.querySelector('.splitCount')?.value || '';
+  BOTTLE_PICKER_STATE.qty    = tr.querySelector('.bottleQuantity')?.value || '';
+
+  renderBottleHierarchyPicker();
+
+  picker.hidden = false;
+  positionBottleHierarchyPicker(resolvedAnchor);
+}
+
+function closeBottleHierarchyPicker() {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker) return;
+
+  picker.hidden = true;
+  BOTTLE_PICKER_STATE.anchorEl = null;
+}
+
+function confirmBottleHierarchyPicker() {
+  const { tr, detail, split, qty } = BOTTLE_PICKER_STATE;
+  if (!tr || !detail) return;
+
+  applyBottleHierarchySelection(
+    tr,
+    detail,
+    String(parseInt(split, 10) || 1),
+    String(parseInt(qty, 10) || 1)
+  );
+
+  closeBottleHierarchyPicker();
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function repositionBottleHierarchyPickerNow() {
+  const picker = getBottleHierarchyPickerEl();
+  if (!picker || picker.hidden) return;
+
+  const anchorEl = BOTTLE_PICKER_STATE.anchorEl;
+  if (!anchorEl || !document.body.contains(anchorEl)) {
+    closeBottleHierarchyPicker();
+    return;
+  }
+
+  positionBottleHierarchyPicker(anchorEl);
+}
+
+function requestRepositionBottleHierarchyPicker() {
+  if (BOTTLE_PICKER_STATE.rafId) return;
+
+  BOTTLE_PICKER_STATE.rafId = requestAnimationFrame(() => {
+    BOTTLE_PICKER_STATE.rafId = 0;
+    repositionBottleHierarchyPickerNow();
+  });
+}
+
+function hydrateAllBottleSelectsWithCustomOptions() {
+  getCustomBottleNames().forEach(name => ensureBottleOptionExists(name));
+}
+
+function rememberBottleSelectionFromRow(row) {
+  if (!row || !row.classList.contains('btl-subrow')) return;
+
+  const detail = normalizeBottleText(
+    row.querySelector('.bottleDetails')?.value ||
+    row.querySelector('.bottleFreeText')?.value ||
+    ''
+  );
+  const split = normalizeBottleNum(row.querySelector('.splitCount')?.value, '');
+  const qty   = normalizeBottleNum(row.querySelector('.bottleQuantity')?.value, '');
+
+  if (!detail) return;
+
+  upsertCustomBottleMemory({
+    detail,
+    split: split || '1',
+    qty: qty || '1'
+  });
+
+  ensureBottleOptionExists(detail);
+}
+
+function buildBottleHistoryMap() {
+  BOTTLE_HISTORY = {};
+  const list = document.getElementById('historyList');
+  if (!list) return;
+
+  const items = Array.from(list.querySelectorAll('li'));
+  const re = /ボトル:\s*¥([\d,]+)（([^/（）]*?)(?:\/割:([^\s/（）]+))?(?:\/数量:([^\s/（）]+))?）/g;
+
+  const seen = new Set();
+
+  for (const li of items) {
+    const html = li.innerHTML;
+    let m;
+
+    while ((m = re.exec(html)) !== null) {
+      const amount = parseInt((m[1] || '').replace(/,/g, ''), 10) || 0;
+      const detail = normalizeBottleDetail(m[2] || '');
+      const split  = normalizeBottleDetail(m[3] || '');
+      const qty    = normalizeBottleDetail(m[4] || '');
+
+      if (!detail) continue;
+
+      const id =
+        encodeURIComponent(detail) + '|' +
+        encodeURIComponent(split)  + '|' +
+        encodeURIComponent(qty)    + '|' +
+        amount;
+
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      if (!BOTTLE_HISTORY[detail]) {
+        BOTTLE_HISTORY[detail] = [];
+      }
+
+      BOTTLE_HISTORY[detail].push({ id, split, qty, amount });
+    }
+  }
+}
+
+function addBottleForm() {
+  const container = document.getElementById('bottleFormsContainer');
+  const newForm = createBottleForm(); // ←空のフォームを追加
+  container.appendChild(newForm);
+  refreshBottleDropdownsFromHistory();
+  saveBottleForms(); // 保存
+}
+
+function autoLearnBottleHistoryFromForm(form) {
+  if (!form) return;
+
+  const detail = normalizeBottleDetail(getSelectedDetail(form) || '');
+  const split  = String(form.querySelector('.splitCount')?.value || '').trim();
+  const qty    = String(form.querySelector('.bottleQuantity')?.value || '').trim();
+  const amountRaw = String(form.querySelector('.bottleAmount')?.value || '').replace(/,/g, '').trim();
+
+  // 品名が空なら何もしない
+  if (!detail) return;
+
+  // 途中入力のゴミ登録を減らすため、最低限の形だけ登録
+  // 例: 品名だけ選んだ時は登録しない
+  if (!split && !qty && !amountRaw) return;
+
+  // amount は数値化。空なら 0
+  const amount = parseInt(amountRaw, 10) || 0;
+
+  // 保存フォーマットは既存の登録処理に合わせる
+  const record = `${detail}|${split}|${qty}|${amount}`;
+
+  let bottleHistory = [];
+  try {
+    bottleHistory = JSON.parse(localStorage.getItem('BOTTLE_HISTORY') || '[]');
+    if (!Array.isArray(bottleHistory)) bottleHistory = [];
+  } catch (e) {
+    bottleHistory = [];
+  }
+
+  // 完全一致があれば追加しない
+  if (bottleHistory.includes(record)) {
+    return;
+  }
+
+  // 先頭追加
+  bottleHistory.unshift(record);
+
+  // 履歴肥大化防止
+  if (bottleHistory.length > 300) {
+    bottleHistory = bottleHistory.slice(0, 300);
+  }
+
+  localStorage.setItem('BOTTLE_HISTORY', JSON.stringify(bottleHistory));
+
+  if (typeof refreshBottleDropdownsFromHistory === 'function') {
+    refreshBottleDropdownsFromHistory();
+  }
+}
+
+function renumberHistory() {
+  const items = Array.from(document.querySelectorAll('#historyList li')).reverse(); // 下から順に1,2,3
+  items.forEach((item, index) => {
+    const castElem = item.querySelector('.castName');
+    if (castElem) {
+      let text = castElem.textContent.replace(/^\s*\d+\.\s*/, ' '); // 旧番号を削除
+      const nameOnly = text.replace(/^\s*/, '').trim();
+      castElem.innerHTML = `<strong></strong> ${index + 1}. ${nameOnly}`;
+    }
+  });
+}
+
+function normalizeBottleDetail(str) {
+  let s = safeDecodeText(String(str || '')).trim();
+  if (!s) return '';
+
+  // __HIST__付きの内部値が来たら、本来の品名へ戻す
+  if (s.startsWith('__HIST__')) {
+    s = s.replace(/^__HIST__/, '');
+
+    const parts = s.split('|');
+    const rawDetail = parts[0] || '';
+
+    return safeDecodeText(rawDetail).trim();
+  }
+
+  return s;
+}
+
+function setBottleDetailValue(selectEl, detail) {
+  if (!selectEl) return;
+
+  const normalized = normalizeBottleDetail(detail || '');
+  if (!normalized) {
+    selectEl.value = '';
+    return;
+  }
+
+  // 既存 option を優先
+  let hit = Array.from(selectEl.options).find(opt => {
+    return normalizeBottleDetail(opt.value) === normalized
+        || normalizeBottleDetail(opt.dataset?.base || '') === normalized;
+  });
+
+  // 無ければ仮 option を作る
+  if (!hit) {
+    hit = document.createElement('option');
+    hit.value = normalized;
+    hit.textContent = normalized;
+    hit.dataset.base = normalized;
+    hit.dataset.customBottle = '1';
+
+    const etcGroup = Array.from(selectEl.children).find(n =>
+      n.tagName === 'OPTGROUP' && n.label === 'その他'
+    );
+
+    (etcGroup || selectEl).appendChild(hit);
+  }
+
+  selectEl.value = hit.value;
+}
+
+function getSelectedDetail(formOrRow) {
+  if (!formOrRow) return '';
+
+  const sel = formOrRow.querySelector('.bottleDetails');
+  if (!sel) return '';
+
+  const opt = sel.selectedOptions?.[0];
+  if (!opt) {
+    return normalizeBottleDetail(sel.value || '');
+  }
+
+  if (opt.dataset?.base) {
+    return normalizeBottleDetail(opt.dataset.base);
+  }
+
+  return normalizeBottleDetail(sel.value || opt.value || '');
+}
 
 function confirmAndCalculate(e) {
   let subtotal = 0;
@@ -2436,37 +3138,6 @@ document.querySelectorAll('.bottle-form').forEach(form => {
 
   return false;
 }
-
-
-
-
-
-
-function moveHistoryItem(button, direction) {
-  const listItem = button.closest('li');
-  if (!listItem) return;
-
-  const parentList = listItem.parentNode;
-  let targetItem = null;
-
-  if (direction === 'up' && listItem.previousElementSibling) {
-    targetItem = listItem.previousElementSibling;
-    parentList.insertBefore(listItem, targetItem);
-  } else if (direction === 'down' && listItem.nextElementSibling) {
-    targetItem = listItem.nextElementSibling;
-    parentList.insertBefore(targetItem, listItem);
-  }
-
-  // ↓ 移動後の要素に強制スクロール（DOM反映後に実行）
-  requestAnimationFrame(() => {
-    listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-
-  renumberHistory(); // ← 連番再振り
-  localStorage.setItem('historyList', parentList.innerHTML);
-  updateSummary();
-}
-
 
 function restoreFromHistory(button) {
   const historyItem = button.closest('li') || button.closest('div');
@@ -2581,6 +3252,31 @@ if (f2Old) {
 
 }
 
+function moveHistoryItem(button, direction) {
+  const listItem = button.closest('li');
+  if (!listItem) return;
+
+  const parentList = listItem.parentNode;
+  let targetItem = null;
+
+  if (direction === 'up' && listItem.previousElementSibling) {
+    targetItem = listItem.previousElementSibling;
+    parentList.insertBefore(listItem, targetItem);
+  } else if (direction === 'down' && listItem.nextElementSibling) {
+    targetItem = listItem.nextElementSibling;
+    parentList.insertBefore(targetItem, listItem);
+  }
+
+  // ↓ 移動後の要素に強制スクロール（DOM反映後に実行）
+  requestAnimationFrame(() => {
+    listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  renumberHistory(); // ← 連番再振り
+  localStorage.setItem('historyList', parentList.innerHTML);
+  updateSummary();
+}
+
 function deleteSelectedHistory() {
   const historyList = document.getElementById('historyList');
   const items = historyList.querySelectorAll('li');
@@ -2620,40 +3316,6 @@ function deleteSelectedHistory() {
     alert(msg);
   }
 }
-
-function updateSummary() {
-  const historyItems = document.querySelectorAll('#historyList li');
-  let totalPeople = 0;
-  let totalAmount = 0;
-  let totalGensen = 0;
-
-  historyItems.forEach(item => {
-    const text = item.innerText;
-    const amountMatch = text.match(/合計:\s*¥([\d,]+)/);
-    const gensenMatch = text.match(/源泉費:\s*¥([\d,]+)/);
-
-    if (amountMatch) {
-      const amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
-      totalAmount += amount;
-    }
-
-    if (gensenMatch) {
-      const gensen = parseInt(gensenMatch[1].replace(/,/g, ''), 10);
-      totalGensen += gensen;
-    }
-
-    totalPeople += 1;
-  });
-
-  document.getElementById('summaryTotalPeople').innerText = `${totalPeople}人`;
-  document.getElementById('summaryTotalAmount').innerText = `¥${totalAmount.toLocaleString()}`;
-  document.getElementById('summaryTotalTax').innerText = `¥${totalGensen.toLocaleString()}`;
-
-  // カンマ付きでセット
-  document.getElementById('femaleSalary').value = totalAmount.toLocaleString();
-  document.getElementById('femaleTax').value = totalGensen.toLocaleString();
-}
-
 
 function toggleDetails(button) {
   const container = button.nextElementSibling.nextElementSibling; 
@@ -2723,7 +3385,6 @@ function calculateBack() {
   document.getElementById("detail").value = detailLines.join("\n");
 }
 
-
 function restoreCheckboxes() {
   const checkboxStates = JSON.parse(localStorage.getItem('checkboxes')) || {};
   document.getElementById('experienceAndRental').checked = checkboxStates.experienceAndRental || false;
@@ -2734,58 +3395,6 @@ function restoreCheckboxes() {
   }
 }
 
-
-
-document.addEventListener('DOMContentLoaded', () => {
-  const exp = document.getElementById('experienceAndRental');
-  if (!exp) return;
-
-  exp.addEventListener('change', function (e) {
-    // ★ プログラムからの変更（dispatchEvent等）は無視
-    if (!e.isTrusted) return;
-
-    if (this.checked) {
-      const confirmed = confirm('「体験及び貸出」にチェックが入りました。');
-      if (!confirmed) this.checked = false;
-    }
-  });
-});
-
-// 統一された初期化処理
-document.addEventListener('DOMContentLoaded', () => {
-
-  // APP2
-  loadBottleForms();
-  restoreCheckboxes();
-  restoreInputs(); 
-
-  // APP1
-  restoreForm();
-  restoreCheckboxStates();
-  document.querySelectorAll("table input[type='checkbox']").forEach(cb => {
-    cb.addEventListener("change", saveCheckboxStates);
-  });
-
-  // APP3
-  restoreApp3Data();
-  attachApp3Listeners();
-
-  // 顧問料自動反映
-  observeTotalCountForAdviserFee(); // ←これを追加
-
-  attachCommaFormatApp1and3();
-
-    const historyList = document.getElementById('historyList');
-  if (historyList) {
-    historyList.innerHTML = localStorage.getItem('historyList') || '';
-  }
-
-  updateSummary();
-  updateCalculations(); // 初期計算
-  attachCommaFormatApp3();
-  refreshBottleDropdownsFromHistory();
-});
-
 function restoreInputs() {
   const inputValues = JSON.parse(localStorage.getItem('inputs') || '{}');
   Object.entries(inputValues).forEach(([id, value]) => {
@@ -2795,7 +3404,6 @@ function restoreInputs() {
 }
 
 // --- app2フォームの十字キー移動 ---
-// #app2内でのみ有効
 (function(){
   // 移動対象input,selectの共通セレクタ（動的増減対応）
   function getApp2Fields() {
@@ -2881,1684 +3489,37 @@ function restoreInputs() {
   });
 })();
 
+function updateSummary() {
+  const historyItems = document.querySelectorAll('#historyList li');
+  let totalPeople = 0;
+  let totalAmount = 0;
+  let totalGensen = 0;
 
+  historyItems.forEach(item => {
+    const text = item.innerText;
+    const amountMatch = text.match(/合計:\s*¥([\d,]+)/);
+    const gensenMatch = text.match(/源泉費:\s*¥([\d,]+)/);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//<app3 script----------------------------------------------------------------------------------------------------------------->
-    function formatNumber(num) {
-    return num.toLocaleString('ja-JP');
+    if (amountMatch) {
+      const amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+      totalAmount += amount;
     }
 
-// 1) 最初に使う共通getter（カンマ/¥除去）
-function get(id){
-  const el = document.getElementById(id);
-  if (!el) return 0;
-  const raw = (el.value ?? el.textContent ?? "0").toString().replace(/[^\d\-]/g,"");
-  const num = parseInt(raw,10);
-  return Number.isNaN(num) ? 0 : num;
-}
-
-// ============================================================
-// 履歴(#historyList)から店舗負担分の合計を算出
-// 事前に LI に data-store-covered を付けていなくても、
-// テキスト "店舗負担: ¥xxxx" からフォールバックで拾います。
-// ============================================================
-function getTotalStoreBurden() {
-  try {
-    const items = document.querySelectorAll('#historyList > li');
-    let total = 0;
-    items.forEach(li => {
-      // 1) data属性があれば最優先
-      const attr = li.getAttribute('data-store-covered');
-      if (attr !== null && attr !== '') {
-        const v = parseInt(attr, 10);
-        if (!Number.isNaN(v)) { total += v; return; }
-      }
-      // 2) sendoff 行のテキストから拾う
-      const txt = li.querySelector('.sendoff')?.textContent || '';
-      const m = txt.match(/店舗負担:\s*¥?\s*([\d,]+)/);
-      if (m) {
-        const v = parseInt(m[1].replace(/,/g, ''), 10);
-        if (!Number.isNaN(v)) total += v;
-      }
-    });
-    return total;
-  } catch (e) {
-    console.warn('店舗負担合計の取得に失敗', e);
-    return 0;
-  }
-}
-
-// ★追加：総客数・女子出勤数ミニフォームを自動反映
-function updateAttendanceMiniForm() {
-  // 総客数 → customersCount
-  const totalSpan = document.getElementById('totalCustomers');
-  const customersInput = document.getElementById('customersCount');
-  if (totalSpan && customersInput) {
-    const num = parseInt(totalSpan.textContent.replace(/[^0-9\-]/g, ''), 10);
-    customersInput.value = Number.isNaN(num) ? '' : num;
-  }
-
-  // 履歴インデックス人数（「○人」）→ femaleAttendance
-  const historyCountSpan = document.getElementById('historyIndexCount');
-  const femaleInput = document.getElementById('femaleAttendance');
-  if (historyCountSpan && femaleInput) {
-    const m = historyCountSpan.textContent.match(/(\d+)/);
-    const num2 = m ? parseInt(m[1], 10) : NaN;
-    femaleInput.value = Number.isNaN(num2) ? '' : num2;
-  }
-}
-
-function updateCalculations(){
-
-  // --- ① driverFee を最初に再計算 ---
-  (function(){
-    // storeTotal → driverExtra1 に反映
-    const el = document.getElementById('driverExtra1');
-    if (el) {
-      const storeTotal = getTotalStoreBurden();
-      el.value = Number.isNaN(storeTotal) ? '' : storeTotal.toLocaleString('ja-JP');
+    if (gensenMatch) {
+      const gensen = parseInt(gensenMatch[1].replace(/,/g, ''), 10);
+      totalGensen += gensen;
     }
 
-    // extra1 + extra2 → driverFee に反映
-    const extra1 = get('driverExtra1');
-    const extra2 = get('driverExtra2');
-    const sum = extra1 + extra2;
-    const feeEl = document.getElementById('driverFee');
-    if (feeEl) feeEl.value = sum ? sum.toLocaleString('ja-JP') : '';
-  })();
-
-
-  // --- ② カード売上・税関連 ---
-  const cardTotalText = document.getElementById('cardTotal')?.textContent || '0';
-  const cardTotal = parseInt(cardTotalText.replace(/,/g, ''), 10) || 0;
-  const cardSalesInput = document.getElementById('cardSales');
-  if (cardSalesInput) cardSalesInput.value = formatNumber(cardTotal);
-
-  const summaryTaxText = document.getElementById('summaryTotalTax')?.innerText || '¥0';
-  const summaryTaxValue = parseInt(summaryTaxText.replace(/[¥,]/g, ''), 10) || 0;
-  const femaleTaxEl0 = document.getElementById('femaleTax');
-  if (femaleTaxEl0) femaleTaxEl0.value = summaryTaxValue;
-
-  // --- ③ totalBackAmount → catchBack ---
-  const totalBackAmountText =
-    document.getElementById("totalBackAmount")?.textContent?.replace(/,/g, "") || "0";
-  const totalBackAmount = parseInt(totalBackAmountText, 10) || 0;
-  const catchBackEl = document.getElementById("catchBack");
-  if (catchBackEl) catchBackEl.value = totalBackAmount.toLocaleString();
-
-  // --- ④ 売上・現金 ---
-  const total = get('totalSales');
-  const card = get('cardSales');
-  const cash = total - card;
-  const cashSalesEl = document.getElementById('cashSales');
-  if (cashSalesEl) cashSalesEl.value = formatNumber(cash);
-
-  // --- ⑤ 税・経費 ---
-  const tax = get('femaleTax') + get('maleTax');
-  const totalTaxEl = document.getElementById('totalTax');
-  if (totalTaxEl) totalTaxEl.value = formatNumber(tax);
-
-  const receiptTotal =
-    get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
-  const r6 = document.getElementById('receipt6');
-  if (r6) r6.value = formatNumber(receiptTotal);
-
-  const expenses = get('alcohol') + receiptTotal;
-  const totalExpEl = document.getElementById('totalExpenses');
-  if (totalExpEl) totalExpEl.value = formatNumber(expenses);
-
-
-  // --- ⑥ adviserFee 自動計算 ---
-  const adviserCountEl = document.getElementById('totalCountValue');
-  const adviserFeeInput = document.getElementById('adviserFee');
-  if (adviserCountEl && adviserFeeInput) {
-    const count = parseInt(adviserCountEl.textContent.replace(/,/g, ''), 10) || 0;
-    adviserFeeInput.value = (count * 1000).toLocaleString();
-  }
-
-
-  // --- ⑦ 人件費合計 ---
-  const labor =
-    get('femaleSalary') +
-    get('maleSalary') +
-    get('catchBack') +
-    get('scoutBack') +
-    get('adviserFee') +
-    get('driverFee');
-
-  const totalLaborEl = document.getElementById('totalLaborCosts');
-  if (totalLaborEl) totalLaborEl.value = formatNumber(labor);
-
-
-  // --- ⑧ 粗利益・残・誤差 ---
-  const gross = total - labor - tax - expenses;
-  const grossEl = document.getElementById('grossProfit');
-  if (grossEl) grossEl.value = formatNumber(gross);
-
-  const remaining = gross - card;
-  const remainingEl = document.getElementById('remainingCash');
-  if (remainingEl) remainingEl.value = formatNumber(remaining);
-
-  const startCash = get('startCash');
-  const finalCash = get('finalCash');
-  const extraSafeCash = get('extraSafeCash');
-  const difference = (finalCash - remaining - tax) - (startCash + extraSafeCash);
-  const diffEl = document.getElementById('cashDifference');
-  if (diffEl) diffEl.value = formatNumber(difference);
-
-
-  // --- ⑨ 表示更新・保存 ---
-  updateAttendanceMiniForm();
-  updateNegativeColor('grossProfit');
-  updateNegativeColor('remainingCash');
-  updateNegativeColor('cashDifference');
-  updateExtraGroupFields();
-  attachCommaFormatApp3();
-  saveToLocal();
-}
-
-// ============================================================
-// APP1/APP2 の集計DOM変化を監視 → APP3更新を予約
-// ============================================================
-(function installApp3AutoSyncObservers(){
-  const watchIds = [
-    'cardTotal',        // カード売上の元
-    'summaryTotalTax',  // 税合計の元
-    'totalBackAmount',  // CB合計の元
-    'totalCustomers',   // 総客数（ミニフォーム用）
-    'historyIndexCount' // 女子出勤数（ミニフォーム用）
-  ];
-
-  const observer = new MutationObserver(() => {
-    scheduleApp3Update('mutation');
+    totalPeople += 1;
   });
 
-  watchIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    observer.observe(el, {
-      childList: true,
-      characterData: true,
-      subtree: true
-    });
-  });
-})();
-
-// ============================================================
-// APP1/APP2 の入力・選択操作でも APP3 更新を予約（保険）
-// ============================================================
-document.addEventListener('input', (e) => {
-  const t = e.target;
-  if (!t) return;
-  if (t.closest('#app1') || t.closest('#app2') || t.closest('#app3')) {
-  scheduleApp3Update('input(app1/app2/app3)');
-}
-}, true);
-
-document.addEventListener('change', (e) => {
-  const t = e.target;
-  if (!t) return;
-  if (t.closest('#app1') || t.closest('#app2')) {
-    scheduleApp3Update('change(app1/app2)');
-  }
-}, true);
-
-
-function updateExtraGroupFields() {
-  // それぞれの値を取得（必要に応じて変数は他から渡してください）
-  let grossProfit = get('grossProfit');         // 粗利益
-  let cardSales = get('cardSales');             // カード売上
-  let remainingCash = get('remainingCash');     // 現金残
-  let totalTax = get('totalTax');               // 源泉費合計
-
-  // 合計計算：現金残 + 源泉費
-  let totalGrossPlusTax = remainingCash + totalTax;
-
-  // 各フィールドに値を表示（存在確認しながら安全に代入）
-  let el;
-
-  el = document.getElementById('grossProfit_extra');
-  if (el) el.value = formatNumber(grossProfit);
-
-  el = document.getElementById('cardSales_extra');
-  if (el) el.value = formatNumber(cardSales);
-
-  el = document.getElementById('remainingCash_extra');
-  if (el) el.value = formatNumber(remainingCash);
-
-  el = document.getElementById('totalWithholdingTax');
-  if (el) el.value = formatNumber(totalTax);
-
-  el = document.getElementById('totalGrossPlusTax');
-  if (el) el.value = formatNumber(totalGrossPlusTax);
-}
-
-
-function updateNegativeColor(id) {
-  const el = document.getElementById(id);
-  if (!el) return; // 無ければ何もしない
-  const v = parseInt((el.value || '0').replace(/,/g, ''), 10) || 0;
-  el.classList.toggle('negative', v < 0);
-}
-
-function saveToLocal() {
-  const inputs = document.querySelectorAll('input');
-  inputs.forEach(input => {
-    // disabled 状態でも保存
-    localStorage.setItem(input.id, input.value);
-  });
-}
-
-function loadFromLocal() {
-  const inputs = document.querySelectorAll('input');
-  inputs.forEach(input => {
-    const saved = localStorage.getItem(input.id);
-    if (saved !== null) input.value = saved;
-  });
-}
-
-
-//業務内容を保存
-window.addEventListener("DOMContentLoaded", () => {
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10); // "YYYY-MM-DD"
-
-  if (!localStorage.getItem("workStartDate")) {
-    localStorage.setItem("workStartDate", todayStr);
-  }
-});
-
-function saveApp3Data() {
-  const fields = [
-    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
-    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
-  ];
-  const data = {};
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) data[id] = el.value;
-  });
-  localStorage.setItem('app3_inputs', JSON.stringify(data));
-}
-
-function restoreApp3Data() {
-  const saved = localStorage.getItem('app3_inputs');
-  if (!saved) return;
-  const data = JSON.parse(saved);
-  Object.entries(data).forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value;
-  });
-  updateCalculations(); // 計算更新
-  attachCommaFormatApp1and3();
-}
-
-function attachApp3Listeners() {
-  const fields = [
-    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
-    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
-  ];
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', saveApp3Data);
-    }
-  });
-}
-
-
-
-
-function getCustomFileName() {
-  // JSTに補正（サーバーUTCなら+9）
-  const now = new Date();
-  now.setHours(now.getHours() + 9);
-
-  let fileDate = new Date(now);
-  const hour = now.getHours();
-  if (hour < 20) {
-    fileDate.setDate(fileDate.getDate() - 1);
-  }
-  const y = fileDate.getFullYear();
-  const m = String(fileDate.getMonth() + 1).padStart(2, '0');
-  const d = String(fileDate.getDate()).padStart(2, '0');
-
-  return `IBASD_${y}-${m}-${d}`;
-}
-
-
-
-
-// =========================
-// 共通リセット関数
-// =========================
-
-// 特定アプリ(app1, app2, app3)をリセット
-function resetApp(appId, full = false) {
-  if (!confirm(full 
-    ? "本当に完全クリアしますか？（履歴・保存データも削除）" 
-    : "入力をクリアしますか？"
-  )) return;
-
-  if (appId === 'app1') {
-    resetApp1(full);
-  } else if (appId === 'app2') {          // ← これを追加
-    resetApp2(full);
-  } else if (appId === 'app3') {
-    resetApp3(full);
-  }
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-}
-
-function resetAllApps() {
-  if (!confirm("app1〜app3のデータを全て削除しますか？")) return;
-
-  const overlay = document.getElementById('resetOverlay');
-  const canvas = document.getElementById('matrixCanvas');
-  const flash = document.getElementById('resetFlash');
-  overlay.style.display = 'flex';
-  setTimeout(() => overlay.classList.add('active'), 20);
-
-  startMatrixEffect(canvas);
-
-  setTimeout(() => {
-    flash.style.opacity = 1;
-    setTimeout(() => {
-      resetApp1(true);
-      resetApp2(true);
-      resetApp3(true);
-      showApp('app1');
-      window.scrollTo({top: 0, behavior: 'auto'});
-      try { localStorage.removeItem('appScrollMap'); } catch(e) {}
-      if (window.clearTabScrollMemory) window.clearTabScrollMemory();
-
-      // ★ ここで全部一気に消す
-      setTimeout(() => {
-        flash.style.opacity = 0;
-        stopMatrixEffect();
-        overlay.classList.remove('active');
-        overlay.style.display = 'none';
-      }, 520); // flashフェードアウト分
-    }, 400);  // 発光持続
-  }, 1600);   // マトリックス演出
-
-// ページ全体を最上段へ
-window.scrollTo({ top: 0, behavior: 'auto' });
-
-// contentWrapper のスクロールもリセット
-const wrapper = document.getElementById("contentWrapper");
-if (wrapper) wrapper.scrollTop = 0;
-
-// APP1をアクティブに切替
-document.body.setAttribute("data-active-app", "app1");
-
-// コンテンツ切替
-document.querySelectorAll(".content").forEach(el => el.classList.remove("active"));
-document.getElementById("app1").classList.add("active");
-
-// タブ切替
-document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-document.querySelector('.tab[data-target="app1"]').classList.add("active");
-
-}
-
-
-
-
-
-// =========================
-// app1用リセット
-// =========================
-function resetApp1(full) {
-  const formRows = document.getElementById("formRows");
-  if (!formRows) return;
-
-  // 1行だけ残して削除
-  while (formRows.rows.length > 1) formRows.deleteRow(1);
-
-  // 最初の行の初期化
-  formRows.querySelectorAll("input, select").forEach(el => el.value = '');
-  document.querySelectorAll("table input[type='checkbox']").forEach(cb => cb.checked = false);
-
-  // 合計リセット
-document.getElementById("totalCustomers").textContent = "0";
-document.getElementById("cashTotal").textContent = "0";
-document.getElementById("cardTotal").textContent = "0";
-document.getElementById("totalAmount").textContent = "0";
-document.getElementById("totalCountCell").innerHTML =
-  '<button type="button" class="print-mini" onclick="printEnvelopeApp1(\'ALL\')">出力</button>' +
-  '<span id="totalCountValue" class="count-value">0</span>';
-document.getElementById("totalBackAmount").textContent = "0";
-
-  // カテゴリ別もリセット
-  const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
-  categories.forEach(cat => {
-    document.getElementById(`${cat}count`).textContent = "0";
-    document.getElementById(`${cat}total`).textContent = "0";
-  });
-
-  rowNumber = 2;
-  updateTotals();
-
-  if (full) {
-    localStorage.removeItem("formData");
-    localStorage.removeItem("checkboxStates");
-  }
-}
-
-
-// =========================
-// app2用リセット
-// =========================
-function resetApp2(full) {
-  // === 通常フォームのクリア =========================================
-  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
-  const exp = document.getElementById('experienceAndRental');
-  if (exp) exp.checked = false;
-  const result = document.getElementById('result');
-  if (result) result.innerHTML = '';
-  const bottleForms = document.getElementById('bottleFormsContainer');
-  if (bottleForms) bottleForms.innerHTML = '';
-
-  // === 一括入力フォームのクリア（内包） ===============================
-  (function clearBulkInputForm() {
-    const grid = document.getElementById('bulkGrid');
-    if (!grid) return;
-
-    grid.querySelectorAll('.bulk-name, .bulk-send, .bulk-num').forEach(el => el.value = '');
-    grid.querySelectorAll('.bulk-exp').forEach(el => (el.checked = false));
-    grid.querySelectorAll('.btl-subrow').forEach(tr => tr.remove());
-    grid.querySelectorAll('tr.bulk-mainrow').forEach(row => {
-      row.dataset.bottleCount = '0';
-      const minusBtn = row.querySelector('.btl-minus');
-      if (minusBtn) minusBtn.setAttribute('disabled', 'true');
-    });
-  })();
-
-  // === 完全クリア時（履歴/保存データも削除） =========================
-  if (full) {
-    const historyList = document.getElementById('historyList');
-    if (historyList) historyList.innerHTML = '';
-
-    // 通常フォーム関連ローカルデータ削除
-    localStorage.removeItem('inputs');
-    localStorage.removeItem('historyList');
-    localStorage.removeItem('result');
-    localStorage.removeItem('bottleForms');
-
-    // ✅ 一括入力グリッド関連も削除
-    localStorage.removeItem('app2_bulkGridData');
-    localStorage.removeItem('app2_bulkPanelVisible');
-
-    // グリッド本体もクリア
-    const grid = document.getElementById('bulkGrid');
-    if (grid) grid.querySelector('tbody')?.replaceChildren();
-
-    if (typeof updateSummary === 'function') updateSummary();
-
-    const countEl = document.getElementById('historyIndexCount');
-    if (countEl) countEl.textContent = '0人';
-    if (typeof window.createHistoryIndex === 'function') window.createHistoryIndex();
-  }
-}
-
-
-// =========================
-// app3用リセット
-// =========================
-function resetApp3(full) {
-  document.querySelectorAll('#app3 input').forEach(el => {
-    if (el.type !== 'button') el.value = '';
-  });
-  updateCalculations();
-
-  if (full) {
-    localStorage.removeItem('app3_inputs');
-    localStorage.removeItem('app3_result');
-
-    // ✅ 一括入力グリッド関連も完全に消去
-    localStorage.removeItem('app2_bulkGridData');
-    localStorage.removeItem('app2_bulkPanelVisible');
-
-    // グリッド本体も空にする
-    const grid = document.getElementById('bulkGrid');
-    if (grid) grid.querySelector('tbody')?.replaceChildren();
-  }
-
-  attachCommaFormatApp1and3();
-}
-
-function clearApp2Inputs() {
-  resetApp2(false);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-document.getElementById('side-clear')?.addEventListener('click', clearApp2Inputs);
-
-function addComma(numStr) {
-  if (!numStr) return '';
-  // 数字とマイナス以外は除去
-  let val = numStr.replace(/[^\d\-]/g, '');
-  val = val.replace(/(?!^)-/g, '');
-  if (val === '' || val === '-') return val;
-  return parseInt(val, 10).toLocaleString('ja-JP');
-}
-
-// app1/app3内だけカンマ付与
-function attachCommaFormatApp1and3() {
-  // app1対象
-  document.querySelectorAll(
-    '#app1 input.amount, #app1 input.num, #app1 input.card, #app1 input.total, #app1 input.honshi, #app1 input.table-number'
-  ).forEach(input => {
-    if (input._commaFormatApplied) return;
-    input._commaFormatApplied = true;
-
-    input.addEventListener('input', function () {
-      let val = this.value.replace(/,/g, '');
-      if (val === '' || !/^-?\d*$/.test(val)) {
-        this.value = '';
-        return;
-      }
-      this.value = addComma(val);
-    });
-    input.addEventListener('focus', function () {
-      this.value = this.value.replace(/,/g, '');
-    });
-    input.addEventListener('blur', function () {
-      this.value = addComma(this.value);
-    });
-    // 初期値にも即時カンマ
-    if (input.value) input.value = addComma(input.value);
-  });
-
-  // app3対象（#app3直下でinput[type="text"]の全部/disabled除外）
-  document.querySelectorAll('#app3 input[type="text"]:not([disabled])')
-    .forEach(input => {
-      if (input._commaFormatApplied) return;
-      input._commaFormatApplied = true;
-
-      input.addEventListener('input', function () {
-        let val = this.value.replace(/,/g, '');
-        if (val === '' || !/^-?\d*$/.test(val)) {
-          this.value = '';
-          return;
-        }
-        this.value = addComma(val);
-      });
-      input.addEventListener('focus', function () {
-        this.value = this.value.replace(/,/g, '');
-      });
-      input.addEventListener('blur', function () {
-        this.value = addComma(this.value);
-      });
-      if (input.value) input.value = addComma(input.value);
-    });
-}
-
-function attachCommaFormatApp3() {
-  document.querySelectorAll(
-    '#app3 input[type="text"], #app3 input[type="number"]'
-  ).forEach(input => {
-    if (input._commaFormatApplied) return;
-    input._commaFormatApplied = true;
-
-    input.addEventListener('input', function () {
-      let val = this.value.replace(/,/g, '');
-      if (val === '' || !/^-?\d*$/.test(val)) {
-        this.value = '';
-        return;
-      }
-      this.value = addComma(val);
-    });
-
-    input.addEventListener('focus', function () {
-      this.value = this.value.replace(/,/g, '');
-    });
-
-    input.addEventListener('blur', function () {
-      this.value = addComma(this.value);
-    });
-  });
-}
-
-// --- マトリックス風エフェクト ---
-let matrixInterval, matrixStopFlag = false;
-
-function startMatrixEffect(canvas) {
-  const ctx = canvas.getContext('2d');
-  let W = window.innerWidth;
-  let H = window.innerHeight;
-  canvas.width = W;
-  canvas.height = H;
-  let fontSize = 18;  // 少し小さく密度を増やす
-  let columns = Math.floor(W / fontSize) + 2;
-  let drops = [];
-  for (let i = 0; i < columns; i++) drops[i] = Math.random() * H / fontSize;
-
-  // 文字セット（カタカナ・ひらがな・英数大文字・英数小文字・数字）
-  const chars = [
-    ..."アイウエオカキクケコサシスセソタチツテトナニヌネノマミムメモヤユヨラリルレロワヲン",
-    ..."あいうえおかきくけこさしすせそたちつてとなにぬねのまみむめもやゆよらりるれろわをん",
-    ..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-  ];
-
-  matrixStopFlag = false;
-
-  function draw() {
-    ctx.fillStyle = 'rgba(25,30,44,0.23)';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.font = fontSize + "px monospace";
-    ctx.fillStyle = "#47f7ff";
-    // 列ごとに複数行ドロップして密度UP
-    for (let i = 0; i < columns; i++) {
-      for (let d = 0; d < 2; d++) { // 1列あたり2個
-        const text = chars[Math.floor(Math.random() * chars.length)];
-        ctx.fillText(text, i * fontSize, (drops[i] - d) * fontSize);
-      }
-      if (Math.random() > 0.975) drops[i] = 0;
-      drops[i] += Math.random() * 1.3 + 0.7; // 速さランダム
-    }
-    if (!matrixStopFlag) matrixInterval = requestAnimationFrame(draw);
-  }
-
-  draw();
-}
-
-function stopMatrixEffect() {
-  matrixStopFlag = true;
-  if (matrixInterval) cancelAnimationFrame(matrixInterval);
-  const canvas = document.getElementById('matrixCanvas');
-  if (canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-}
-
-/* === CB表を [チェック][カテゴリ][本数][金額] に変換 === */
-document.addEventListener('DOMContentLoaded', () => {
-  const table = document.querySelector('#categorySection table');
-  if (!table) return;
-
-  /* ヘッダを差し替え */
-  const thRow = table.querySelector('thead tr');
-  if (thRow) thRow.innerHTML = '<th></th><th>カテゴリ</th><th>本数</th><th>金額</th>';
-
-  /* 各行を4列化（1列目の「チェック＋カテゴリ名」を分離） */
-  table.querySelectorAll('tbody tr').forEach(tr => {
-    // すでに4列ならスキップ
-    if (tr.children.length >= 4) return;
-
-    const firstTd = tr.children[0];
-    if (!firstTd) return;
-
-    const isTotal = /合計/.test(firstTd.textContent);
-
-    if (isTotal) {
-      // 合計行はチェック列を空、カテゴリ列に「合計」
-      const blank = document.createElement('td');          // [チェック]
-      tr.insertBefore(blank, firstTd);                     // 先頭に空列を追加
-      const catTd = document.createElement('td');          // [カテゴリ]
-      catTd.innerHTML = firstTd.innerHTML;                 // 「合計」
-      tr.replaceChild(catTd, firstTd);
-      return;
-    }
-
-    // 通常行：チェックとカテゴリ名を分離
-    const cb = firstTd.querySelector('input[type="checkbox"]');
-    const nameText = firstTd.textContent.replace(/\s+/g, ' ').trim();
-
-    // 先頭セルはチェックボックスだけに
-    firstTd.innerHTML = '';
-    if (cb) firstTd.appendChild(cb);
-
-    // チェックの次に「カテゴリ名」セルを挿入
-    const catTd = document.createElement('td');
-    catTd.textContent = nameText; // 例：UK
-    tr.insertBefore(catTd, tr.children[1]);
-  });
- });
-
-
-
-// 計算ボタン
-document.getElementById('side-calc')?.addEventListener('click', () => {
-  confirmAndCalculate(new Event('submit'));
-});
-
-/* ========= タブ切替：堅牢版（競合に強い） ================================================================================== */
-/* ========= タブ切替 + 各APPのスクロール記憶 =============================================================================== */
-(function () {
-  const tabsRoot = document.querySelector('.tabs');
-  if (!tabsRoot) return;
-
-  const pagesById = new Map(['app1','app2','app3'].map(id => [id, document.getElementById(id)]));
-
-  const SCROLL_KEY = 'appScrollMap';
-  const loadMap = () => { try { return JSON.parse(localStorage.getItem(SCROLL_KEY)) || {}; } catch(_) { return {}; } };
-  const saveMap = (m) => { try { localStorage.setItem(SCROLL_KEY, JSON.stringify(m)); } catch(_) {} };
-  let scrollMap = loadMap();
-
-  const getY = () => window.pageYOffset || document.documentElement.scrollTop || 0;
-  const restoreY = (id) => {
-    const y = Number(scrollMap[id] ?? 0);
-    // レイアウト確定後に復帰
-    requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'auto' }));
-  };
-
-  // スクロールのたびに「現在のAPP」の位置を保存（rAFスロットル）
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      ticking = false;
-      const id = document.body.getAttribute('data-active-app');
-      if (!id) return;
-      scrollMap[id] = getY();
-      saveMap(scrollMap);
-    });
-  }, { passive: true });
-
-  function apply(targetId) {
-    // 切替前に現在の位置を保存
-    const prevId = document.body.getAttribute('data-active-app');
-    if (prevId) {
-      scrollMap[prevId] = getY();
-      saveMap(scrollMap);
-    }
-
-    // ページ表示/非表示
-    pagesById.forEach((el, id) => {
-      const on = id === targetId;
-      if (!el) return;
-      el.style.display = on ? '' : 'none';
-      el.classList.toggle('active', on);
-      el.toggleAttribute('hidden', !on);
-    });
-
-    // タブの見た目/ARIA
-    tabsRoot.querySelectorAll('.tab').forEach(t => {
-      const on = t.dataset.target === targetId;
-      t.classList.toggle('active', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', on ? '0' : '-1');
-      t.setAttribute('role', 'tab');
-    });
-
-    document.body.setAttribute('data-active-app', targetId);
-    try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
-
-    // そのAPPの以前の位置へ復帰
-    restoreY(targetId);
-  }
-
-  // 外からも呼べるように
-  window.showApp = apply;
-
-  // スクロール記憶を完全クリア（ローカル/メモリ両方）
-window.clearTabScrollMemory = () => {
-  scrollMap = {};
-  saveMap(scrollMap);
-};
-
-  // クリック＆Enter/Spaceでタブ切替
-  tabsRoot.addEventListener('click', (e) => {
-    const tab = e.target.closest('.tab');
-    if (!tab || !tabsRoot.contains(tab)) return;
-    const id = tab.dataset.target;
-    if (id) apply(id);
-  });
-
-  tabsRoot.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const tab = e.target.closest('.tab');
-    if (!tab) return;
-    e.preventDefault();
-    const id = tab.dataset.target;
-    if (id) apply(id);
-  });
-
-  // 初期表示（保存 > 既存active > 先頭 > app1）
-  const saved = localStorage.getItem('selectedTab');
-  const fallbackTab = tabsRoot.querySelector('.tab.active') || tabsRoot.querySelector('.tab');
-  const fallback = fallbackTab?.dataset.target || 'app1';
-  apply(saved || fallback);
-
-  // ページ離脱時の保険
-  window.addEventListener('beforeunload', () => {
-    const id = document.body.getAttribute('data-active-app');
-    if (!id) return;
-    scrollMap[id] = getY();
-    saveMap(scrollMap);
-  });
-})();
-
-
-
-
-
-
-
-// APP3保存と封筒印刷で共通利用する日付文字列生成関数
-function getApp3StyleDate() {
-  const d = new Date();
-  // 5時より前なら前日扱い
-  if (d.getHours() < 5) {
-    d.setDate(d.getDate() - 1);
-  }
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}/${m}/${day}`;
-}
-
-
-/* =========================================================
-   APP1 だけで使うもの（顧問料：ALL／個別の封筒印刷）
-   使い方：
-     - 顧問料まとめ封筒 … printEnvelopeApp1('ALL')
-     - カテゴリ封筒     … printEnvelopeApp1('UK') など
-     - #resultをそのまま印刷 … preparePrintApp1()
-========================================================= */
-
-/* =========================================================
-   APP1 印刷（安定版・全面作り直し）
-   - preparePrintApp1: #result をそのまま印刷
-   - printEnvelopeApp1:
-       * 'ALL' → カテゴリごとの本数合計＋総人数＋金額
-       * その他 → 従来の明細（単価×本数）＋Total
-   - openPrintApp1: 90×205mm 封筒レイアウト、確実にプレビュー→元画面復帰
-========================================================= */
-
-(function(){
-  const YEN = (v)=> Number(v||0).toLocaleString('ja-JP');
-
-  // #result をそのまま印刷（既存互換）
-  window.preparePrintApp1 = function () {
-    const html = (document.getElementById('result')?.innerHTML || '').trim();
-    if (!html) { alert('印刷する内容がありません。'); return; }
-
-    const printCSS = `
-      <style>
-        @media print {
-          @page { size: 90mm 205mm; margin: 0; }
-          html, body {
-            margin: 0; padding: 0; background: #fff;
-            -webkit-print-color-adjust: exact; print-color-adjust: exact;
-          }
-          #result {
-            width: 90mm !important; max-height: 205mm !important;
-            margin: 0 auto !important; padding: 8mm 6mm !important;
-            box-sizing: border-box; font-size: 10.5pt; line-height: 1.25;
-          }
-          #result, .envelope {
-            page-break-before: avoid;
-            page-break-after: avoid;
-            page-break-inside: avoid;
-          }
-        }
-      </style>`;
-
-    openPrintApp1(printCSS + `<div id="result">${html}</div>`, { rotateOnMobile: true });
-  };
-
-  // 封筒印刷（ALL or 個別カテゴリ）
-  window.printEnvelopeApp1 = function (category) {
-    const dateStr = (typeof getApp3StyleDate === 'function')
-      ? getApp3StyleDate()
-      : (() => {
-          const d = new Date();
-          return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-        })();
-
-    if (category === 'ALL') {
-      if (!confirm('伝票の記入はすべて完了していますか？')) return;
-
-      const CATS = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB'];
-
-      const perCat = CATS.map(key => {
-        const arr = (window.catchbackDetails && window.catchbackDetails[key]) || [];
-        const total = arr.reduce((s, d) => {
-          const n = parseInt(String(d?.count ?? 0).replace(/,/g,''), 10);
-          return s + (isNaN(n) ? 0 : n);
-        }, 0);
-        return { key, total };
-      });
-
-      const shown = perCat.filter(x => x.total > 0);
-      const list  = shown.length ? shown : perCat;
-
-      const grand  = list.reduce((s, x) => s + x.total, 0);
-      const amount = grand * 1000;
-
-      // openPrintApp1 は行テキストを再構成するので 1行ずつ渡す
-      const lines = list.map(x => `${x.key} (計${x.total})`).join('\n');
-
-      const innerAll = `
-        <div class="envelope">
-          <div class="print-date">${dateStr}</div>
-          <div class="print-title">顧問料</div>
-          <div style="text-align:center; font-size:26pt; margin:2mm 0 3mm;">￥${YEN(amount)}</div>
-          <div style="text-align:center; font-size:14pt; margin-bottom:4mm;">（人数: ${grand}）</div>
-          ${lines}
-          <div style="text-align:center; font-size:14pt; margin-top:4mm;">Total ${grand}</div>
-        </div>`;
-
-      openPrintApp1(innerAll, { rotateOnMobile:true });
-      return;
-    }
-
-    // 個別カテゴリ
-    // 個別カテゴリ
-// --- 個別カテゴリ ---
-const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
-const lineTexts = [];
-let total = 0;
-arr.forEach(d => {
-  const unit  = Number(String(d.unit || 0).replace(/[,￥¥]/g,''));
-  const count = Number(String(d.count|| 0).replace(/,/g,''));
-  if (unit && count) {
-    lineTexts.push(`${unit.toLocaleString()}×${count}`);
-    total += count;
-  }
-});
-
-// ✅ 合計金額を画面上の <span id="UKtotal"> の値から取得
-const totalSpan = document.getElementById(`${category}total`);
-const amountText = totalSpan ? totalSpan.textContent.trim() : "0";
-
-// <br> で改行
-const rowsHtml = lineTexts.length ? lineTexts.join('<br>') : '0';
-
-// 出力HTML
-const innerCat = `
-  <div class="envelope" style="font-size:11pt;line-height:1.35;">
-    <div class="print-date">${dateStr}</div>
-    <div class="print-title">${category}</div>
-    <div class="detail-list" style="margin:3mm 0 4mm 0;">
-      ${rowsHtml}
-    </div>
-    <div style="text-align:center; font-size:12pt; margin-top:2mm;">
-      Total ${total}本
-    </div>
-    <div style="text-align:center; font-size:22pt; margin:3mm 0 0;">
-      ￥${amountText}
-    </div>
-  </div>`;
-
-openPrintApp1(innerCat, { rotateOnMobile:true, noRebuild:true });
-  }
-
-  // コア：印刷ウィンドウ生成・整形・復帰制御
-  function openPrintApp1(innerHTML, opts = { rotateOnMobile:true }) {
-    // ---- 行テキスト化して3行パターンを再構成 ----
-    // ---- 行テキスト化して3行パターンを再構成 ----
-let rebuilt = innerHTML;
-if (!opts?.noRebuild) {
-  const tmpEl = document.createElement('div');
-  tmpEl.innerHTML = innerHTML;
-  const lines = (tmpEl.innerText.trim().split(/\r?\n/)).map(s => s.trim());
-
-  rebuilt = "";
-  for (let i = 0; i < lines.length; i++) {
-    const a = lines[i] || "";
-    const b = lines[i + 1] || "";
-    const c = lines[i + 2] || "";
-
-    if (/^[A-Z]{1,6}$/.test(a) &&
-        (/^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$|^\d+$/.test(b)) &&
-        c.includes("計")) {
-      rebuilt += `
-        <div class="cat-line">
-          <span class="cat">${a}</span>
-          <span class="val">${b}</span>
-          <span class="cnt">${c}</span>
-        </div>`;
-      i += 2;
-    } else if (a === "") {
-      rebuilt += `<div class="group-sep"></div>`;
-    } else {
-      rebuilt += `<div class="misc">${a}</div>`;
-    }
-  }
-}
-
-    // ---- 子ウィンドウ生成（毎回ユニーク名）----
-    const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
-    const winName = "app1print_" + Date.now();
-    const w = window.open("", winName);
-    if (!w) { alert("ポップアップがブロックされました。許可してください。"); return; }
-
-    const doc = w.document;
-    doc.open();
-    doc.write(`
-      <!doctype html>
-      <html lang="ja">
-      <head>
-        <meta charset="utf-8">
-        <title>APP1 出力</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          @page { size: 90mm 205mm; margin: 0; }
-          html, body {
-            margin: 0; padding: 0; background: #fff;
-            -webkit-print-color-adjust: exact; print-color-adjust: exact;
-          }
-          #page {
-            width: 90mm; height: 205mm;
-            padding: 8mm 6mm; box-sizing: border-box;
-            font-size: 11pt; line-height: 1.3;
-          }
-          .rotate180 #page { transform: rotate(180deg); transform-origin: 50% 50%; }
-          .cat-line {
-            display: grid; grid-template-columns: 3.2em 6em auto;
-            column-gap: 8px; align-items: baseline;
-          }
-          .cat-line .cat { font-weight: 700; }
-          .cat-line .val, .cat-line .cnt { text-align: right; }
-          .cat-line .cnt { opacity: .9; }
-          .group-sep { height: 0.8em; }
-          .misc { margin: 2px 0; }
-          #__app1Back {
-            position: fixed; right: 8px; top: 8px; padding: .5em .8em;
-            font-size: 12px; border: 1px solid #888; border-radius: 6px;
-            background: #fff; cursor: pointer; z-index: 9999;
-          }
-          @media print { #__app1Back { display:none } }
-        </style>
-      </head>
-      <body class="${isSP && opts.rotateOnMobile ? 'rotate180' : ''}">
-        <div id="page">${rebuilt}</div>
-        <button id="__app1Back">← 元の画面へ戻る</button>
-        <script>
-          (function(){
-            function backToOpener(){
-              try { if (window.opener && !window.opener.closed) window.opener.focus(); } catch(e){}
-              try { window.close(); } catch(e){}
-              try { if (window.opener && !window.opener.closed) window.opener.postMessage({type:'IBASD_PRINT_DONE'}, '*'); } catch(e){}
-            }
-
-            // 印刷キック（load 済みでも一回だけ）
-            let kicked=false, printed=false;
-            function kick(){
-              if (kicked) return; kicked=true;
-              try { window.focus(); window.print(); printed=true; } catch(e){}
-            }
-            if (document.readyState === 'complete') { setTimeout(kick, 80); }
-            else {
-              window.addEventListener('load', ()=> setTimeout(kick,120), {once:true});
-              document.addEventListener('readystatechange', ()=> {
-                if (document.readyState === 'complete') setTimeout(kick, 80);
-              });
-            }
-            setTimeout(kick, 1500); // 最後の一押し
-
-            // 必ず閉じて戻る：5重トリガ
-            window.addEventListener('afterprint', backToOpener);
-            window.addEventListener('focus', ()=> { if (printed) backToOpener(); });
-            document.addEventListener('visibilitychange', ()=> { if (!document.hidden) backToOpener(); });
-            try {
-              const mql = matchMedia('print');
-              const h = e => { if (!e.matches) backToOpener(); };
-              (mql.addEventListener ? mql.addEventListener('change', h) : mql.addListener(h));
-            } catch(e){}
-            setTimeout(backToOpener, 12000); // タイムアウト保険
-
-            // 手動戻る
-            document.getElementById('__app1Back')?.addEventListener('click', backToOpener);
-          })();
-        <\/script>
-      </body>
-      </html>
-    `);
-    doc.close();
-
-    // 親側：ユーザー操作直後の“第一弾”をここで試す
-    try {
-      w.__app1Printed = false;
-      w.focus();
-      w.print();           // ここで開けば最短
-      w.__app1Printed = true;
-
-      w.addEventListener('load', () => {
-        if (!w.__app1Printed) {
-          try { w.focus(); w.print(); w.__app1Printed = true; } catch(e){}
-        }
-      }, { once:true });
-    } catch(e) {}
-
-    // 親側ウォッチドッグ：子が閉じたら即フォーカス
-    try {
-      const wd = setInterval(() => {
-        if (!w || w.closed) { clearInterval(wd); try { window.focus(); } catch(e){} }
-      }, 700);
-
-      window.addEventListener('message', (ev) => {
-        if (ev && ev.data && ev.data.type === 'IBASD_PRINT_DONE') {
-          try { window.focus(); } catch(e){}
-        }
-      }, { once:true });
-    } catch(e){}
-  }
-
-})();
-
-
-
-
-/* =========================================================
-   APP2 だけで使うもの（#result を封筒サイズで出力）
-   使い方：
-     - #resultを封筒レイアウトで … preparePrintApp2('envelope')  ←既定
-     - #resultそのまま            … preparePrintApp2('plain')
-   ========================================================= */
-
-window.preparePrintApp2 = function (mode = 'envelope') {
-  if (typeof window.showApp === 'function') window.showApp('app2');
-
-  // 印刷前に保存内容も最新化
-  if (typeof saveBottleForms === 'function') saveBottleForms();
-
-  if (typeof window.calculate === 'function') window.calculate();
-
-  const html = (document.getElementById('result')?.innerHTML || '').trim();
-  if (!html) {
-    alert('印刷する内容がありません。先に「計算」で結果を出してください。');
-    return;
-  }
-
-  const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
-  const inner = (mode === 'envelope' && !hasEnvelope)
-    ? `<div class="envelope">${html}</div>`
-    : html;
-
-  openPrintApp2(inner, { scale: 1.05, rotateOnMobile: true, trimBottomMM: 20 });
-};
-
-
-function openPrintApp2(innerHTML, opts = {}) {
-  const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
-  const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
-  const rotate = rotateOnMobile && isSP;
-
-  // ★ 最終合計をチェックして、条件を満たせば special クラスを付与
-  const temp = document.createElement('div');
-  temp.innerHTML = innerHTML;
-  const finalEl = temp.querySelector('.finalAmount');
-  if (finalEl) {
-    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10);
-    if (num >= 100000) {
-      finalEl.classList.add('rainbow-print');
-    }
-  }
-  innerHTML = temp.innerHTML;
-
-  const printHTML = `<!doctype html><html lang="ja"><head>
-  <meta charset="utf-8"><title>print</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root { --scale:${scale}; }
-    @page { size: 90mm 205mm; margin: 0; }
-    html,body {
-      margin:0; padding:0; background:#fff;
-      -webkit-print-color-adjust:exact; print-color-adjust:exact;
-    }
-
-    #page { width:90mm; max-height:205mm; margin:0 auto; overflow:hidden; }
-    .rotate180 #page { margin-bottom:-${trimBottomMM}mm; }
-
-    #result {
-      width:calc(90mm/var(--scale));
-      min-height:calc(205mm/var(--scale));
-      margin:0 auto; padding:0;
-      box-sizing:border-box;
-      transform:scale(var(--scale));
-      transform-origin:top center;
-    }
-    .rotate180 #result {
-      transform:rotate(180deg) scale(var(--scale));
-      transform-origin:center center;
-    }
-
-.envelope {
-  box-sizing: border-box;
-  width: calc(84mm / var(--scale)); /* ← 86→84 にして左右3mmずつの余白を確保 */
-  max-height: 205mm;
-  margin: 0 auto;
-  text-align: left;
-  font-family: 'ＭＳ 明朝', serif;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .02em;
-  padding: calc(5mm / var(--scale)); /* padding もスケールで割って実効幅を維持 */
-}
-    .print-date  { text-align:left;  font-size:11pt; margin:4mm 0 0; }
-    .print-title { text-align:center;font-size:14pt;margin:2mm 0 8mm;font-weight:700; }
-    .receipt-row { display:flex; justify-content:space-between; align-items:baseline; }
-    .receipt-row .label{ margin-right:5mm; white-space:nowrap; }
-    .receipt-row .value{ font-weight:700; font-size:12pt; text-align:right; }
-    .totalAmount{ font-size:18pt !important; font-weight:800; color:#0066cc; margin:3mm 0 2mm; }
-    .finalAmount{ font-size:18pt !important; font-weight:900; color:#009944; margin:4mm 0 3mm; }
-    .castName   { font-size:16pt !important; font-weight:700; }
-
-      .castName {
-    font-size: 18pt !important;
-    font-weight: 800 !important;
-    margin: 3mm 0 !important;   /* 名前上下の余白復活 */
-  }
-
-  .subtotal {
-    font-size: 14pt !important;
-    font-weight: 700 !important;
-    color: #333 !important;
-    margin-top: 2mm !important;
-    margin-bottom: 2mm !important;
-  }
-
-  .totalAmount {
-    font-size: 15pt !important;
-    font-weight: 800 !important;
-    color: #0066cc !important;
-    margin-top: 3mm !important;
-    margin-bottom: 2mm !important;
-  }
-
-  .finalAmount {
-    font-size: 18pt !important;
-    font-weight: 900 !important;
-    color: #009944 !important;
-    margin-top: 4mm !important;
-    margin-bottom: 3mm !important;
-  }
-
-    /* 印刷だけ虹色 */
-    @media print {
-      @keyframes rainbowText {
-        0%   { color: red; }
-        20%  { color: orange; }
-        40%  { color: yellow; }
-        60%  { color: green; }
-        80%  { color: blue; }
-        100% { color: purple; }
-      }
-
-  .rainbow-print {
-    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 900;
-  }
-
-#result .congrats.print-only {
-  display: none;
-  text-align: center;
-  font-weight: bold;
-  font-size: 14pt;
-
-  /* ↓ ここを追加または調整 */
-  margin-bottom: 2px;   /* 最終合計との間隔を小さくする */
-}
-@media print {
-  #result .congrats.print-only {
-    display: block;
-  }
-
-#result .congrats-box {
-  border: 2px solid #000;
-  padding: 6px 10px;
-  margin: 6px 0;
-
-  /* ここから追加/変更 */
-  max-width: calc(100% - 4mm); /* ← 右端クリップ回避の安全幅 */
-  margin-left: 2mm;
-  margin-right: 2mm;
-  /* ここまで */
-
-  text-align: center;
-  border-radius: 6px;
-  display: block;
-  box-sizing: border-box;
-}
-
-#result .congrats.print-only {
-  font-weight: bold;
-  font-size: 14pt;
-  margin-bottom: 2px;       /* 最終合計との間隔を調整 */
-}
-}
-       
-    }
-    
-  </style>
-  </head><body class="${rotate ? 'rotate180' : ''}">
-    <div id="page"><div id="result">${innerHTML}</div></div>
-    <script>
-      function tryClose(){ try{ window.close(); }catch(e){} }
-      window.onload = function(){
-        try{ window.focus(); window.print(); }catch(e){}
-        window.onafterprint = tryClose;
-        window.addEventListener('focus', tryClose, { once:true });
-        document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
-        setTimeout(tryClose, 2500);
-      };
-    <\/script>
-  </body></html>`;
-
-  try {
-  let w = window.open('', 'PRINT_APP2', 'width=480,height=800');
-  if (w && w.document) {
-    w.document.open(); 
-    w.document.write(printHTML); 
-    w.document.close();
-    return w; // ← return に修正！
-  }
-} catch(_) {}
-
-try {
-  const blob = new Blob([printHTML], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url,'_blank');
-  return w; // ← こちらもreturn w
-} catch(_) {}
-
-}
-
-
-// ===== app2 履歴のローカル状態 =====
-let app2History = [];
-
-// HTMLエスケープ（XSS/レイアウト崩れ対策）
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, m =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-// 履歴の描画
-function renderApp2History(){
-  const ul = document.getElementById('app2-historyList');
-  if(!ul) return;
-  ul.innerHTML = app2History.map(e => {
-    const when = new Date(e.time||Date.now()).toLocaleString();
-  return `<li class="history-item">
-            <span class="history-name">${escapeHtml(e.cast||'（名前なし）')}</span>｜${when}
-            ｜小計:${e.subtotal?.toLocaleString?.() ?? e.subtotal}
-            ｜合計:${e.total?.toLocaleString?.() ?? e.total}
-            ｜最終:${e.final?.toLocaleString?.() ?? e.final}
-          </li>`;
-  }).join('');
-}
-
-// Firebase へ履歴を保存（saveRemote があればそれを使う）
-async function persistApp2History(){
-  // ① 既存の saveRemote(appId, stateObj) がある場合
-  if (typeof saveRemote === 'function'){
-    await saveRemote('app2', { history: app2History });
-    return;
-  }
-  // ② ない場合のフォールバック（useFirebase を使う前提）
-  if (typeof useFirebase === 'function'){
-    const fb = await useFirebase();
-    if(!fb) return;
-    const { db, doc, setDoc, serverTimestamp } = fb;
-    await setDoc(
-      doc(db, 'apps', 'app2'),              // ← コレクション/ドキュメントは環境に合わせて
-      { history: app2History, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-  }
-}
-
-// リアルタイム購読（他端末の更新を即反映）
-async function startApp2Realtime(){
-  if (typeof useFirebase !== 'function') return;
-  const fb = await useFirebase();
-  if(!fb) return;
-  const { db, doc, onSnapshot } = fb;
-  const ref = doc(db, 'apps', 'app2');      // ← 保存先に合わせて同じ参照にする
-  onSnapshot(ref, (snap) => {
-    const data = snap.data();
-    if (!data || !Array.isArray(data.history)) return;
-    // 自分の直後保存で重複しにくいよう簡単な等価チェック
-    const jsonLocal  = JSON.stringify(app2History);
-    const jsonRemote = JSON.stringify(data.history);
-    if (jsonLocal !== jsonRemote){
-      app2History = data.history;
-      renderApp2History();
-    }
-  });
-}
-
-// 初期ロード（ページ表示時に一度だけ取り込み）
-async function loadApp2HistoryOnce(){
-  if (typeof useFirebase !== 'function') return renderApp2History();
-  const fb = await useFirebase();
-  if(!fb) return renderApp2History();
-  const { db, doc, getDoc } = fb;
-  const ref = doc(db, 'apps', 'app2');      // ← 保存先に合わせる
-  const snap = await getDoc(ref);
-  const data = snap.exists() ? snap.data() : null;
-  app2History = Array.isArray(data?.history) ? data.history : [];
-  renderApp2History();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadApp2HistoryOnce();  // 一度だけ読み込む
-  startApp2Realtime();    // 以後はリアルタイム反映
-});
-
-
-/* 入力済みHTMLとして保存 v2.9
-   - 値焼き込み（id/name優先＋APP1は行×クラス、カテゴリ表チェックは出現順）
-   - タブ <div.tab data-target="appX"> → <a class="tab" href="#appX">
-   - :target で .content を切替（JS不要）。初期は app1 を表示
-   - 既存のopacity/transformアニメは上書きで無効化（見えない事故防止）
-   - 保存物は編集不可（disabled/readonly）＋ <script> 全削除
-*/
-window.exportAsFilledHTML = function(){
-  const doc = document;
-  const cloned = doc.documentElement.cloneNode(true);
-  const $all = (root, sel) => Array.from(root.querySelectorAll(sel));
-  const esc  = (window.CSS && CSS.escape) ? CSS.escape : s=>String(s).replace(/[^a-zA-Z0-9_\-]/g,'\\$&');
-  const byId = (root, id) => id ? root.querySelector('#'+esc(id)) : null;
-
-  // ===== 1) 値の焼き込み（id/name 優先） =====
-  // input
-  $all(doc,'input').forEach(oi=>{
-    const ci = (oi.id && byId(cloned,oi.id)) || (oi.name && cloned.querySelector(`[name="${esc(oi.name)}"]`));
-    if(!ci) return;
-    const type=(oi.getAttribute('type')||'text').toLowerCase();
-    if(type==='checkbox'||type==='radio'){
-      if(oi.checked) ci.setAttribute('checked',''); else ci.removeAttribute('checked');
-      if(type==='radio' && oi.name){
-        $all(cloned,`input[type="radio"][name="${esc(oi.name)}"]`).forEach(r=>{ if(r!==ci) r.removeAttribute('checked'); });
-      }
-    }else{
-      ci.setAttribute('value', oi.value ?? '');
-    }
-    ci.setAttribute('disabled','disabled'); ci.setAttribute('readonly','readonly');
-    ['onclick','onchange','oninput','onsubmit'].forEach(a=>ci.removeAttribute(a));
-  });
-  // textarea
-  $all(doc,'textarea').forEach(ot=>{
-    const ct = (ot.id && byId(cloned,ot.id)) || (ot.name && cloned.querySelector(`[name="${esc(ot.name)}"]`));
-    if(!ct) return;
-    ct.textContent = ot.value ?? '';
-    ct.setAttribute('disabled','disabled'); ct.setAttribute('readonly','readonly');
-    ['onclick','onchange','oninput','onsubmit'].forEach(a=>ct.removeAttribute(a));
-  });
-  // select
-  $all(doc,'select').forEach(os=>{
-    const cs = (os.id && byId(cloned,os.id)) || (os.name && cloned.querySelector(`[name="${esc(os.name)}"]`));
-    if(!cs) return;
-    const val = os.value ?? '';
-    $all(cs,'option').forEach(opt=>{ if(opt.value===val) opt.setAttribute('selected',''); else opt.removeAttribute('selected'); });
-    cs.setAttribute('disabled','disabled'); cs.setAttribute('readonly','readonly');
-    ['onclick','onchange','oninput','onsubmit'].forEach(a=>cs.removeAttribute(a));
-  });
-
-  // ===== 2) APP1 伝票行（#formRows tr.row）を行×クラスで焼き込み =====
-  const oRows = $all(doc,'#formRows tr.row');
-  const cRows = $all(cloned,'#formRows tr.row');
-  const fields = ['.table-number','.honshi','.c','.amount','.num','.detail','.card','.total'];
-  oRows.forEach((tr,i)=>{
-    const ctr = cRows[i]; if(!ctr) return;
-    fields.forEach(sel=>{
-      const oi = tr.querySelector(sel);
-      const ci = ctr.querySelector(sel);
-      if(!oi || !ci) return;
-      if (ci.tagName === 'SELECT') {
-        const val = oi.value ?? '';
-        $all(ci,'option').forEach(opt=>{ if(opt.value===val) opt.setAttribute('selected',''); else opt.removeAttribute('selected'); });
-      } else {
-        const type=(oi.getAttribute('type')||'text').toLowerCase();
-        if(type==='checkbox'||type==='radio'){
-          if(oi.checked) ci.setAttribute('checked',''); else ci.removeAttribute('checked');
-        }else{
-          ci.setAttribute('value', oi.value ?? '');
-        }
-      }
-      ci.setAttribute('disabled','disabled'); ci.setAttribute('readonly','readonly');
-      ['onclick','onchange','oninput','onsubmit'].forEach(a=>ci.removeAttribute(a));
-    });
-  });
-
-  // ===== 3) カテゴリ表チェック（#categorySection）を出現順で固定 =====
-  const oCbs = $all(doc,'#categorySection input[type="checkbox"]');
-  const cCbs = $all(cloned,'#categorySection input[type="checkbox"]');
-  oCbs.forEach((o,i)=>{
-    const c = cCbs[i]; if(!c) return;
-    if(o.checked) c.setAttribute('checked',''); else c.removeAttribute('checked');
-    c.setAttribute('disabled','disabled');
-    ['onclick','onchange'].forEach(a=>c.removeAttribute(a));
-  });
-
-  // ===== 4) タブをアンカー式に変換（JS不要の切替） =====
-  const tabsBar = cloned.querySelector('.tabs');
-  if(tabsBar){
-    $all(tabsBar,'.tab').forEach(old=>{
-      if(old.tagName.toLowerCase()==='a') return;
-      const target = old.getAttribute('data-target') || 'app1';
-      const label  = (old.textContent||'').trim() || target;
-      const a = document.createElement('a');
-      a.className = old.className.replace(/\bactive\b/g,'').trim();
-      a.setAttribute('href','#'+target);
-      a.setAttribute('role','tab');
-      a.textContent = label;
-      old.replaceWith(a);
-    });
-  }
-
-  // ===== 5) 保存版用CSSを追加（:target で切替 & アニメ無効化） =====
-  const head  = cloned.querySelector('head') || cloned.getElementsByTagName('head')[0];
-  const style = document.createElement('style');
-  style.textContent = `
-    /* 保存版バッジ＆操作不可 */
-    body[data-frozen="1"] * { caret-color: transparent; }
-    [disabled], input[readonly], select[disabled], textarea[disabled]{ opacity:.85; pointer-events:none; }
-    .frozen-banner{
-      position:fixed; top:8px; right:8px; z-index:99999;
-      padding:6px 10px; font:12px/1 system-ui,-apple-system,Segoe UI,Roboto,"M PLUS 2",sans-serif;
-      background:rgba(0,245,255,.14); border:1px solid rgba(0,245,255,.55);
-      border-radius:8px; color:#00f5ff; backdrop-filter: blur(6px);
-    }
-    /* 既存のアニメを打ち消して“表示優先” */
-    .content{ opacity:1 !important; transform:none !important; }
-
-    /* JSなしのAPP切替：デフォ非表示、:targetだけ表示 */
-    .content{ display:none !important; }
-    .content:target{ display:block !important; }
-    /* ハッシュ無しの初期表示はapp1 */
-    :root #app1{ display:block !important; }
-  `;
-  head.appendChild(style);
-
-  // ===== 6) バナー付与・初期表示の保険 =====
-  const body = cloned.querySelector('body') || cloned.getElementsByTagName('body')[0];
-  if(body){
-    body.setAttribute('data-frozen','1');
-    const banner = document.createElement('div');
-    banner.className = 'frozen-banner';
-    banner.textContent = 'このファイルは入力済みの保存版（編集不可）';
-    body.appendChild(banner);
-  }
-  ['app1','app2','app3'].forEach(id=>{
-    const el = byId(cloned,id);
-    if(el){ el.removeAttribute('hidden'); el.style.visibility='visible'; }
-  });
-
-  // ===== 7) クリック不可（証跡用） =====
-  $all(cloned,'button').forEach(b=>{ b.setAttribute('disabled','disabled'); b.removeAttribute('onclick'); b.type='button'; });
-  $all(cloned,'form').forEach(f=>{ f.setAttribute('onsubmit','return false;'); });
-
-  // ===== 8) <script> 全削除（完全静的化） =====
-  $all(cloned,'script').forEach(s=> s.remove());
-
-  // ===== 9) ダウンロード =====
-  const htmlText = '<!DOCTYPE html>\n' + cloned.outerHTML;
-  const blob = new Blob([htmlText], { type:'text/html' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  try{
-    const base = (typeof window.getCustomFileName==='function') ? window.getCustomFileName()
-               : 'IBASD_' + new Date().toISOString().slice(0,10);
-    a.href = url; a.download = base + '.html'; a.click();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-};
-
-
-/* 合計ユーティリティ（存在しなければ定義） */
-if (typeof window.subtotal !== 'function') {
-  window.subtotal = function(values){
-    let s = 0; for (const v of (values||[])) s += (Number(v)||0); return s;
-  };
+  document.getElementById('summaryTotalPeople').innerText = `${totalPeople}人`;
+  document.getElementById('summaryTotalAmount').innerText = `¥${totalAmount.toLocaleString()}`;
+  document.getElementById('summaryTotalTax').innerText = `¥${totalGensen.toLocaleString()}`;
+
+  // カンマ付きでセット
+  document.getElementById('femaleSalary').value = totalAmount.toLocaleString();
+  document.getElementById('femaleTax').value = totalGensen.toLocaleString();
 }
 
 // ====== 履歴インデックス生成 ======
@@ -4574,12 +3535,6 @@ function getNavOffsetPx(){
   const tabs = document.querySelector('.tabs')?.offsetHeight ?? getVarPx('--tabs-h', 56);
   const sub  = document.querySelector('#app2-nav')?.offsetHeight ?? getVarPx('--subnav-h', 50);
   return tabs + sub + 10; // 仕上げの余白10px
-}
-
-// オフセット付きスムーススクロール
-function scrollWithOffset(targetEl){
-  const y = targetEl.getBoundingClientRect().top + window.scrollY - getNavOffsetPx();
-  window.scrollTo({ top: y, behavior: 'smooth' });
 }
 
 // インデックス置き場（テーブル）を確保 or 作成（app2-inputSection の直前）
@@ -4613,113 +3568,6 @@ table.innerHTML = `
   return table;
 }
 
-document.addEventListener('click', (e)=>{
-  if (e.target.closest('#historyIndexToggle')) {
-    const tbl = document.getElementById('historyIndexTable');
-    tbl?.classList.toggle('collapsed');
-  }
-});
-
-// テーブル版：履歴から氏名ボタンを生成（列数は画面幅で変化）
-function createHistoryIndex(){
-  const historySection = document.getElementById('app2-historySection');
-  if (!historySection) return;
-
-  const table = ensureHistoryIndexTable();
-  if (!table) return;
-
-  const tbody = table.querySelector('#historyIndexBody');
-  if (!tbody) return;
-
-// 1) 履歴アイテムを拾う（推奨: .history-item、旧: #historyList > li）
-let items = historySection.querySelectorAll('.history-item');
-if (items.length === 0) {
-  const list = document.getElementById('historyList');
-  if (list) items = list.querySelectorAll('li');
-}
-if (!items || items.length === 0){
-  tbody.innerHTML = '';
-  return;
-}
-
-// ★ ここを追加：新しい登録が下に付く前提で、逆順にして「新→旧」の順で処理
-items = Array.from(items).reverse();
-
-// 2) {name, el} の配列を作る（.history-name / .castName / <b>）
-const map = new Map();
-items.forEach(item => {
-  const nameEl = item.querySelector('.history-name')
-              || item.querySelector('.castName')
-              || item.querySelector('b');
-  const raw  = nameEl?.textContent?.trim() || '';
-  const base = stripLeadingSerial(raw);   // ★ 連番を除去した表示名
-  if (base && !map.has(base)) map.set(base, item);
-});
-
-const pairs = Array.from(map, ([name, el]) => ({ name, el }));
-
-  const countEl = document.getElementById('historyIndexCount');
-  if (countEl) countEl.textContent = `${pairs.length}人`;
-
-
-// 3) レイアウト：モバイルは横スクロールのチップ1行 / PCは表グリッド
-const isMobile = window.matchMedia('(max-width:700px)').matches;
-tbody.innerHTML = '';
-
-if (isMobile) {
-  const tr = document.createElement('tr');
-  const td = document.createElement('td');
-  const wrap = document.createElement('div');
-  wrap.className = 'history-chip-row'; // ← CSSで横スクロール
-
-  pairs.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'idx-btn';
-    btn.type = 'button';
-    btn.textContent = p.name;
-    btn.addEventListener('click', () => scrollWithOffset(p.el));
-    wrap.appendChild(btn);
-  });
-
-  td.appendChild(wrap);
-  tr.appendChild(td);
-  tbody.appendChild(tr);
-} else {
-  const COLS = 6; // PC列数
-  for (let i = 0; i < pairs.length; i += COLS){
-    const tr = document.createElement('tr');
-    for (let c = 0; c < COLS; c++){
-      const td = document.createElement('td');
-      const p = pairs[i + c];
-      if (p){
-        const btn = document.createElement('button');
-        btn.className = 'idx-btn';
-        btn.type = 'button';
-        btn.textContent = p.name;
-        btn.addEventListener('click', () => scrollWithOffset(p.el));
-        td.appendChild(btn);
-      }
-      tr.appendChild(td);
-    }
-    tbody.appendChild(tr);
-  }
-}
-
-}
-
-// 公開しておく（必要なら手動再生成で呼べる）
-window.createHistoryIndex = createHistoryIndex;
-
-// 初期化：履歴変化を監視して自動再生成＋初回実行
-document.addEventListener('DOMContentLoaded', () => {
-  const historySection = document.getElementById('app2-historySection');
-  if (historySection){
-    const mo = new MutationObserver(() => createHistoryIndex());
-    mo.observe(historySection, { childList:true, subtree:true });
-  }
-  createHistoryIndex();
-});
-
 // 先頭の連番「1. 」「１）」「#3 」などを削除
 function stripLeadingSerial(s){
   if (!s) return '';
@@ -4728,15 +3576,6 @@ function stripLeadingSerial(s){
     ''
   ).trim();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  addOutputButtonsNextToRestore();
-  const his = document.getElementById('app2-historySection');
-  if (his) {
-    const mo = new MutationObserver(() => addOutputButtonsNextToRestore());
-    mo.observe(his, { childList: true, subtree: true });
-  }
-});
 
 function addOutputButtonsNextToRestore() {
   const historySection = document.getElementById('app2-historySection');
@@ -4793,72 +3632,6 @@ function addOutputButtonsNextToRestore() {
     [restoreBtn, outBtn, upBtn, downBtn].forEach(b => b && b.classList.add('history-action'));
     });
 }
-
-// 自動再適用
-document.addEventListener('DOMContentLoaded', () => {
-  addOutputButtonsNextToRestore();
-  const his = document.getElementById('app2-historySection');
-  if (his) {
-    const mo = new MutationObserver(() => addOutputButtonsNextToRestore());
-    mo.observe(his, { childList: true, subtree: true });
-  }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  // ← 既存の addOutputButtonsNextToRestore() と MutationObserver はそのままでOK
-
-  const sel = document.getElementById('bulkRows');
-  if (!sel) return;
-
-  sel.addEventListener('change', () => {
-    // ★ 復元中フラグON（合成change対策）
-    window.BULK_RESTORING = true;
-
-    const snapshot = (typeof snapshotBulkGrid === 'function') ? snapshotBulkGrid() : [];
-    const nextN = parseInt(sel.value || '40', 10) || 40;
-
-    if (typeof buildGrid === 'function') buildGrid(nextN);
-
-    if (typeof restoreBulkGrid === 'function') {
-      restoreBulkGrid((snapshot || []).slice(0, nextN));
-    }
-
-    // ★ 再発火は input のみ。select には触れない
-    document.querySelectorAll('#bulkGrid input')
-      .forEach(el => el.dispatchEvent(new Event('input', {bubbles:true})));
-
-    // ★ フラグOFF
-    window.BULK_RESTORING = false;
-  });
-});
-
-window.sortHistoryIndex = function() {
-  const container = document.querySelector('.history-index-table');
-  if (!container) return;
-
-  // ボタン要素を全部取得（表題行は除外）
-  const buttons = Array.from(container.querySelectorAll('.idx-btn'));
-
-  // 50音順ソート（濁音・半濁音・小文字も考慮）
-  buttons.sort((a, b) => {
-    const aText = a.textContent
-      .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60)) // カナ→ひらがな
-      .replace(/[ﾞﾟ]/g, ""); // 濁点除去
-    const bText = b.textContent
-      .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60))
-      .replace(/[ﾞﾟ]/g, "");
-    return aText.localeCompare(bText, 'ja');
-  });
-
-  // 並べ替え反映（タイトル以外を削除して再追加）
-  const title = container.querySelector('.history-index-title');
-  container.querySelectorAll('.idx-btn').forEach(btn => btn.remove());
-  buttons.forEach(btn => container.appendChild(btn));
-  
-  // 成功時の軽い視覚フィードバック（オプション）
-  title.style.textShadow = '0 0 8px #00f5ff';
-  setTimeout(() => title.style.textShadow = '', 800);
-};
 
 /* 金額フォーマット（既存にあるなら差し替えてOK） */
 function fmtYen(n){
@@ -4962,10 +3735,6 @@ function slimHistoryUI(){
   });
 }
 
-/* 初期化：描画が済んだあとに一度実行
-   - 自前の renderHistory() をお持ちなら、その直後でもOK */
-window.addEventListener('DOMContentLoaded', () => setTimeout(slimHistoryUI, 0));
-
 (function(){
   const nav = document.getElementById('app2-nav');
   if (!nav) return;
@@ -5011,10 +3780,7 @@ window.addEventListener('DOMContentLoaded', () => setTimeout(slimHistoryUI, 0));
   observer.observe(document.body, { childList: true, subtree: true });
 })();
 
-
-
 //app2個別一括スクロール関数開始
-
 (function(){
   const nav = document.getElementById('app2-nav');
   if (!nav) return;
@@ -5110,12 +3876,7 @@ window.addEventListener('DOMContentLoaded', () => setTimeout(slimHistoryUI, 0));
   });
 })();
 
-//個別一括スクロール関数終了
-
-
-
-
-//app2一括入力JS開始
+//app2一括入力
 (function(){
 
 // === カラム定義 ============================================================
@@ -5698,12 +4459,671 @@ window.saveBulkGridState = saveBulkGridState;
 });
 
 
-})(); // ← IIFE を閉じる
+})();
+
+// === 金額変換ユーティリティ ==========================================
+function intSafe(v, d = 0) {
+  const n = parseInt(String(v ?? '').toString().replace(/,/g,''), 10);
+  return Number.isFinite(n) ? n : d;
+}
+
+// 100円未満切り捨て（例: 3750 → 3700）
+function floor100(yen) {
+  return Math.floor(intSafe(yen) / 100) * 100;
+}
+
+// --- 履歴オプションを生成して追加する関数 ---
+function appendBottleHistoryOptions(selectEl, historyList){
+  const grp = document.createElement('optgroup');
+  grp.label = '最近の登録（履歴）';
+
+  historyList.forEach(item => {
+    const o = document.createElement('option');
+    const s = parseInt(item.splitCount || 1, 10);
+    const q = parseInt(item.bottleQuantity || 1, 10);
+    const a = parseInt(item.bottleAmount || 0, 10);
+    o.textContent = `${item.bottleDetails}${s ? ` / 割${s}` : ''}${q ? ` / 数${q}` : ''}${a ? ` / ￥${a.toLocaleString()}` : ''}`;
+    o.value = `hist:${item.bottleDetails}:${s||''}:${q||''}:${a||''}`;
+    o.dataset.base  = item.bottleDetails || '';
+    o.dataset.split = String(s || '');
+    o.dataset.qty   = String(q || '');
+    o.dataset.amt   = String(a || '');
+    grp.appendChild(o);
+  });
+
+  [...selectEl.querySelectorAll('optgroup[label="最近の登録（履歴）"]')].forEach(n=>n.remove());
+  selectEl.insertBefore(grp, selectEl.firstChild);
+}
+
+// === 自動入力処理本体 ================================================
+function applySelectRule(selectEl) {
+  const tr = selectEl.closest('.btl-subrow') || selectEl.closest('.bottle-form');
+  const splitEl = tr.querySelector('.splitCount');
+  const qtyEl   = tr.querySelector('.bottleQuantity');
+  const amtEl   = tr.querySelector('.bottleAmount');
+
+  const opt  = selectEl.selectedOptions && selectEl.selectedOptions[0];
+  const val  = selectEl.value;
+  const rule = bottleRules[val];
+
+  // 1) 履歴由来オプション
+  if (opt && (opt.dataset.split || opt.dataset.qty || opt.dataset.amt || opt.dataset.base)) {
+    const baseName = opt.dataset.base || val;
+    if (splitEl) splitEl.value = opt.dataset.split ?? '';
+    if (qtyEl)   qtyEl.value   = opt.dataset.qty   ?? '';
+
+    // --- ★ 修正版ここから ---
+    const savedAmt = opt.dataset.amt;
+    if (savedAmt !== undefined && savedAmt !== null && savedAmt !== '') {
+      // dataset.amt が存在すればそのまま使う
+      const num = parseInt(savedAmt, 10);
+      amtEl.value = Number.isFinite(num) ? num.toLocaleString() : '';
+    } else {
+      // dataset.amt が空なら rule から再計算
+      const base = bottleRules[baseName]?.amt ?? 0;
+      const s = Math.max(1, parseInt(splitEl.value || '1', 10) || 1);
+      const q = Math.max(1, parseInt(qtyEl.value   || '1', 10) || 1);
+      const per   = Math.floor(base / s);
+      const total = per * q;
+      amtEl.value = total ? total.toLocaleString() : '';
+    }
+    // --- ★ 修正版ここまで ---
+
+  } else if (rule) {
+    // 2) 通常オプション
+    if (splitEl && splitEl.value === '') splitEl.value = rule.split ?? '';
+    if (qtyEl   && qtyEl.value   === '') qtyEl.value   = rule.qty   ?? '';
+    if (amtEl)  {
+      const v = Math.floor(rule.amt ?? 0).toLocaleString();
+      if (amtEl.value === '') amtEl.value = v;
+    }
+
+  } else {
+    // 3) その他
+    if (splitEl) splitEl.value = '';
+    if (qtyEl)   qtyEl.value   = '';
+    if (amtEl)   amtEl.value   = '';
+  }
+
+  // 入力イベントを発火
+  splitEl?.dispatchEvent(new Event('input',  { bubbles:true }));
+  qtyEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
+  amtEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
+}
+
+// === 一括入力フォーム用：金額再計算 ======================================
+function updateBottleAmountForRow(tr) {
+  const sel   = tr.querySelector('.bottleDetails');
+  const split = intSafe(tr.querySelector('.splitCount')?.value || 1, 1);
+  const qty   = intSafe(tr.querySelector('.bottleQuantity')?.value || 1, 1);
+  const amtEl = tr.querySelector('.bottleAmount');
+  if (!sel || !amtEl) return;
+
+  // ---- 品名の決定（履歴対応版） ----
+  let val = sel.value || '';
+  let baseName = sel.selectedOptions?.[0]?.dataset?.base || val;
+
+  try {
+    if (val.startsWith('__HIST__')) {
+      const decoded = decodeURIComponent(val.split('|')[0].replace('__HIST__', ''));
+      if (decoded) baseName = decoded;
+    }
+  } catch (e) {}
+  baseName = baseName.trim();
+
+  const base = bottleRules[baseName]?.amt ?? 0;
+
+  // ★ 割ったあと 100 円未満切り捨て
+  const perRaw     = base / Math.max(1, split);
+  const perPerson  = floor100(perRaw);                // ←ここで 100 円未満切り捨て
+  const total      = perPerson * Math.max(1, qty);    // 本数分掛ける
+
+  amtEl.value = total ? total.toLocaleString() : '';
+}
+
+// ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
+(function(){
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  const isInvisible = (node) => node?.offsetParent === null;
+  const isDisabledLike = (node) => !node || node.disabled || node.readOnly || isInvisible(node);
+  const isBottleSpacerRow = (tr) =>
+    tr?.classList?.contains('btl-subrow') || tr?.dataset?.rowType === 'bottle-subrow';
+
+  function onGridNav(e){
+  const key = e.key;
+  if (e.isComposing) return;
+  // ← Enter は新ナビが処理するので素通り
+  if (key === 'Enter') return;
+  // ここからは Tab 専用
+  if (key !== 'Tab') return;
+
+  const el = e.target;
+  if (!(el instanceof HTMLElement)) return;
+  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  if (!grid.contains(el)) return;
+
+  // 同一行の左右（Tab/Shift+Tab）のみ面倒を見る
+  const currentRow = el.closest('tr');
+  if (!currentRow) return;
+
+  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
+  const colIdx = rowInputs.indexOf(el);
+  if (colIdx === -1) return;
+
+  e.preventDefault(); // ここでだけ既定の Tab を止める
+
+  const delta = e.shiftKey ? -1 : 1;
+  const nextInRow = rowInputs[colIdx + delta];
+
+  // 非表示/無効はスキップせず“何もしない”＝他ハンドラを止めない
+  if (nextInRow && !nextInRow.disabled && nextInRow.offsetParent !== null) {
+    nextInRow.focus();
+    nextInRow.select?.();
+    // ここはフォーカス済みなので他へ流さないでOK
+    return;
+  }
+
+  // 見つからない/フォーカスできない場合は何もしない（他ハンドラに譲る）
+  return;
+}
+
+  // capture=true で最優先捕捉し、他ハンドラより先に制御
+  document.addEventListener('keydown', onGridNav, true);
+})();
+
+// === スマホ表示：氏名・体/貸・送迎 だけ表示（一本化） ==================
+(function(){
+  function applyApp2MobileView(){
+    const grid = document.getElementById('bulkGrid');
+    if (!grid || !grid.tHead || !grid.tBodies[0]) return;
+
+    const isMobile = window.innerWidth <= 768;
+
+    // ✅ モバイルでは colgroup を外して、隠した列の幅配分をリセット
+    const cg = grid.querySelector('colgroup');
+    if (isMobile && cg) cg.remove();
+
+    // サブ行（ボトル行）はスマホで隠す
+    grid.querySelectorAll('tbody tr.btl-subrow')
+      .forEach(tr => tr.style.display = isMobile ? 'none' : '');
+
+    const ths  = Array.from(grid.tHead.rows[0].cells || []);
+    const rows = Array.from(grid.tBodies[0].rows || []);
+
+    for (let i = 0; i < ths.length; i++){
+      const colIndex = i + 1; // 1-based
+      const show = !isMobile || (colIndex === 2 || colIndex === 3 || colIndex === 4);
+
+      if (ths[i]) ths[i].style.display = show ? 'table-cell' : 'none';
+
+      rows.forEach(tr => {
+        if (tr.classList.contains('btl-subrow')) return;
+        const td = tr.cells[i];
+        if (td) td.style.display = show ? 'table-cell' : 'none';
+      });
+    }
+
+    // 見た目補助
+    const wrap = grid.closest('.bulk-grid-wrap');
+    if (wrap) wrap.style.overflowX = isMobile ? 'hidden' : '';
+    grid.style.tableLayout = 'fixed';
+    grid.style.width = '100%';
+    grid.style.borderCollapse = 'collapse';
+  }
+
+  // グローバルに公開（buildGrid 直後でも呼べるように）
+  window.applyApp2MobileView = applyApp2MobileView;
+
+  // 初期 & リサイズで適用
+  document.addEventListener('DOMContentLoaded', applyApp2MobileView);
+  window.addEventListener('load', applyApp2MobileView);
+  window.addEventListener('resize', applyApp2MobileView);
+})();
+
+(function () {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  const clearHighlight = () => {
+    grid.querySelectorAll('tr.hl-row').forEach(el => el.classList.remove('hl-row'));
+    grid.querySelectorAll('.hl-col').forEach(el => el.classList.remove('hl-col'));
+  };
+
+  grid.addEventListener('focusin', (e) => {
+    const td = e.target.closest('td');
+    if (!td || !grid.contains(td)) return;
+
+    clearHighlight();
+
+    // 行をハイライト
+    const tr = td.parentElement;
+    tr.classList.add('hl-row');
+
+    // 列インデックスを取得
+    const idx = td.cellIndex;
+    if (idx < 0) return;
+
+    // ヘッダの同列をハイライト
+    const th = grid.tHead && grid.tHead.rows && grid.tHead.rows[0] && grid.tHead.rows[0].cells[idx];
+    if (th) th.classList.add('hl-col');
+
+    // 本文の同列をハイライト
+    grid.tBodies[0] && Array.from(grid.tBodies[0].rows).forEach(r => {
+      const c = r.cells[idx];
+      if (c) c.classList.add('hl-col');
+    });
+  });
+
+  // グリッド外へフォーカスが抜けたら消す（内部移動はfocusinで上書き）
+  grid.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!grid.contains(document.activeElement)) clearHighlight();
+    }, 0);
+  });
+})();
+
+function addAndGetSubrow(mainRow){
+  if (typeof addBottleSubrow === 'function') addBottleSubrow(mainRow);
+  if (typeof getBottleSubrows === 'function') {
+    const subs = getBottleSubrows(mainRow);
+    return subs[subs.length - 1] || null;
+  }
+  return null;
+}
+
+// チェックボックスの活性/選択を空行に合わせて更新
+function updateRowCheckState(mainRow){
+  const cb = mainRow.querySelector('.bulk-check');
+  if (!cb) return;
+  const empty = isBulkRowEmpty(mainRow);
+  cb.disabled = empty;
+  if (empty) cb.checked = false;       // 空行は強制で外す
+  mainRow.classList.toggle('bulk-empty', empty); // 見た目用（任意CSSで淡色化可）
+}
+
+//一括入力グリッドで入力のあるフォームのみ色を変えるJS開始
+(function(){
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  // 入力があるか判定（0 は入力あり扱い）
+  function hasValue(el){
+    if (el.type === 'checkbox') return el.checked;
+    const v = (el.value ?? '').toString().trim();
+    return v !== '';
+  }
+
+  function updateFilledState(el){
+    const filled = hasValue(el);
+    el.classList.toggle('is-filled', filled);
+    const td = el.closest('td');
+    if (td) td.classList.toggle('cell-filled', filled);
+  }
+
+  function scanAll(){
+    grid.querySelectorAll('input, select, textarea').forEach(updateFilledState);
+  }
+
+  // 入力中の即時反映
+  grid.addEventListener('input', (e)=>{
+    if (e.target.matches('#bulkGrid input, #bulkGrid textarea')) updateFilledState(e.target);
+  });
+  grid.addEventListener('change', (e)=>{
+    if (e.target.matches('#bulkGrid select, #bulkGrid input[type="checkbox"]')) updateFilledState(e.target);
+  });
+
+  // 初期スキャン
+  scanAll();
+
+  // 行の追加/復元にも追従
+  const mo = new MutationObserver((mut)=>{
+    for (const m of mut){
+      m.addedNodes?.forEach(node=>{
+        if (node.nodeType === 1){
+          if (node.matches?.('input,select,textarea')) updateFilledState(node);
+          node.querySelectorAll?.('input,select,textarea').forEach(updateFilledState);
+        }
+      });
+    }
+  });
+  mo.observe(grid.tBodies[0] || grid, { childList: true, subtree: true });
+
+  // 外から呼べる再スキャン（履歴一括復元の完了後などに）
+  window.rescanBulkFilledState = scanAll;
+})();
+
+//APP2 一括入力：右端に「退」チェック列を追加
+(function injectBulkLeaveStyles(){
+  if (document.getElementById('bulk-leave-styles')) return;
+  const css = `
+    #bulkGrid thead th.bulk-leave-head { width:3.2em;text-align:center; }
+    #bulkGrid tbody td.bulk-leave-cell { text-align:center; }
+    #bulkGrid input.bulk-leave { transform:scale(1.05);cursor:pointer; }
+
+    /* グレーアウト見た目（操作可・変更不可） */
+    #bulkGrid tr.bulk-mainrow.is-leave td,
+    #bulkGrid tr.btl-subrow.is-leave td {
+    opacity: .45 !important;
+    filter: grayscale(0.9);
+    }
 
 
+    /* 読み取り専用スタイル */
+    #bulkGrid input[readonly],
+    #bulkGrid select[data-readonly="1"] {
+    background: rgba(100, 100, 100, 0.2) !important;
+    color: #ccc !important;
+    cursor: not-allowed !important;
+    }
 
-// 一括入力用のフォールバック選択肢（通常フォームが無くても出る）
-// これだけを唯一のソースにする（<select>は含めない）
+    /* ★例外：退チェック＆マイナスボタンは常に操作可 */
+    #bulkGrid tr.is-leave input.bulk-leave,
+    #bulkGrid tr.bulk-mainrow.is-leave .btl-minus,
+    #bulkGrid tr.btl-subrow.is-leave   .btl-minus{
+      pointer-events:auto!important;
+    }
+  `.trim();
+  const s=document.createElement('style');
+  s.id='bulk-leave-styles';
+  s.textContent=css;
+  document.head.appendChild(s);
+})();
+
+/* ==== 退勤列セットアップ ==== */
+(function setupBulkLeaveColumn(){
+  const grid=document.getElementById('bulkGrid');
+  if(!grid) return;
+
+  function ensureLeaveHead(){
+    const thRow=grid.tHead?.rows?.[0];
+    if(!thRow||thRow.querySelector('.bulk-leave-head'))return;
+    const th=document.createElement('th');
+    th.className='bulk-leave-head';
+    th.textContent='退';
+    th.style.width = '3%';
+    thRow.appendChild(th);
+  }
+
+  function getSubrows(mainTr){
+    const subs=[];
+    let cur=mainTr.nextElementSibling;
+    while(cur&&cur.classList.contains('btl-subrow')){
+      subs.push(cur);
+      cur=cur.nextElementSibling;
+    }
+    return subs;
+  }
+
+
+  /* ✅改修版：退勤ON/OFFで「選択可・変更不可」制御 */
+function applyRowLeaveState(mainTr, isLeave) {
+  const subs = getSubrows(mainTr);
+  const all = [mainTr, ...subs];
+  all.forEach(tr => tr.classList.toggle('is-leave', !!isLeave));
+
+  // 退勤チェック自身の制御
+  const sel = mainTr.querySelector('.bulk-check');
+  if (sel) {
+    if (isLeave) { sel.checked = false; sel.disabled = true; }
+    else { sel.disabled = false; }
+  }
+
+  // 各入力要素の制御
+  const allEls = [
+    ...mainTr.querySelectorAll('input, select, button'),
+    ...subs.flatMap(s => Array.from(s.querySelectorAll('input, select, button')))
+  ];
+
+  allEls.forEach(el => {
+    const isMinus = el.classList.contains('btl-minus');
+    const isLeaveCheck = el.classList.contains('bulk-leave');
+
+    if (isLeave) {
+      // --- 退勤中 ---
+      if (el.tagName === 'INPUT' && !isLeaveCheck) {
+        el.readOnly = true;        // ← 入力禁止だがフォーカス可
+      } else if (el.tagName === 'SELECT') {
+        el.dataset.readonly = '1'; // ← セレクト専用フラグ
+        el.addEventListener('mousedown', preventSelectChange, { once: true });
+      } else if (!isLeaveCheck && !isMinus) {
+        el.disabled = true;        // ボタン類などは無効化
+      }
+    } else {
+      // --- 通常 ---
+      if (el.tagName === 'INPUT') el.readOnly = false;
+      if (el.tagName === 'SELECT') delete el.dataset.readonly;
+      el.disabled = false;
+    }
+  });
+}
+
+/* セレクト変更抑止 */
+function preventSelectChange(e) {
+  if (e.currentTarget.dataset.readonly === '1') {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return false;
+  }
+}
+
+
+  function ensureLeaveCell(mainTr){
+    if(mainTr.querySelector('td.bulk-leave-cell'))return;
+    const td=document.createElement('td');
+    td.className='bulk-leave-cell';
+    td.innerHTML=`<input type="checkbox" class="bulk-leave" aria-label="退勤行">`;
+    mainTr.appendChild(td);
+  }
+
+  const tbody=grid.tBodies?.[0];
+  if(!tbody)return;
+  ensureLeaveHead();
+
+  const process=()=>{ ensureLeaveHead(); tbody.querySelectorAll('tr.bulk-mainrow').forEach(r=>ensureLeaveCell(r)); };
+  process();
+  new MutationObserver(process).observe(tbody,{childList:true,subtree:false});
+
+  document.addEventListener('change',e=>{
+    if(!e.target?.classList?.contains('bulk-leave'))return;
+    const tr=e.target.closest('tr.bulk-mainrow');
+    if(!tr)return;
+    applyRowLeaveState(tr,e.target.checked);
+  });
+
+  window._bulkLeave={applyRowLeaveState,getSubrows,isLeave:tr=>!!tr?.classList?.contains('is-leave')};
+})();
+
+//共通：app2ナビゲーション（Enter / 矢印キー 両対応）
+/* 有効フィールド取得関数 */
+function getApp2ActiveFields(current) {
+  const app2  = document.getElementById('app2');
+  const grid  = document.getElementById('bulkGrid');
+  if (!app2) return [];
+
+  const inGrid = !!(current && grid && grid.contains(current));
+  const scope  = inGrid ? grid : app2;
+
+  const all = Array.from(scope.querySelectorAll('input, select, textarea'));
+  return all.filter(el => {
+    if (!el.offsetParent) return false;        // 非表示は除外
+    if (el.disabled) return false;             // disabled は除外（退行で一部ボタン等）
+    // ※ readonly / data-readonly は “フォーカスOK” にするため除外しない
+    return true;
+  });
+}
+
+// === 幾何学ベースの次候補探索（列ズレに強い） ===
+function findNextByGeometry(fields, current, dir) {
+  const rect = current.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top  + rect.height/ 2;
+
+  let best = null, bestScore = Infinity;
+  const vertical = (dir === 'down' || dir === 'up');
+  const sign     = (dir === 'down') ? +1 : -1;
+
+  for (const el of fields) {
+    if (el === current) continue;
+    const r  = el.getBoundingClientRect();
+    const ex = r.left + r.width / 2;
+    const ey = r.top  + r.height/ 2;
+
+    if (vertical) {
+      const dy = ey - cy;
+      if (sign * dy <= 0) continue;     // 進行方向のみ
+      const dx = Math.abs(ex - cx);
+      const score = dy * 1000 + dx;     // 縦優先
+      if (score < bestScore) { best = el; bestScore = score; }
+    } else {
+      // 左右は同じ行近傍のみ
+      const dy = Math.abs(ey - cy);
+      if (dy > 8) continue;
+      const dx = ex - cx;
+      if ((dir === 'right' && dx <= 0) || (dir === 'left' && dx >= 0)) continue;
+      const score = Math.abs(dx);
+      if (score < bestScore) { best = el; bestScore = score; }
+    }
+  }
+  return best;
+}
+
+// 移動の入口：現在地に応じて探索範囲と手法を切り替え
+function moveFocus(dir, current) {
+  const grid = document.getElementById('bulkGrid');
+  const inGrid = !!(grid && current && grid.contains(current));
+
+  if (inGrid && (dir === 'down' || dir === 'up')) {
+    // ← グリッド内の上下は “同列維持” アルゴリズムを必ず使用
+    moveFocusGridVertical(current, dir);
+    return;
+  }
+
+  // それ以外は近傍幾何学
+  const fields = getApp2ActiveFields(current);
+  const next = findNextByGeometry(fields, current, dir);
+  if (next) {
+    next.focus();
+    next.select?.();
+  }
+}
+
+// === 共通移動 ===
+// グリッド行→次の「メイン行」へ（btl-subrow と退行を自動スキップ）
+function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return;
+
+  const curTr  = current.closest('tr');
+  if (!curTr) return;
+
+  // 現行行の列スロットを決める
+  const rowSlots = Array.from(curTr.querySelectorAll('input, select, textarea'));
+  const colIdx   = rowSlots.indexOf(current);
+  if (colIdx < 0) return;
+
+  // メイン行のみを縦走査対象にする（←ここは据え置き）
+  const allRows = Array.from(grid.tBodies?.[0]?.rows || [])
+    .filter(tr => tr.classList.contains('bulk-mainrow'));
+
+  const r0 = allRows.indexOf(curTr);
+  if (r0 < 0) return;
+
+  const step = (dir === 'up') ? -1 : +1;
+  let r = r0 + step;
+
+  while (r >= 0 && r < allRows.length) {
+    const tr = allRows[r];
+
+    // ★退行でもフォーカス可能にするため “スキップしない”
+    const cand = Array.from(tr.querySelectorAll('input, select, textarea'))[colIdx];
+
+    // フォーカス可能なら移動（readonly/data-readonlyでもOK）
+    if (cand && cand.offsetParent && !cand.disabled) {
+      cand.focus();
+      cand.select?.();
+      return;
+    }
+    r += step;
+  }
+}
+
+// === イベント統合（capture=true で最優先） ===
+(function attachGridNavOnce(){
+  if (window.__app2NavInstalled) return;
+  window.__app2NavInstalled = true;
+
+  document.addEventListener('keydown', (e) => {
+    // app2 以外・対象外要素は無視
+    const app2 = document.getElementById('app2');
+    if (!app2 || !app2.classList.contains('active')) return;
+    const target = e.target;
+    if (!target || !target.closest('#app2')) return;
+    if (!['INPUT','SELECT','TEXTAREA'].includes(target.tagName)) return;
+
+    // Enter は常に “下へ” ＋ submit を完全阻止
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      moveFocus('down', target);
+      return;
+    }
+
+    // 矢印
+    let dir = null;
+    if (e.key === 'ArrowDown') dir = 'down';
+    else if (e.key === 'ArrowUp') dir = 'up';
+    else if (e.key === 'ArrowLeft') dir = 'left';
+    else if (e.key === 'ArrowRight') dir = 'right';
+    if (!dir) return;
+
+    e.preventDefault();
+    moveFocus(dir, target);
+  }, true);
+})();
+
+window.sortHistoryIndex = function() {
+  const container = document.querySelector('.history-index-table');
+  if (!container) return;
+
+  // ボタン要素を全部取得（表題行は除外）
+  const buttons = Array.from(container.querySelectorAll('.idx-btn'));
+
+  // 50音順ソート（濁音・半濁音・小文字も考慮）
+  buttons.sort((a, b) => {
+    const aText = a.textContent
+      .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60)) // カナ→ひらがな
+      .replace(/[ﾞﾟ]/g, ""); // 濁点除去
+    const bText = b.textContent
+      .replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60))
+      .replace(/[ﾞﾟ]/g, "");
+    return aText.localeCompare(bText, 'ja');
+  });
+
+  // 並べ替え反映（タイトル以外を削除して再追加）
+  const title = container.querySelector('.history-index-title');
+  container.querySelectorAll('.idx-btn').forEach(btn => btn.remove());
+  buttons.forEach(btn => container.appendChild(btn));
+  
+  // 成功時の軽い視覚フィードバック（オプション）
+  title.style.textShadow = '0 0 8px #00f5ff';
+  setTimeout(() => title.style.textShadow = '', 800);
+};
+
+document.addEventListener('click', (e)=>{
+  if (e.target.closest('#historyIndexToggle')) {
+    const tbl = document.getElementById('historyIndexTable');
+    tbl?.classList.toggle('collapsed');
+  }
+});
+
+// 公開しておく（必要なら手動再生成で呼べる）
+window.createHistoryIndex = createHistoryIndex;
+
+document.getElementById('side-clear')?.addEventListener('click', clearApp2Inputs);
+
+// 一括入力用のフォールバック選択肢
 window.BOTTLE_OPTIONS_HTML = `
   <option value="">選択してください</option>
   <optgroup label="リステル等">
@@ -5770,21 +5190,7 @@ window.BOTTLE_OPTIONS_HTML = `
   </optgroup>
 `;
 
-// === 金額変換ユーティリティ ==========================================
-// 入力 → 数値変換（カンマ除去・数値化）
-function intSafe(v, d = 0) {
-  const n = parseInt(String(v ?? '').toString().replace(/,/g,''), 10);
-  return Number.isFinite(n) ? n : d;
-}
-
-// 100円未満切り捨て（例: 3750 → 3700）
-function floor100(yen) {
-  return Math.floor(intSafe(yen) / 100) * 100;
-}
-
 // === ボトル自動入力ルール ============================================
-// キー：セレクトの value
-// 値：{ split: 割人数, qty: 数量, amt: 金額 }
 const bottleRules = {
   // --- リステル等 ---
   "リステル": { split: 1, qty: 1, amt: 6000 },
@@ -5849,118 +5255,6 @@ const bottleRules = {
   "保障補正": { split: 1, qty: 1, amt: 0 },
 };
 
-// --- 履歴オプションを生成して追加する関数 ---
-function appendBottleHistoryOptions(selectEl, historyList){
-  const grp = document.createElement('optgroup');
-  grp.label = '最近の登録（履歴）';
-
-  historyList.forEach(item => {
-    const o = document.createElement('option');
-    const s = parseInt(item.splitCount || 1, 10);
-    const q = parseInt(item.bottleQuantity || 1, 10);
-    const a = parseInt(item.bottleAmount || 0, 10);
-    o.textContent = `${item.bottleDetails}${s ? ` / 割${s}` : ''}${q ? ` / 数${q}` : ''}${a ? ` / ￥${a.toLocaleString()}` : ''}`;
-    o.value = `hist:${item.bottleDetails}:${s||''}:${q||''}:${a||''}`;
-    o.dataset.base  = item.bottleDetails || '';
-    o.dataset.split = String(s || '');
-    o.dataset.qty   = String(q || '');
-    o.dataset.amt   = String(a || '');
-    grp.appendChild(o);
-  });
-
-  [...selectEl.querySelectorAll('optgroup[label="最近の登録（履歴）"]')].forEach(n=>n.remove());
-  selectEl.insertBefore(grp, selectEl.firstChild);
-}
-
-
-// === 自動入力処理本体 ================================================
-function applySelectRule(selectEl) {
-  const tr = selectEl.closest('.btl-subrow') || selectEl.closest('.bottle-form');
-  const splitEl = tr.querySelector('.splitCount');
-  const qtyEl   = tr.querySelector('.bottleQuantity');
-  const amtEl   = tr.querySelector('.bottleAmount');
-
-  const opt  = selectEl.selectedOptions && selectEl.selectedOptions[0];
-  const val  = selectEl.value;
-  const rule = bottleRules[val];
-
-  // 1) 履歴由来オプション
-  if (opt && (opt.dataset.split || opt.dataset.qty || opt.dataset.amt || opt.dataset.base)) {
-    const baseName = opt.dataset.base || val;
-    if (splitEl) splitEl.value = opt.dataset.split ?? '';
-    if (qtyEl)   qtyEl.value   = opt.dataset.qty   ?? '';
-
-    // --- ★ 修正版ここから ---
-    const savedAmt = opt.dataset.amt;
-    if (savedAmt !== undefined && savedAmt !== null && savedAmt !== '') {
-      // dataset.amt が存在すればそのまま使う
-      const num = parseInt(savedAmt, 10);
-      amtEl.value = Number.isFinite(num) ? num.toLocaleString() : '';
-    } else {
-      // dataset.amt が空なら rule から再計算
-      const base = bottleRules[baseName]?.amt ?? 0;
-      const s = Math.max(1, parseInt(splitEl.value || '1', 10) || 1);
-      const q = Math.max(1, parseInt(qtyEl.value   || '1', 10) || 1);
-      const per   = Math.floor(base / s);
-      const total = per * q;
-      amtEl.value = total ? total.toLocaleString() : '';
-    }
-    // --- ★ 修正版ここまで ---
-
-  } else if (rule) {
-    // 2) 通常オプション
-    if (splitEl && splitEl.value === '') splitEl.value = rule.split ?? '';
-    if (qtyEl   && qtyEl.value   === '') qtyEl.value   = rule.qty   ?? '';
-    if (amtEl)  {
-      const v = Math.floor(rule.amt ?? 0).toLocaleString();
-      if (amtEl.value === '') amtEl.value = v;
-    }
-
-  } else {
-    // 3) その他
-    if (splitEl) splitEl.value = '';
-    if (qtyEl)   qtyEl.value   = '';
-    if (amtEl)   amtEl.value   = '';
-  }
-
-  // 入力イベントを発火
-  splitEl?.dispatchEvent(new Event('input',  { bubbles:true }));
-  qtyEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
-  amtEl  ?.dispatchEvent(new Event('input',  { bubbles:true }));
-}
-
-
-// === 一括入力フォーム用：金額再計算 ======================================
-function updateBottleAmountForRow(tr) {
-  const sel   = tr.querySelector('.bottleDetails');
-  const split = intSafe(tr.querySelector('.splitCount')?.value || 1, 1);
-  const qty   = intSafe(tr.querySelector('.bottleQuantity')?.value || 1, 1);
-  const amtEl = tr.querySelector('.bottleAmount');
-  if (!sel || !amtEl) return;
-
-  // ---- 品名の決定（履歴対応版） ----
-  let val = sel.value || '';
-  let baseName = sel.selectedOptions?.[0]?.dataset?.base || val;
-
-  try {
-    if (val.startsWith('__HIST__')) {
-      const decoded = decodeURIComponent(val.split('|')[0].replace('__HIST__', ''));
-      if (decoded) baseName = decoded;
-    }
-  } catch (e) {}
-  baseName = baseName.trim();
-
-  const base = bottleRules[baseName]?.amt ?? 0;
-
-  // ★ 割ったあと 100 円未満切り捨て
-  const perRaw     = base / Math.max(1, split);
-  const perPerson  = floor100(perRaw);                // ←ここで 100 円未満切り捨て
-  const total      = perPerson * Math.max(1, qty);    // 本数分掛ける
-
-  amtEl.value = total ? total.toLocaleString() : '';
-}
-
-
 // === 割・数量の変更で金額を自動再計算（グリッド版） ===
 document.addEventListener('input', e => {
   if (!e.target || !e.target.closest('#bulkGrid')) return;
@@ -5980,7 +5274,6 @@ document.addEventListener('change', e => {
     if (tr) updateBottleAmountForRow(tr);
   }
 });
-
 
 // === クリック式ボトル階層ピッカー制御 ===============================
 document.addEventListener('click', e => {
@@ -6036,9 +5329,7 @@ document.addEventListener('change', e => {
   updateBottleAmountForRow(tr);
 });
 
-// ===============================
-// 一括入力グリッドのボトル学習イベント
-// ===============================
+//  一括入力グリッドのボトル学習イベント
 document.addEventListener('change', e => {
   const row = e.target.closest('#bulkGrid tr.btl-subrow');
   if (!row) return;
@@ -6066,122 +5357,10 @@ document.addEventListener('blur', e => {
   }
 }, true);
 
-document.addEventListener('DOMContentLoaded', () => {
-  hydrateAllBottleSelectsWithCustomOptions();
-});
-
 window.addEventListener('scroll', requestRepositionBottleHierarchyPicker, true);
 window.addEventListener('resize', requestRepositionBottleHierarchyPicker);
 
-// ====== グリッド移動（Enter=縦 / Tab=横）完全停止版 ======
-(function(){
-  const grid = document.getElementById('bulkGrid');
-  if (!grid) return;
-
-  const isInvisible = (node) => node?.offsetParent === null;
-  const isDisabledLike = (node) => !node || node.disabled || node.readOnly || isInvisible(node);
-  const isBottleSpacerRow = (tr) =>
-    tr?.classList?.contains('btl-subrow') || tr?.dataset?.rowType === 'bottle-subrow';
-
-  function onGridNav(e){
-  const key = e.key;
-  if (e.isComposing) return;
-  // ← Enter は新ナビが処理するので素通り
-  if (key === 'Enter') return;
-  // ここからは Tab 専用
-  if (key !== 'Tab') return;
-
-  const el = e.target;
-  if (!(el instanceof HTMLElement)) return;
-  if (!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
-  if (!grid.contains(el)) return;
-
-  // 同一行の左右（Tab/Shift+Tab）のみ面倒を見る
-  const currentRow = el.closest('tr');
-  if (!currentRow) return;
-
-  const rowInputs = Array.from(currentRow.querySelectorAll('input, select, textarea'));
-  const colIdx = rowInputs.indexOf(el);
-  if (colIdx === -1) return;
-
-  e.preventDefault(); // ここでだけ既定の Tab を止める
-
-  const delta = e.shiftKey ? -1 : 1;
-  const nextInRow = rowInputs[colIdx + delta];
-
-  // 非表示/無効はスキップせず“何もしない”＝他ハンドラを止めない
-  if (nextInRow && !nextInRow.disabled && nextInRow.offsetParent !== null) {
-    nextInRow.focus();
-    nextInRow.select?.();
-    // ここはフォーカス済みなので他へ流さないでOK
-    return;
-  }
-
-  // 見つからない/フォーカスできない場合は何もしない（他ハンドラに譲る）
-  return;
-}
-
-  // capture=true で最優先捕捉し、他ハンドラより先に制御
-  document.addEventListener('keydown', onGridNav, true);
-})();
-
-
-
-
-// === スマホ表示：氏名・体/貸・送迎 だけ表示（一本化） ==================
-(function(){
-  function applyApp2MobileView(){
-    const grid = document.getElementById('bulkGrid');
-    if (!grid || !grid.tHead || !grid.tBodies[0]) return;
-
-    const isMobile = window.innerWidth <= 768;
-
-    // ✅ モバイルでは colgroup を外して、隠した列の幅配分をリセット
-    const cg = grid.querySelector('colgroup');
-    if (isMobile && cg) cg.remove();
-
-    // サブ行（ボトル行）はスマホで隠す
-    grid.querySelectorAll('tbody tr.btl-subrow')
-      .forEach(tr => tr.style.display = isMobile ? 'none' : '');
-
-    const ths  = Array.from(grid.tHead.rows[0].cells || []);
-    const rows = Array.from(grid.tBodies[0].rows || []);
-
-    for (let i = 0; i < ths.length; i++){
-      const colIndex = i + 1; // 1-based
-      const show = !isMobile || (colIndex === 2 || colIndex === 3 || colIndex === 4);
-
-      if (ths[i]) ths[i].style.display = show ? 'table-cell' : 'none';
-
-      rows.forEach(tr => {
-        if (tr.classList.contains('btl-subrow')) return;
-        const td = tr.cells[i];
-        if (td) td.style.display = show ? 'table-cell' : 'none';
-      });
-    }
-
-    // 見た目補助
-    const wrap = grid.closest('.bulk-grid-wrap');
-    if (wrap) wrap.style.overflowX = isMobile ? 'hidden' : '';
-    grid.style.tableLayout = 'fixed';
-    grid.style.width = '100%';
-    grid.style.borderCollapse = 'collapse';
-  }
-
-  // グローバルに公開（buildGrid 直後でも呼べるように）
-  window.applyApp2MobileView = applyApp2MobileView;
-
-  // 初期 & リサイズで適用
-  document.addEventListener('DOMContentLoaded', applyApp2MobileView);
-  window.addEventListener('load', applyApp2MobileView);
-  window.addEventListener('resize', applyApp2MobileView);
-})();
-
-
-// =====================================================
 // 履歴 → 一括入力へ一括復元（ボトル含む）
-//  - くるくるオーバーレイ＋進捗%/件数バッジ付き
-// =====================================================
 document.addEventListener('click', async (e) => {
   if (!e.target || e.target.id !== 'bulkImportFromHistory') return;
 
@@ -6483,64 +5662,1223 @@ for (const f of forms) {
   }
 });
 
+window.collectApp2State = collectApp2State;
+window.applyApp2State   = applyApp2State;
 
-(function () {
-  const grid = document.getElementById('bulkGrid');
-  if (!grid) return;
 
-  const clearHighlight = () => {
-    grid.querySelectorAll('tr.hl-row').forEach(el => el.classList.remove('hl-row'));
-    grid.querySelectorAll('.hl-col').forEach(el => el.classList.remove('hl-col'));
-  };
 
-  grid.addEventListener('focusin', (e) => {
-    const td = e.target.closest('td');
-    if (!td || !grid.contains(td)) return;
 
-    clearHighlight();
 
-    // 行をハイライト
-    const tr = td.parentElement;
-    tr.classList.add('hl-row');
+/************************************************************
+ * 5. APP3
+ ************************************************************/
 
-    // 列インデックスを取得
-    const idx = td.cellIndex;
-    if (idx < 0) return;
 
-    // ヘッダの同列をハイライト
-    const th = grid.tHead && grid.tHead.rows && grid.tHead.rows[0] && grid.tHead.rows[0].cells[idx];
-    if (th) th.classList.add('hl-col');
+/* app3（ざっくり）：id付きの要素を一括保存/復元 */
+function collectApp3State(){
+  const root = document.getElementById('app3');
+  if(!root) return {};
+  const fields = {};
+  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
+    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
+  });
+  return { fields };
+}
+function applyApp3State(state){
+  const root = document.getElementById('app3');
+  if(!root || !state || !state.fields) return;
+  Object.entries(state.fields).forEach(([id, val])=>{
+    const el = root.querySelector('#'+CSS.escape(id));
+    if(!el) return;
+    if(el.type === 'checkbox'){ el.checked = !!val; }
+    else { el.value = val ?? ""; }
+  });
+}
 
-    // 本文の同列をハイライト
-    grid.tBodies[0] && Array.from(grid.tBodies[0].rows).forEach(r => {
-      const c = r.cells[idx];
-      if (c) c.classList.add('hl-col');
+function updateExtraGroupFields() {
+  // それぞれの値を取得（必要に応じて変数は他から渡してください）
+  let grossProfit = get('grossProfit');         // 粗利益
+  let cardSales = get('cardSales');             // カード売上
+  let adviserFee = get('adviserFee');     // 顧問料
+  let remainingCash = get('remainingCash');     // 現金残
+  let totalTax = get('totalTax');               // 源泉費合計
+
+  // 合計計算：現金残 + 源泉費
+  let totalGrossPlusTax = remainingCash + totalTax; +adviserFee;
+
+  // 各フィールドに値を表示（存在確認しながら安全に代入）
+  let el;
+
+  el = document.getElementById('grossProfit_extra');
+  if (el) el.value = formatNumber(grossProfit);
+
+  el = document.getElementById('cardSales_extra');
+  if (el) el.value = formatNumber(cardSales);
+
+  el = document.getElementById('remainingCash_extra');
+  if (el) el.value = formatNumber(remainingCash);
+
+  el = document.getElementById('totalWithholdingTax');
+  if (el) el.value = formatNumber(totalTax);
+
+  el = document.getElementById('totalGrossPlusTax');
+  if (el) el.value = formatNumber(totalGrossPlusTax);
+}
+
+function updateNegativeColor(id) {
+  const el = document.getElementById(id);
+  if (!el) return; // 無ければ何もしない
+  const v = parseInt((el.value || '0').replace(/,/g, ''), 10) || 0;
+  el.classList.toggle('negative', v < 0);
+}
+
+function saveApp3Data() {
+  const fields = [
+    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
+    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
+  ];
+  const data = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  localStorage.setItem('app3_inputs', JSON.stringify(data));
+}
+
+function restoreApp3Data() {
+  const saved = localStorage.getItem('app3_inputs');
+  if (!saved) return;
+  const data = JSON.parse(saved);
+  Object.entries(data).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+  updateCalculations(); // 計算更新
+  attachCommaFormatApp1and3();
+}
+
+function loadFromLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    const saved = localStorage.getItem(input.id);
+    if (saved !== null) input.value = saved;
+  });
+}
+
+function saveToLocal() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    // disabled 状態でも保存
+    localStorage.setItem(input.id, input.value);
+  });
+}
+
+function formatNumber(num) {
+ return num.toLocaleString('ja-JP');
+}
+
+// 1) 最初に使う共通getter（カンマ/¥除去）
+function get(id){
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const raw = (el.value ?? el.textContent ?? "0").toString().replace(/[^\d\-]/g,"");
+  const num = parseInt(raw,10);
+  return Number.isNaN(num) ? 0 : num;
+}
+
+function attachCommaFormatApp3() {
+  document.querySelectorAll(
+    '#app3 input[type="text"], #app3 input[type="number"]'
+  ).forEach(input => {
+    if (input._commaFormatApplied) return;
+    input._commaFormatApplied = true;
+
+    input.addEventListener('input', function () {
+      let val = this.value.replace(/,/g, '');
+      if (val === '' || !/^-?\d*$/.test(val)) {
+        this.value = '';
+        return;
+      }
+      this.value = addComma(val);
+    });
+
+    input.addEventListener('focus', function () {
+      this.value = this.value.replace(/,/g, '');
+    });
+
+    input.addEventListener('blur', function () {
+      this.value = addComma(this.value);
     });
   });
+}
 
-  // グリッド外へフォーカスが抜けたら消す（内部移動はfocusinで上書き）
-  grid.addEventListener('focusout', () => {
-    setTimeout(() => {
-      if (!grid.contains(document.activeElement)) clearHighlight();
-    }, 0);
+window.collectApp3State = collectApp3State;
+window.applyApp3State   = applyApp3State;
+
+function getTotalStoreBurden() {
+  try {
+    const items = document.querySelectorAll('#historyList > li');
+    let total = 0;
+    items.forEach(li => {
+      // 1) data属性があれば最優先
+      const attr = li.getAttribute('data-store-covered');
+      if (attr !== null && attr !== '') {
+        const v = parseInt(attr, 10);
+        if (!Number.isNaN(v)) { total += v; return; }
+      }
+      // 2) sendoff 行のテキストから拾う
+      const txt = li.querySelector('.sendoff')?.textContent || '';
+      const m = txt.match(/店舗負担:\s*¥?\s*([\d,]+)/);
+      if (m) {
+        const v = parseInt(m[1].replace(/,/g, ''), 10);
+        if (!Number.isNaN(v)) total += v;
+      }
+    });
+    return total;
+  } catch (e) {
+    console.warn('店舗負担合計の取得に失敗', e);
+    return 0;
+  }
+}
+
+// ★追加：総客数・女子出勤数ミニフォームを自動反映
+function updateAttendanceMiniForm() {
+  // 総客数 → customersCount
+  const totalSpan = document.getElementById('totalCustomers');
+  const customersInput = document.getElementById('customersCount');
+  if (totalSpan && customersInput) {
+    const num = parseInt(totalSpan.textContent.replace(/[^0-9\-]/g, ''), 10);
+    customersInput.value = Number.isNaN(num) ? '' : num;
+  }
+
+  // 履歴インデックス人数（「○人」）→ femaleAttendance
+  const historyCountSpan = document.getElementById('historyIndexCount');
+  const femaleInput = document.getElementById('femaleAttendance');
+  if (historyCountSpan && femaleInput) {
+    const m = historyCountSpan.textContent.match(/(\d+)/);
+    const num2 = m ? parseInt(m[1], 10) : NaN;
+    femaleInput.value = Number.isNaN(num2) ? '' : num2;
+  }
+}
+
+function updateCalculations(){
+
+  // --- ① driverFee を最初に再計算 ---
+  (function(){
+    // storeTotal → driverExtra1 に反映
+    const el = document.getElementById('driverExtra1');
+    if (el) {
+      const storeTotal = getTotalStoreBurden();
+      el.value = Number.isNaN(storeTotal) ? '' : storeTotal.toLocaleString('ja-JP');
+    }
+
+    // extra1 + extra2 → driverFee に反映
+    const extra1 = get('driverExtra1');
+    const extra2 = get('driverExtra2');
+    const sum = extra1 + extra2;
+    const feeEl = document.getElementById('driverFee');
+    if (feeEl) feeEl.value = sum ? sum.toLocaleString('ja-JP') : '';
+  })();
+
+
+  // --- ② カード売上・税関連 ---
+  const cardTotalText = document.getElementById('cardTotal')?.textContent || '0';
+  const cardTotal = parseInt(cardTotalText.replace(/,/g, ''), 10) || 0;
+  const cardSalesInput = document.getElementById('cardSales');
+  if (cardSalesInput) cardSalesInput.value = formatNumber(cardTotal);
+
+  const summaryTaxText = document.getElementById('summaryTotalTax')?.innerText || '¥0';
+  const summaryTaxValue = parseInt(summaryTaxText.replace(/[¥,]/g, ''), 10) || 0;
+  const femaleTaxEl0 = document.getElementById('femaleTax');
+  if (femaleTaxEl0) femaleTaxEl0.value = summaryTaxValue;
+
+  // --- ③ totalBackAmount → catchBack ---
+  const totalBackAmountText =
+    document.getElementById("totalBackAmount")?.textContent?.replace(/,/g, "") || "0";
+  const totalBackAmount = parseInt(totalBackAmountText, 10) || 0;
+  const catchBackEl = document.getElementById("catchBack");
+  if (catchBackEl) catchBackEl.value = totalBackAmount.toLocaleString();
+
+  // --- ④ 売上・現金 ---
+  const total = get('totalSales');
+  const card = get('cardSales');
+  const cash = total - card;
+  const cashSalesEl = document.getElementById('cashSales');
+  if (cashSalesEl) cashSalesEl.value = formatNumber(cash);
+
+  // --- ⑤ 税・経費 ---
+  const tax = get('femaleTax') + get('maleTax');
+  const totalTaxEl = document.getElementById('totalTax');
+  if (totalTaxEl) totalTaxEl.value = formatNumber(tax);
+
+  const receiptTotal =
+    get('receipt1') + get('receipt2') + get('receipt3') + get('receipt4') + get('receipt5');
+  const r6 = document.getElementById('receipt6');
+  if (r6) r6.value = formatNumber(receiptTotal);
+
+  const expenses = get('alcohol') + receiptTotal;
+  const totalExpEl = document.getElementById('totalExpenses');
+  if (totalExpEl) totalExpEl.value = formatNumber(expenses);
+
+
+  // --- ⑥ adviserFee 自動計算 ---
+  const adviserCountEl = document.getElementById('totalCountValue');
+  const adviserFeeInput = document.getElementById('adviserFee');
+  if (adviserCountEl && adviserFeeInput) {
+    const count = parseInt(adviserCountEl.textContent.replace(/,/g, ''), 10) || 0;
+    adviserFeeInput.value = (count * 1000).toLocaleString();
+  }
+
+
+  // --- ⑦ 人件費合計 ---
+  const labor =
+    get('femaleSalary') +
+    get('maleSalary') +
+    get('catchBack') +
+    get('scoutBack') +
+    get('adviserFee') +
+    get('driverFee');
+
+  const totalLaborEl = document.getElementById('totalLaborCosts');
+  if (totalLaborEl) totalLaborEl.value = formatNumber(labor);
+
+
+  // --- ⑧ 粗利益・残・誤差 ---
+  const gross = total - labor - tax - expenses;
+  const grossEl = document.getElementById('grossProfit');
+  if (grossEl) grossEl.value = formatNumber(gross);
+
+  const remaining = gross - card;
+  const remainingEl = document.getElementById('remainingCash');
+  if (remainingEl) remainingEl.value = formatNumber(remaining);
+
+  const startCash = get('startCash');
+  const finalCash = get('finalCash');
+  const extraSafeCash = get('extraSafeCash');
+  const adviserFee = get('adviserFee'); // ←追加
+  const difference = (finalCash - remaining - tax - adviserFee) - (startCash + extraSafeCash);
+  const diffEl = document.getElementById('cashDifference');
+  if (diffEl) diffEl.value = formatNumber(difference);
+
+
+  // --- ⑨ 表示更新・保存 ---
+  updateAttendanceMiniForm();
+  updateNegativeColor('grossProfit');
+  updateNegativeColor('remainingCash');
+  updateNegativeColor('cashDifference');
+  updateExtraGroupFields();
+  attachCommaFormatApp3();
+  saveToLocal();
+}
+
+// APP1/APP2 の集計DOM変化を監視 → APP3更新を予約
+(function installApp3AutoSyncObservers(){
+  const watchIds = [
+    'cardTotal',        // カード売上の元
+    'summaryTotalTax',  // 税合計の元
+    'totalBackAmount',  // CB合計の元
+    'totalCustomers',   // 総客数（ミニフォーム用）
+    'historyIndexCount' // 女子出勤数（ミニフォーム用）
+  ];
+
+  const observer = new MutationObserver(() => {
+    scheduleApp3Update('mutation');
+  });
+
+  watchIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    observer.observe(el, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
   });
 })();
 
-function addAndGetSubrow(mainRow){
-  if (typeof addBottleSubrow === 'function') addBottleSubrow(mainRow);
-  if (typeof getBottleSubrows === 'function') {
-    const subs = getBottleSubrows(mainRow);
-    return subs[subs.length - 1] || null;
-  }
-  return null;
+// APP3 更新を「次フレームにまとめる」グローバル関数（必須）
+(function(){
+  let pending = false;
+
+  window.scheduleApp3Update = function(reason = '') {
+    if (pending) return;
+    pending = true;
+
+    requestAnimationFrame(() => {
+      pending = false;
+
+      // APP3 側の更新関数が存在する場合だけ呼ぶ（存在しない環境でも落とさない）
+      try {
+        if (typeof window.updateAttendanceMiniForm === 'function') {
+          window.updateAttendanceMiniForm();
+        }
+      } catch(e){}
+
+      try {
+        if (typeof window.updateCalculations === 'function') {
+          window.updateCalculations();
+        }
+      } catch(e){
+        console.warn('scheduleApp3Update failed:', reason, e);
+      }
+    });
+  };
+})();
+
+function attachApp3Listeners() {
+  const fields = [
+    'startCash', 'maleSalary', 'scoutBack', 'driverFee', 'maleTax',
+    'alcohol', 'receipt1', 'receipt2', 'receipt3', 'receipt4', 'receipt5', 'finalCash'
+  ];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', saveApp3Data);
+    }
+  });
 }
 
-/* =========================================================
-   一括入力グリッド：選択→まとめて出力
-   - # 列にチェックボックス追加（見出しに全選択）
-   - 選択行だけ通常フォームへ流し込んで既存の出力ボタンを順にClick
-   --------------------------------------------------------- */
+function getCustomFileName() {
+  // JSTに補正（サーバーUTCなら+9）
+  const now = new Date();
+  now.setHours(now.getHours() + 9);
 
+  let fileDate = new Date(now);
+  const hour = now.getHours();
+  if (hour < 20) {
+    fileDate.setDate(fileDate.getDate() - 1);
+  }
+  const y = fileDate.getFullYear();
+  const m = String(fileDate.getMonth() + 1).padStart(2, '0');
+  const d = String(fileDate.getDate()).padStart(2, '0');
+
+  return `IBASD_${y}-${m}-${d}`;
+}
+
+
+
+
+
+/************************************************************
+ * 6. Excel出力・外部連携
+ ************************************************************/
+
+// 日計シート列マッピング（PA）
+const COLMAP_PA = {
+  totalCustomers:  "B",
+  historyIndexCount: "C",
+  maleAttendance: "D",
+  cardSales: "F",
+  totalSales: "G",
+  femaleSalary: "H",
+  maleSalary: "I",
+  catchBack: "J",
+  scoutBack: "K",
+  adviserFee: "L",
+  driverFee: "M",
+  femaleTax: "O",
+  maleTax: "P",
+  alcohol: "R",
+  receipt6: "S",
+};
+
+// CBシート列マッピング（本数）
+const COLMAP_CB = {
+  UKcount:   "B",
+  Kcount:    "C",
+  ABcount:   "D",
+  LAcount:   "E",
+  PAcount:   "F",
+  BBcount:   "G",
+  MScount:   "H",
+  GMcount:   "I",
+  Bcount:    "J",
+  JOEcount:  "K",
+  KOSEcount: "L",
+  HEcount:   "M",
+  PBcount:   "N"
+};
+
+//式行（上書き禁止）
+const FORMULA_ROWS = [17, 34, 35];
+
+
+// APP3保存と封筒印刷で共通利用する日付文字列生成関数
+function getApp3StyleDate() {
+  const d = new Date();
+  // 5時より前なら前日扱い
+  if (d.getHours() < 5) {
+    d.setDate(d.getDate() - 1);
+  }
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}/${m}/${day}`;
+}
+
+// メイン処理：日計 + CB に同時書き込み
+async function exportApp3MonthlyWrite_xpop(){
+
+  const workDate = readWorkDate();
+  if (!workDate){
+    alert("対象日付を入力してください。");
+    return;
+  }
+
+  const d = new Date(workDate.replace(/\./g,"/").replace(/-/g,"/"));
+  if (isNaN(d)) { alert("日付形式が不正です。"); return; }
+
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth()+1).padStart(2,"0");
+  const dd   = d.getDate();
+
+
+  // (1) ファイル選択
+  let fileHandle, file;
+  try{
+    [fileHandle] = await showOpenFilePicker({
+      types: [{
+        description: 'Excel',
+        accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] }
+      }],
+      excludeAcceptAllOption: false,
+      multiple: false
+    });
+    file = await fileHandle.getFile();
+  }catch{
+    alert("Excelファイルが選択されませんでした。");
+    return;
+  }
+
+  const buffer = await file.arrayBuffer();
+
+
+  // (2) ブック読み込み
+  const workbook = await XlsxPopulate.fromDataAsync(buffer);
+
+  // シート名は「日計」「CB」
+  const sheetPA = workbook.sheet("日計");
+  const sheetCB = workbook.sheet("CB");
+
+  if (!sheetPA){
+    alert("Excel内に『日計』シートがありません。");
+    return;
+  }
+  if (!sheetCB){
+    alert("Excel内に『CB』シートがありません。");
+    return;
+  }
+
+
+  // (3) A列で dd に一致する行を探す（1行目は表題なので2行目以降）
+  let targetRow = null;
+  for (let r = 2; r <= 40; r++) {
+    const v = sheetPA.cell("A" + r).value();
+
+    if (typeof v === "number" && v === dd){
+      targetRow = r;
+      break;
+    }
+    if (typeof v === "string"){
+      const n = parseInt(v,10);
+      if (!Number.isNaN(n) && n === dd){
+        targetRow = r;
+        break;
+      }
+    }
+  }
+
+  if (!targetRow){
+    alert(`${dd}日 に対応する行が A列に見つかりません。`);
+    return;
+  }
+
+  if (FORMULA_ROWS.includes(targetRow)) {
+    alert(`${dd}日は合計行（式行）のため上書きできません。`);
+    return;
+  }
+
+
+  const $ = (id)=>document.getElementById(id);
+
+  // (4) 日計シートへ書き込み
+  for (const [id, col] of Object.entries(COLMAP_PA)) {
+    const el = $(id);
+    if (!el) continue;
+
+    const raw = (el.value ?? el.textContent ?? "0").toString();
+    const num = parseFloat(raw.replace(/[^\d.-]/g,"")) || 0;
+
+    sheetPA.cell(`${col}${targetRow}`).value(num);
+  }
+
+  // (5) CBシートへ書き込み（本数）
+  for (const [id, col] of Object.entries(COLMAP_CB)) {
+    const el = $(id);
+    if (!el) continue;
+
+    const raw = (el.value ?? el.textContent ?? "0").toString();
+    const num = parseFloat(raw.replace(/[^\d.-]/g,"")) || 0;
+
+    sheetCB.cell(`${col}${targetRow}`).value(num);
+  }
+
+
+  // (6) 上書き保存
+  try{
+    const outBuffer = await workbook.outputAsync();
+    const writable = await fileHandle.createWritable();
+    await writable.write(outBuffer);
+    await writable.close();
+
+    alert(`Excelに書き込みました：\n${dd}日 → ${targetRow}行目（『日計』『CB』両方）`);
+  }catch(e){
+    console.error(e);
+    alert("Excel書き出しに失敗しました。");
+  }
+}
+
+// 入力済みHTMLとして保存 v2.9
+window.exportAsFilledHTML = function(){
+  const doc = document;
+  const cloned = doc.documentElement.cloneNode(true);
+  const $all = (root, sel) => Array.from(root.querySelectorAll(sel));
+  const esc  = (window.CSS && CSS.escape) ? CSS.escape : s=>String(s).replace(/[^a-zA-Z0-9_\-]/g,'\\$&');
+  const byId = (root, id) => id ? root.querySelector('#'+esc(id)) : null;
+
+  // ===== 1) 値の焼き込み（id/name 優先） =====
+  // input
+  $all(doc,'input').forEach(oi=>{
+    const ci = (oi.id && byId(cloned,oi.id)) || (oi.name && cloned.querySelector(`[name="${esc(oi.name)}"]`));
+    if(!ci) return;
+    const type=(oi.getAttribute('type')||'text').toLowerCase();
+    if(type==='checkbox'||type==='radio'){
+      if(oi.checked) ci.setAttribute('checked',''); else ci.removeAttribute('checked');
+      if(type==='radio' && oi.name){
+        $all(cloned,`input[type="radio"][name="${esc(oi.name)}"]`).forEach(r=>{ if(r!==ci) r.removeAttribute('checked'); });
+      }
+    }else{
+      ci.setAttribute('value', oi.value ?? '');
+    }
+    ci.setAttribute('disabled','disabled'); ci.setAttribute('readonly','readonly');
+    ['onclick','onchange','oninput','onsubmit'].forEach(a=>ci.removeAttribute(a));
+  });
+  // textarea
+  $all(doc,'textarea').forEach(ot=>{
+    const ct = (ot.id && byId(cloned,ot.id)) || (ot.name && cloned.querySelector(`[name="${esc(ot.name)}"]`));
+    if(!ct) return;
+    ct.textContent = ot.value ?? '';
+    ct.setAttribute('disabled','disabled'); ct.setAttribute('readonly','readonly');
+    ['onclick','onchange','oninput','onsubmit'].forEach(a=>ct.removeAttribute(a));
+  });
+  // select
+  $all(doc,'select').forEach(os=>{
+    const cs = (os.id && byId(cloned,os.id)) || (os.name && cloned.querySelector(`[name="${esc(os.name)}"]`));
+    if(!cs) return;
+    const val = os.value ?? '';
+    $all(cs,'option').forEach(opt=>{ if(opt.value===val) opt.setAttribute('selected',''); else opt.removeAttribute('selected'); });
+    cs.setAttribute('disabled','disabled'); cs.setAttribute('readonly','readonly');
+    ['onclick','onchange','oninput','onsubmit'].forEach(a=>cs.removeAttribute(a));
+  });
+
+  // ===== 2) APP1 伝票行（#formRows tr.row）を行×クラスで焼き込み =====
+  const oRows = $all(doc,'#formRows tr.row');
+  const cRows = $all(cloned,'#formRows tr.row');
+  const fields = ['.table-number','.honshi','.c','.amount','.num','.detail','.card','.total'];
+  oRows.forEach((tr,i)=>{
+    const ctr = cRows[i]; if(!ctr) return;
+    fields.forEach(sel=>{
+      const oi = tr.querySelector(sel);
+      const ci = ctr.querySelector(sel);
+      if(!oi || !ci) return;
+      if (ci.tagName === 'SELECT') {
+        const val = oi.value ?? '';
+        $all(ci,'option').forEach(opt=>{ if(opt.value===val) opt.setAttribute('selected',''); else opt.removeAttribute('selected'); });
+      } else {
+        const type=(oi.getAttribute('type')||'text').toLowerCase();
+        if(type==='checkbox'||type==='radio'){
+          if(oi.checked) ci.setAttribute('checked',''); else ci.removeAttribute('checked');
+        }else{
+          ci.setAttribute('value', oi.value ?? '');
+        }
+      }
+      ci.setAttribute('disabled','disabled'); ci.setAttribute('readonly','readonly');
+      ['onclick','onchange','oninput','onsubmit'].forEach(a=>ci.removeAttribute(a));
+    });
+  });
+
+  // ===== 3) カテゴリ表チェック（#categorySection）を出現順で固定 =====
+  const oCbs = $all(doc,'#categorySection input[type="checkbox"]');
+  const cCbs = $all(cloned,'#categorySection input[type="checkbox"]');
+  oCbs.forEach((o,i)=>{
+    const c = cCbs[i]; if(!c) return;
+    if(o.checked) c.setAttribute('checked',''); else c.removeAttribute('checked');
+    c.setAttribute('disabled','disabled');
+    ['onclick','onchange'].forEach(a=>c.removeAttribute(a));
+  });
+
+  // ===== 4) タブをアンカー式に変換（JS不要の切替） =====
+  const tabsBar = cloned.querySelector('.tabs');
+  if(tabsBar){
+    $all(tabsBar,'.tab').forEach(old=>{
+      if(old.tagName.toLowerCase()==='a') return;
+      const target = old.getAttribute('data-target') || 'app1';
+      const label  = (old.textContent||'').trim() || target;
+      const a = document.createElement('a');
+      a.className = old.className.replace(/\bactive\b/g,'').trim();
+      a.setAttribute('href','#'+target);
+      a.setAttribute('role','tab');
+      a.textContent = label;
+      old.replaceWith(a);
+    });
+  }
+
+  // ===== 5) 保存版用CSSを追加（:target で切替 & アニメ無効化） =====
+  const head  = cloned.querySelector('head') || cloned.getElementsByTagName('head')[0];
+  const style = document.createElement('style');
+  style.textContent = `
+    /* 保存版バッジ＆操作不可 */
+    body[data-frozen="1"] * { caret-color: transparent; }
+    [disabled], input[readonly], select[disabled], textarea[disabled]{ opacity:.85; pointer-events:none; }
+    .frozen-banner{
+      position:fixed; top:8px; right:8px; z-index:99999;
+      padding:6px 10px; font:12px/1 system-ui,-apple-system,Segoe UI,Roboto,"M PLUS 2",sans-serif;
+      background:rgba(0,245,255,.14); border:1px solid rgba(0,245,255,.55);
+      border-radius:8px; color:#00f5ff; backdrop-filter: blur(6px);
+    }
+    /* 既存のアニメを打ち消して“表示優先” */
+    .content{ opacity:1 !important; transform:none !important; }
+
+    /* JSなしのAPP切替：デフォ非表示、:targetだけ表示 */
+    .content{ display:none !important; }
+    .content:target{ display:block !important; }
+    /* ハッシュ無しの初期表示はapp1 */
+    :root #app1{ display:block !important; }
+  `;
+  head.appendChild(style);
+
+  // ===== 6) バナー付与・初期表示の保険 =====
+  const body = cloned.querySelector('body') || cloned.getElementsByTagName('body')[0];
+  if(body){
+    body.setAttribute('data-frozen','1');
+    const banner = document.createElement('div');
+    banner.className = 'frozen-banner';
+    banner.textContent = 'このファイルは入力済みの保存版（編集不可）';
+    body.appendChild(banner);
+  }
+  ['app1','app2','app3'].forEach(id=>{
+    const el = byId(cloned,id);
+    if(el){ el.removeAttribute('hidden'); el.style.visibility='visible'; }
+  });
+
+  // ===== 7) クリック不可（証跡用） =====
+  $all(cloned,'button').forEach(b=>{ b.setAttribute('disabled','disabled'); b.removeAttribute('onclick'); b.type='button'; });
+  $all(cloned,'form').forEach(f=>{ f.setAttribute('onsubmit','return false;'); });
+
+  // ===== 8) <script> 全削除（完全静的化） =====
+  $all(cloned,'script').forEach(s=> s.remove());
+
+  // ===== 9) ダウンロード =====
+  const htmlText = '<!DOCTYPE html>\n' + cloned.outerHTML;
+  const blob = new Blob([htmlText], { type:'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  try{
+    const base = (typeof window.getCustomFileName==='function') ? window.getCustomFileName()
+               : 'IBASD_' + new Date().toISOString().slice(0,10);
+    a.href = url; a.download = base + '.html'; a.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
+
+// APP1 印刷
+(function(){
+  const YEN = (v)=> Number(v||0).toLocaleString('ja-JP');
+
+  // #result をそのまま印刷（既存互換）
+  window.preparePrintApp1 = function () {
+    const html = (document.getElementById('result')?.innerHTML || '').trim();
+    if (!html) { alert('印刷する内容がありません。'); return; }
+
+    const printCSS = `
+      <style>
+        @media print {
+          @page { size: 90mm 205mm; margin: 0; }
+          html, body {
+            margin: 0; padding: 0; background: #fff;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+          }
+          #result {
+            width: 90mm !important; max-height: 205mm !important;
+            margin: 0 auto !important; padding: 8mm 6mm !important;
+            box-sizing: border-box; font-size: 10.5pt; line-height: 1.25;
+          }
+          #result, .envelope {
+            page-break-before: avoid;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      </style>`;
+
+    openPrintApp1(printCSS + `<div id="result">${html}</div>`, { rotateOnMobile: true });
+  };
+
+  // 封筒印刷（ALL or 個別カテゴリ）
+  window.printEnvelopeApp1 = function (category) {
+    const dateStr = (typeof getApp3StyleDate === 'function')
+      ? getApp3StyleDate()
+      : (() => {
+          const d = new Date();
+          return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        })();
+
+    if (category === 'ALL') {
+      if (!confirm('伝票の記入はすべて完了していますか？')) return;
+
+      const CATS = ['UK','K','AB','LA','PA','BB','MS','GM','B','JOE','KOSE','HE','PB'];
+
+      const perCat = CATS.map(key => {
+        const arr = (window.catchbackDetails && window.catchbackDetails[key]) || [];
+        const total = arr.reduce((s, d) => {
+          const n = parseInt(String(d?.count ?? 0).replace(/,/g,''), 10);
+          return s + (isNaN(n) ? 0 : n);
+        }, 0);
+        return { key, total };
+      });
+
+      const shown = perCat.filter(x => x.total > 0);
+      const list  = shown.length ? shown : perCat;
+
+      const grand  = list.reduce((s, x) => s + x.total, 0);
+      const amount = grand * 1000;
+
+      // openPrintApp1 は行テキストを再構成するので 1行ずつ渡す
+      const lines = list.map(x => `${x.key} (計${x.total})`).join('\n');
+
+      const innerAll = `
+        <div class="envelope">
+          <div class="print-date">${dateStr}</div>
+          <div class="print-title">顧問料</div>
+          <div style="text-align:center; font-size:26pt; margin:2mm 0 3mm;">￥${YEN(amount)}</div>
+          <div style="text-align:center; font-size:14pt; margin-bottom:4mm;">（人数: ${grand}）</div>
+          ${lines}
+          <div style="text-align:center; font-size:14pt; margin-top:4mm;">Total ${grand}</div>
+        </div>`;
+
+      openPrintApp1(innerAll, { rotateOnMobile:true });
+      return;
+    }
+
+    // 個別カテゴリ
+    // 個別カテゴリ
+// --- 個別カテゴリ ---
+const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
+const lineTexts = [];
+let total = 0;
+arr.forEach(d => {
+  const unit  = Number(String(d.unit || 0).replace(/[,￥¥]/g,''));
+  const count = Number(String(d.count|| 0).replace(/,/g,''));
+  if (unit && count) {
+    lineTexts.push(`${unit.toLocaleString()}×${count}`);
+    total += count;
+  }
+});
+
+// ✅ 合計金額を画面上の <span id="UKtotal"> の値から取得
+const totalSpan = document.getElementById(`${category}total`);
+const amountText = totalSpan ? totalSpan.textContent.trim() : "0";
+
+// <br> で改行
+const rowsHtml = lineTexts.length ? lineTexts.join('<br>') : '0';
+
+// 出力HTML
+const innerCat = `
+  <div class="envelope" style="font-size:11pt;line-height:1.35;">
+    <div class="print-date">${dateStr}</div>
+    <div class="print-title">${category}</div>
+    <div class="detail-list" style="margin:3mm 0 4mm 0;">
+      ${rowsHtml}
+    </div>
+    <div style="text-align:center; font-size:12pt; margin-top:2mm;">
+      Total ${total}本
+    </div>
+    <div style="text-align:center; font-size:22pt; margin:3mm 0 0;">
+      ￥${amountText}
+    </div>
+  </div>`;
+
+openPrintApp1(innerCat, { rotateOnMobile:true, noRebuild:true });
+  }
+
+  // コア：印刷ウィンドウ生成・整形・復帰制御
+  function openPrintApp1(innerHTML, opts = { rotateOnMobile:true }) {
+    // ---- 行テキスト化して3行パターンを再構成 ----
+    // ---- 行テキスト化して3行パターンを再構成 ----
+let rebuilt = innerHTML;
+if (!opts?.noRebuild) {
+  const tmpEl = document.createElement('div');
+  tmpEl.innerHTML = innerHTML;
+  const lines = (tmpEl.innerText.trim().split(/\r?\n/)).map(s => s.trim());
+
+  rebuilt = "";
+  for (let i = 0; i < lines.length; i++) {
+    const a = lines[i] || "";
+    const b = lines[i + 1] || "";
+    const c = lines[i + 2] || "";
+
+    if (/^[A-Z]{1,6}$/.test(a) &&
+        (/^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$|^\d+$/.test(b)) &&
+        c.includes("計")) {
+      rebuilt += `
+        <div class="cat-line">
+          <span class="cat">${a}</span>
+          <span class="val">${b}</span>
+          <span class="cnt">${c}</span>
+        </div>`;
+      i += 2;
+    } else if (a === "") {
+      rebuilt += `<div class="group-sep"></div>`;
+    } else {
+      rebuilt += `<div class="misc">${a}</div>`;
+    }
+  }
+}
+
+    // ---- 子ウィンドウ生成（毎回ユニーク名）----
+    const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+    const winName = "app1print_" + Date.now();
+    const w = window.open("", winName);
+    if (!w) { alert("ポップアップがブロックされました。許可してください。"); return; }
+
+    const doc = w.document;
+    doc.open();
+    doc.write(`
+      <!doctype html>
+      <html lang="ja">
+      <head>
+        <meta charset="utf-8">
+        <title>APP1 出力</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          @page { size: 90mm 205mm; margin: 0; }
+          html, body {
+            margin: 0; padding: 0; background: #fff;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+          }
+          #page {
+            width: 90mm; height: 205mm;
+            padding: 8mm 6mm; box-sizing: border-box;
+            font-size: 11pt; line-height: 1.3;
+          }
+          .rotate180 #page { transform: rotate(180deg); transform-origin: 50% 50%; }
+          .cat-line {
+            display: grid; grid-template-columns: 3.2em 6em auto;
+            column-gap: 8px; align-items: baseline;
+          }
+          .cat-line .cat { font-weight: 700; }
+          .cat-line .val, .cat-line .cnt { text-align: right; }
+          .cat-line .cnt { opacity: .9; }
+          .group-sep { height: 0.8em; }
+          .misc { margin: 2px 0; }
+          #__app1Back {
+            position: fixed; right: 8px; top: 8px; padding: .5em .8em;
+            font-size: 12px; border: 1px solid #888; border-radius: 6px;
+            background: #fff; cursor: pointer; z-index: 9999;
+          }
+          @media print { #__app1Back { display:none } }
+        </style>
+      </head>
+      <body class="${isSP && opts.rotateOnMobile ? 'rotate180' : ''}">
+        <div id="page">${rebuilt}</div>
+        <button id="__app1Back">← 元の画面へ戻る</button>
+        <script>
+          (function(){
+            function backToOpener(){
+              try { if (window.opener && !window.opener.closed) window.opener.focus(); } catch(e){}
+              try { window.close(); } catch(e){}
+              try { if (window.opener && !window.opener.closed) window.opener.postMessage({type:'IBASD_PRINT_DONE'}, '*'); } catch(e){}
+            }
+
+            // 印刷キック（load 済みでも一回だけ）
+            let kicked=false, printed=false;
+            function kick(){
+              if (kicked) return; kicked=true;
+              try { window.focus(); window.print(); printed=true; } catch(e){}
+            }
+            if (document.readyState === 'complete') { setTimeout(kick, 80); }
+            else {
+              window.addEventListener('load', ()=> setTimeout(kick,120), {once:true});
+              document.addEventListener('readystatechange', ()=> {
+                if (document.readyState === 'complete') setTimeout(kick, 80);
+              });
+            }
+            setTimeout(kick, 1500); // 最後の一押し
+
+            // 必ず閉じて戻る：5重トリガ
+            window.addEventListener('afterprint', backToOpener);
+            window.addEventListener('focus', ()=> { if (printed) backToOpener(); });
+            document.addEventListener('visibilitychange', ()=> { if (!document.hidden) backToOpener(); });
+            try {
+              const mql = matchMedia('print');
+              const h = e => { if (!e.matches) backToOpener(); };
+              (mql.addEventListener ? mql.addEventListener('change', h) : mql.addListener(h));
+            } catch(e){}
+            setTimeout(backToOpener, 12000); // タイムアウト保険
+
+            // 手動戻る
+            document.getElementById('__app1Back')?.addEventListener('click', backToOpener);
+          })();
+        <\/script>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // 親側：ユーザー操作直後の“第一弾”をここで試す
+    try {
+      w.__app1Printed = false;
+      w.focus();
+      w.print();           // ここで開けば最短
+      w.__app1Printed = true;
+
+      w.addEventListener('load', () => {
+        if (!w.__app1Printed) {
+          try { w.focus(); w.print(); w.__app1Printed = true; } catch(e){}
+        }
+      }, { once:true });
+    } catch(e) {}
+
+    // 親側ウォッチドッグ：子が閉じたら即フォーカス
+    try {
+      const wd = setInterval(() => {
+        if (!w || w.closed) { clearInterval(wd); try { window.focus(); } catch(e){} }
+      }, 700);
+
+      window.addEventListener('message', (ev) => {
+        if (ev && ev.data && ev.data.type === 'IBASD_PRINT_DONE') {
+          try { window.focus(); } catch(e){}
+        }
+      }, { once:true });
+    } catch(e){}
+  }
+
+})();
+
+// APP2 印刷
+
+function openPrintApp2(innerHTML, opts = {}) {
+  const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
+  const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+  const rotate = rotateOnMobile && isSP;
+
+  // ★ 最終合計をチェックして、条件を満たせば special クラスを付与
+  const temp = document.createElement('div');
+  temp.innerHTML = innerHTML;
+  const finalEl = temp.querySelector('.finalAmount');
+  if (finalEl) {
+    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10);
+    if (num >= 100000) {
+      finalEl.classList.add('rainbow-print');
+    }
+  }
+  innerHTML = temp.innerHTML;
+
+  const printHTML = `<!doctype html><html lang="ja"><head>
+  <meta charset="utf-8"><title>print</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { --scale:${scale}; }
+    @page { size: 90mm 205mm; margin: 0; }
+    html,body {
+      margin:0; padding:0; background:#fff;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+
+    #page { width:90mm; max-height:205mm; margin:0 auto; overflow:hidden; }
+    .rotate180 #page { margin-bottom:-${trimBottomMM}mm; }
+
+    #result {
+      width:calc(90mm/var(--scale));
+      min-height:calc(205mm/var(--scale));
+      margin:0 auto; padding:0;
+      box-sizing:border-box;
+      transform:scale(var(--scale));
+      transform-origin:top center;
+    }
+    .rotate180 #result {
+      transform:rotate(180deg) scale(var(--scale));
+      transform-origin:center center;
+    }
+
+.envelope {
+  box-sizing: border-box;
+  width: calc(84mm / var(--scale)); /* ← 86→84 にして左右3mmずつの余白を確保 */
+  max-height: 205mm;
+  margin: 0 auto;
+  text-align: left;
+  font-family: 'ＭＳ 明朝', serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+  padding: calc(5mm / var(--scale)); /* padding もスケールで割って実効幅を維持 */
+}
+    .print-date  { text-align:left;  font-size:11pt; margin:4mm 0 0; }
+    .print-title { text-align:center;font-size:14pt;margin:2mm 0 8mm;font-weight:700; }
+    .receipt-row { display:flex; justify-content:space-between; align-items:baseline; }
+    .receipt-row .label{ margin-right:5mm; white-space:nowrap; }
+    .receipt-row .value{ font-weight:700; font-size:12pt; text-align:right; }
+    .totalAmount{ font-size:18pt !important; font-weight:800; color:#0066cc; margin:3mm 0 2mm; }
+    .finalAmount{ font-size:18pt !important; font-weight:900; color:#009944; margin:4mm 0 3mm; }
+    .castName   { font-size:16pt !important; font-weight:700; }
+
+      .castName {
+    font-size: 18pt !important;
+    font-weight: 800 !important;
+    margin: 3mm 0 !important;   /* 名前上下の余白復活 */
+  }
+
+  .subtotal {
+    font-size: 14pt !important;
+    font-weight: 700 !important;
+    color: #333 !important;
+    margin-top: 2mm !important;
+    margin-bottom: 2mm !important;
+  }
+
+  .totalAmount {
+    font-size: 15pt !important;
+    font-weight: 800 !important;
+    color: #0066cc !important;
+    margin-top: 3mm !important;
+    margin-bottom: 2mm !important;
+  }
+
+  .finalAmount {
+    font-size: 18pt !important;
+    font-weight: 900 !important;
+    color: #009944 !important;
+    margin-top: 4mm !important;
+    margin-bottom: 3mm !important;
+  }
+
+    /* 印刷だけ虹色 */
+    @media print {
+      @keyframes rainbowText {
+        0%   { color: red; }
+        20%  { color: orange; }
+        40%  { color: yellow; }
+        60%  { color: green; }
+        80%  { color: blue; }
+        100% { color: purple; }
+      }
+
+  .rainbow-print {
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+  }
+
+#result .congrats.print-only {
+  display: none;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14pt;
+
+  /* ↓ ここを追加または調整 */
+  margin-bottom: 2px;   /* 最終合計との間隔を小さくする */
+}
+@media print {
+  #result .congrats.print-only {
+    display: block;
+  }
+
+#result .congrats-box {
+  border: 2px solid #000;
+  padding: 6px 10px;
+  margin: 6px 0;
+
+  /* ここから追加/変更 */
+  max-width: calc(100% - 4mm); /* ← 右端クリップ回避の安全幅 */
+  margin-left: 2mm;
+  margin-right: 2mm;
+  /* ここまで */
+
+  text-align: center;
+  border-radius: 6px;
+  display: block;
+  box-sizing: border-box;
+}
+
+#result .congrats.print-only {
+  font-weight: bold;
+  font-size: 14pt;
+  margin-bottom: 2px;       /* 最終合計との間隔を調整 */
+}
+}
+       
+    }
+    
+  </style>
+  </head><body class="${rotate ? 'rotate180' : ''}">
+    <div id="page"><div id="result">${innerHTML}</div></div>
+    <script>
+      function tryClose(){ try{ window.close(); }catch(e){} }
+      window.onload = function(){
+        try{ window.focus(); window.print(); }catch(e){}
+        window.onafterprint = tryClose;
+        window.addEventListener('focus', tryClose, { once:true });
+        document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
+        setTimeout(tryClose, 2500);
+      };
+    <\/script>
+  </body></html>`;
+
+  try {
+  let w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+  if (w && w.document) {
+    w.document.open(); 
+    w.document.write(printHTML); 
+    w.document.close();
+    return w; // ← return に修正！
+  }
+} catch(_) {}
+
+try {
+  const blob = new Blob([printHTML], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url,'_blank');
+  return w; // ← こちらもreturn w
+} catch(_) {}
+
+}
+
+// HTMLエスケープ（XSS/レイアウト崩れ対策）
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// 履歴の描画
+function renderApp2History(){
+  const ul = document.getElementById('app2-historyList');
+  if(!ul) return;
+  ul.innerHTML = app2History.map(e => {
+    const when = new Date(e.time||Date.now()).toLocaleString();
+  return `<li class="history-item">
+            <span class="history-name">${escapeHtml(e.cast||'（名前なし）')}</span>｜${when}
+            ｜小計:${e.subtotal?.toLocaleString?.() ?? e.subtotal}
+            ｜合計:${e.total?.toLocaleString?.() ?? e.total}
+            ｜最終:${e.final?.toLocaleString?.() ?? e.final}
+          </li>`;
+  }).join('');
+}
+
+// 一括入力グリッド：選択→まとめて出力
 (function(){
   const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
   const WAIT_BETWEEN_PRINT_MS = 500;   // 1件出力→次までの待機（必要なら調整）
@@ -6785,7 +7123,6 @@ document.addEventListener('change', (e) => {
 })();
 
 // ===== 空行判定：氏名/体験/送迎/数量群/ボトルのどれも入ってなければ空 =====
-// ===== 空行判定：氏名/体験/送迎/数量群/ボトルのどれも入ってなければ空 =====
 function isBulkRowEmpty(mainRow){
   if (!mainRow) return true;
 
@@ -6837,426 +7174,453 @@ function isBulkRowEmpty(mainRow){
   return !(name || send || exp || anyQuant || anyBottle);
 }
 
+window.preparePrintApp2 = function (mode = 'envelope') {
+  if (typeof window.showApp === 'function') window.showApp('app2');
 
-// チェックボックスの活性/選択を空行に合わせて更新
-function updateRowCheckState(mainRow){
-  const cb = mainRow.querySelector('.bulk-check');
-  if (!cb) return;
-  const empty = isBulkRowEmpty(mainRow);
-  cb.disabled = empty;
-  if (empty) cb.checked = false;       // 空行は強制で外す
-  mainRow.classList.toggle('bulk-empty', empty); // 見た目用（任意CSSで淡色化可）
-}
+  // 印刷前に保存内容も最新化
+  if (typeof saveBottleForms === 'function') saveBottleForms();
 
-//一括入力グリッドで入力のあるフォームのみ色を変えるJS開始
+  if (typeof window.calculate === 'function') window.calculate();
 
-(function(){
-  const grid = document.getElementById('bulkGrid');
-  if (!grid) return;
-
-  // 入力があるか判定（0 は入力あり扱い）
-  function hasValue(el){
-    if (el.type === 'checkbox') return el.checked;
-    const v = (el.value ?? '').toString().trim();
-    return v !== '';
-  }
-
-  function updateFilledState(el){
-    const filled = hasValue(el);
-    el.classList.toggle('is-filled', filled);
-    const td = el.closest('td');
-    if (td) td.classList.toggle('cell-filled', filled);
-  }
-
-  function scanAll(){
-    grid.querySelectorAll('input, select, textarea').forEach(updateFilledState);
-  }
-
-  // 入力中の即時反映
-  grid.addEventListener('input', (e)=>{
-    if (e.target.matches('#bulkGrid input, #bulkGrid textarea')) updateFilledState(e.target);
-  });
-  grid.addEventListener('change', (e)=>{
-    if (e.target.matches('#bulkGrid select, #bulkGrid input[type="checkbox"]')) updateFilledState(e.target);
-  });
-
-  // 初期スキャン
-  scanAll();
-
-  // 行の追加/復元にも追従
-  const mo = new MutationObserver((mut)=>{
-    for (const m of mut){
-      m.addedNodes?.forEach(node=>{
-        if (node.nodeType === 1){
-          if (node.matches?.('input,select,textarea')) updateFilledState(node);
-          node.querySelectorAll?.('input,select,textarea').forEach(updateFilledState);
-        }
-      });
-    }
-  });
-  mo.observe(grid.tBodies[0] || grid, { childList: true, subtree: true });
-
-  // 外から呼べる再スキャン（履歴一括復元の完了後などに）
-  window.rescanBulkFilledState = scanAll;
-})();
-
-// === 入力フォームを選択した瞬間に中の文字を全選択する ===
-document.addEventListener('focusin', (e) => {
-  const el = e.target;
-  if (!(el instanceof HTMLElement)) return;
-
-  if (el.classList?.contains('use-custom-keypad')) {
+  const html = (document.getElementById('result')?.innerHTML || '').trim();
+  if (!html) {
+    alert('印刷する内容がありません。先に「計算」で結果を出してください。');
     return;
   }
 
-  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-    el.select?.();
+  const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
+  const inner = (mode === 'envelope' && !hasEnvelope)
+    ? `<div class="envelope">${html}</div>`
+    : html;
+
+  openPrintApp2(inner, { scale: 1.05, rotateOnMobile: true, trimBottomMM: 20 });
+};
+
+
+
+/************************************************************
+ * 7. 初期化
+ ************************************************************/
+// initCommon()
+// initApp1()
+// initApp2()
+// initApp3()
+// document.addEventListener('DOMContentLoaded', initAll)
+
+// 特定アプリ(app1, app2, app3)をリセット
+function resetApp(appId, full = false) {
+  if (!confirm(full 
+    ? "本当に完全クリアしますか？（履歴・保存データも削除）" 
+    : "入力をクリアしますか？"
+  )) return;
+
+  if (appId === 'app1') {
+    resetApp1(full);
+  } else if (appId === 'app2') {          // ← これを追加
+    resetApp2(full);
+  } else if (appId === 'app3') {
+    resetApp3(full);
   }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+}
+
+function resetAllApps() {
+  if (!confirm("app1〜app3のデータを全て削除しますか？")) return;
+
+  const overlay = document.getElementById('resetOverlay');
+  const canvas = document.getElementById('matrixCanvas');
+  const flash = document.getElementById('resetFlash');
+  overlay.style.display = 'flex';
+  setTimeout(() => overlay.classList.add('active'), 20);
+
+  startMatrixEffect(canvas);
+
+  setTimeout(() => {
+    flash.style.opacity = 1;
+    setTimeout(() => {
+      resetApp1(true);
+      resetApp2(true);
+      resetApp3(true);
+      showApp('app1');
+      window.scrollTo({top: 0, behavior: 'auto'});
+      try { localStorage.removeItem('appScrollMap'); } catch(e) {}
+      if (window.clearTabScrollMemory) window.clearTabScrollMemory();
+
+      // ★ ここで全部一気に消す
+      setTimeout(() => {
+        flash.style.opacity = 0;
+        stopMatrixEffect();
+        overlay.classList.remove('active');
+        overlay.style.display = 'none';
+      }, 520); // flashフェードアウト分
+    }, 400);  // 発光持続
+  }, 1600);   // マトリックス演出
+
+// ページ全体を最上段へ
+window.scrollTo({ top: 0, behavior: 'auto' });
+
+// contentWrapper のスクロールもリセット
+const wrapper = document.getElementById("contentWrapper");
+if (wrapper) wrapper.scrollTop = 0;
+
+// APP1をアクティブに切替
+document.body.setAttribute("data-active-app", "app1");
+
+// コンテンツ切替
+document.querySelectorAll(".content").forEach(el => el.classList.remove("active"));
+document.getElementById("app1").classList.add("active");
+
+// タブ切替
+document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+document.querySelector('.tab[data-target="app1"]').classList.add("active");
+
+}
+
+// app1用リセット
+function resetApp1(full) {
+  const formRows = document.getElementById("formRows");
+  if (!formRows) return;
+
+  // 1行だけ残して削除
+  while (formRows.rows.length > 1) formRows.deleteRow(1);
+
+  // 最初の行の初期化
+  formRows.querySelectorAll("input, select").forEach(el => el.value = '');
+  document.querySelectorAll("table input[type='checkbox']").forEach(cb => cb.checked = false);
+
+  // 合計リセット
+document.getElementById("totalCustomers").textContent = "0";
+document.getElementById("cashTotal").textContent = "0";
+document.getElementById("cardTotal").textContent = "0";
+document.getElementById("totalAmount").textContent = "0";
+document.getElementById("totalCountCell").innerHTML =
+  '<button type="button" class="print-mini" onclick="printEnvelopeApp1(\'ALL\')">出力</button>' +
+  '<span id="totalCountValue" class="count-value">0</span>';
+document.getElementById("totalBackAmount").textContent = "0";
+
+  // カテゴリ別もリセット
+  const categories = ["UK", "K", "AB", "LA", "PA", "BB", "MS", "GM", "B", "JOE", "KOSE", "HE", "PB", "X", "Z"];
+  categories.forEach(cat => {
+    document.getElementById(`${cat}count`).textContent = "0";
+    document.getElementById(`${cat}total`).textContent = "0";
+  });
+
+  rowNumber = 2;
+  updateTotals();
+
+  if (full) {
+    localStorage.removeItem("formData");
+    localStorage.removeItem("checkboxStates");
+  }
+}
+
+// app2用リセット
+function resetApp2(full) {
+  // === 通常フォームのクリア =========================================
+  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
+  const exp = document.getElementById('experienceAndRental');
+  if (exp) exp.checked = false;
+  const result = document.getElementById('result');
+  if (result) result.innerHTML = '';
+  const bottleForms = document.getElementById('bottleFormsContainer');
+  if (bottleForms) bottleForms.innerHTML = '';
+
+  // === 一括入力フォームのクリア（内包） ===============================
+  (function clearBulkInputForm() {
+    const grid = document.getElementById('bulkGrid');
+    if (!grid) return;
+
+    grid.querySelectorAll('.bulk-name, .bulk-send, .bulk-num').forEach(el => el.value = '');
+    grid.querySelectorAll('.bulk-exp').forEach(el => (el.checked = false));
+    grid.querySelectorAll('.btl-subrow').forEach(tr => tr.remove());
+    grid.querySelectorAll('tr.bulk-mainrow').forEach(row => {
+      row.dataset.bottleCount = '0';
+      const minusBtn = row.querySelector('.btl-minus');
+      if (minusBtn) minusBtn.setAttribute('disabled', 'true');
+    });
+  })();
+
+  // === 完全クリア時（履歴/保存データも削除） =========================
+  if (full) {
+    const historyList = document.getElementById('historyList');
+    if (historyList) historyList.innerHTML = '';
+
+    // 通常フォーム関連ローカルデータ削除
+    localStorage.removeItem('inputs');
+    localStorage.removeItem('historyList');
+    localStorage.removeItem('result');
+    localStorage.removeItem('bottleForms');
+
+    // ✅ 一括入力グリッド関連も削除
+    localStorage.removeItem('app2_bulkGridData');
+    localStorage.removeItem('app2_bulkPanelVisible');
+
+    // グリッド本体もクリア
+    const grid = document.getElementById('bulkGrid');
+    if (grid) grid.querySelector('tbody')?.replaceChildren();
+
+    if (typeof updateSummary === 'function') updateSummary();
+
+    const countEl = document.getElementById('historyIndexCount');
+    if (countEl) countEl.textContent = '0人';
+    if (typeof window.createHistoryIndex === 'function') window.createHistoryIndex();
+  }
+}
+
+// app3用リセット
+function resetApp3(full) {
+  document.querySelectorAll('#app3 input').forEach(el => {
+    if (el.type !== 'button') el.value = '';
+  });
+  updateCalculations();
+
+  if (full) {
+    localStorage.removeItem('app3_inputs');
+    localStorage.removeItem('app3_result');
+
+    // ✅ 一括入力グリッド関連も完全に消去
+    localStorage.removeItem('app2_bulkGridData');
+    localStorage.removeItem('app2_bulkPanelVisible');
+
+    // グリッド本体も空にする
+    const grid = document.getElementById('bulkGrid');
+    if (grid) grid.querySelector('tbody')?.replaceChildren();
+  }
+
+  attachCommaFormatApp1and3();
+}
+
+function clearApp2Inputs() {
+  resetApp2(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+// 初期化ヘルパ
+function initUpdateRowGrayOut() {
+  updateRowGrayOut();
+}
+
+function initExperienceAndRentalConfirm() {
+  const exp = document.getElementById('experienceAndRental');
+  if (!exp) return;
+
+  exp.addEventListener('change', function (e) {
+    // プログラムからの変更は無視
+    if (!e.isTrusted) return;
+
+    if (this.checked) {
+      const confirmed = confirm('「体験及び貸出」にチェックが入りました。');
+      if (!confirmed) this.checked = false;
+    }
+  });
+}
+
+function initCategorySectionTable() {
+  const table = document.querySelector('#categorySection table');
+  if (!table) return;
+
+  // ヘッダを差し替え
+  const thRow = table.querySelector('thead tr');
+  if (thRow) {
+    thRow.innerHTML = '<th></th><th>カテゴリ</th><th>本数</th><th>金額</th>';
+  }
+
+  // 各行を4列化
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    if (tr.children.length >= 4) return;
+
+    const firstTd = tr.children[0];
+    if (!firstTd) return;
+
+    const isTotal = /合計/.test(firstTd.textContent);
+
+    if (isTotal) {
+      const blank = document.createElement('td');
+      tr.insertBefore(blank, firstTd);
+
+      const catTd = document.createElement('td');
+      catTd.innerHTML = firstTd.innerHTML;
+      tr.replaceChild(catTd, firstTd);
+      return;
+    }
+
+    const cb = firstTd.querySelector('input[type="checkbox"]');
+    const nameText = firstTd.textContent.replace(/\s+/g, ' ').trim();
+
+    firstTd.innerHTML = '';
+    if (cb) firstTd.appendChild(cb);
+
+    const catTd = document.createElement('td');
+    catTd.textContent = nameText;
+    tr.insertBefore(catTd, tr.children[1]);
+  });
+}
+
+function initSideCalcButton() {
+  document.getElementById('side-calc')?.addEventListener('click', () => {
+    confirmAndCalculate(new Event('submit'));
+  });
+}
+
+function initHistoryIndexObserver() {
+  const historySection = document.getElementById('app2-historySection');
+  if (!historySection) {
+    createHistoryIndex();
+    return;
+  }
+
+  const mo = new MutationObserver(() => createHistoryIndex());
+  mo.observe(historySection, { childList: true, subtree: true });
+
+  createHistoryIndex();
+}
+
+function initOutputButtonsObserver() {
+  addOutputButtonsNextToRestore();
+
+  const his = document.getElementById('app2-historySection');
+  if (!his) return;
+
+  const mo = new MutationObserver(() => addOutputButtonsNextToRestore());
+  mo.observe(his, { childList: true, subtree: true });
+}
+
+function initBulkRowsChangeHandler() {
+  const sel = document.getElementById('bulkRows');
+  if (!sel) return;
+
+  sel.addEventListener('change', () => {
+    window.BULK_RESTORING = true;
+
+    const snapshot = (typeof snapshotBulkGrid === 'function') ? snapshotBulkGrid() : [];
+    const nextN = parseInt(sel.value || '40', 10) || 40;
+
+    if (typeof buildGrid === 'function') {
+      buildGrid(nextN);
+    }
+
+    if (typeof restoreBulkGrid === 'function') {
+      restoreBulkGrid((snapshot || []).slice(0, nextN));
+    }
+
+    document.querySelectorAll('#bulkGrid input')
+      .forEach(el => el.dispatchEvent(new Event('input', { bubbles: true })));
+
+    window.BULK_RESTORING = false;
+  });
+}
+
+function initBottleCustomOptions() {
+  hydrateAllBottleSelectsWithCustomOptions();
+}
+
+function initExportExcelButton() {
+  const btn = document.getElementById('exportExcelApp3');
+  if (btn) {
+    btn.addEventListener('click', exportApp3MonthlyWrite_xpop);
+  }
+}
+
+function initBulkCustomKeypad() {
+  installBulkCustomKeypad();
+}
+
+function initArrowNavigationApp1() {
+  enableArrowNavigationApp1();
+}
+
+function initWorkStartDate() {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  if (!localStorage.getItem("workStartDate")) {
+    localStorage.setItem("workStartDate", todayStr);
+  }
+}
+
+function initSlimHistoryUI() {
+  setTimeout(slimHistoryUI, 0);
+}
+
+//DOMContentLoaded 統合初期化
+document.addEventListener('DOMContentLoaded', () => {
+  initUpdateRowGrayOut();
+  initExperienceAndRentalConfirm();
+  initRestoreAllApps();
+  initCategorySectionTable();
+  initSideCalcButton();
+  initHistoryIndexObserver();
+  initOutputButtonsObserver();
+  initBulkRowsChangeHandler();
+  initBottleCustomOptions();
+  initExportExcelButton();
+  initBulkCustomKeypad();
+  initArrowNavigationApp1();
+  initWorkStartDate();
+  initSlimHistoryUI();
 });
 
-//一括入力グリッドで入力のあるフォームのみ色を変えるJS終了
 
+/************************************************************
+ * 7. 演出専用レイヤー
+ ************************************************************/
 
-/* ============================================================
-   APP2 一括入力：右端に「退」チェック列を追加
-   - 行の退勤フラグ（.bulk-leave）を導入
-   - 退勤行はグレーアウト＆選択不可（印刷対象から除外）
-   - 一括登録で「氏名→退勤フラグ」をlocalStorageへ保存
-   - 一括復元時に退勤フラグを復元
-   貼り付け位置：既存JSの一番最後（他関数を上書きしない）
-============================================================ */
+// --- マトリックス風エフェクト ---
+let matrixInterval, matrixStopFlag = false;
 
-/* ==== 1) 見た目（CSS）をJSで挿入 ==== */
-(function injectBulkLeaveStyles(){
-  if (document.getElementById('bulk-leave-styles')) return;
-  const css = `
-    #bulkGrid thead th.bulk-leave-head { width:3.2em;text-align:center; }
-    #bulkGrid tbody td.bulk-leave-cell { text-align:center; }
-    #bulkGrid input.bulk-leave { transform:scale(1.05);cursor:pointer; }
+function startMatrixEffect(canvas) {
+  const ctx = canvas.getContext('2d');
+  let W = window.innerWidth;
+  let H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  let fontSize = 18;  // 少し小さく密度を増やす
+  let columns = Math.floor(W / fontSize) + 2;
+  let drops = [];
+  for (let i = 0; i < columns; i++) drops[i] = Math.random() * H / fontSize;
 
-    /* グレーアウト見た目（操作可・変更不可） */
-    #bulkGrid tr.bulk-mainrow.is-leave td,
-    #bulkGrid tr.btl-subrow.is-leave td {
-    opacity: .45 !important;
-    filter: grayscale(0.9);
-    }
-
-
-    /* 読み取り専用スタイル */
-    #bulkGrid input[readonly],
-    #bulkGrid select[data-readonly="1"] {
-    background: rgba(100, 100, 100, 0.2) !important;
-    color: #ccc !important;
-    cursor: not-allowed !important;
-    }
-
-    /* ★例外：退チェック＆マイナスボタンは常に操作可 */
-    #bulkGrid tr.is-leave input.bulk-leave,
-    #bulkGrid tr.bulk-mainrow.is-leave .btl-minus,
-    #bulkGrid tr.btl-subrow.is-leave   .btl-minus{
-      pointer-events:auto!important;
-    }
-  `.trim();
-  const s=document.createElement('style');
-  s.id='bulk-leave-styles';
-  s.textContent=css;
-  document.head.appendChild(s);
-})();
-
-/* ==== 退勤列セットアップ ==== */
-(function setupBulkLeaveColumn(){
-  const grid=document.getElementById('bulkGrid');
-  if(!grid) return;
-
-  function ensureLeaveHead(){
-    const thRow=grid.tHead?.rows?.[0];
-    if(!thRow||thRow.querySelector('.bulk-leave-head'))return;
-    const th=document.createElement('th');
-    th.className='bulk-leave-head';
-    th.textContent='退';
-    th.style.width = '3%';
-    thRow.appendChild(th);
-  }
-
-  function getSubrows(mainTr){
-    const subs=[];
-    let cur=mainTr.nextElementSibling;
-    while(cur&&cur.classList.contains('btl-subrow')){
-      subs.push(cur);
-      cur=cur.nextElementSibling;
-    }
-    return subs;
-  }
-
-
-  /* ✅改修版：退勤ON/OFFで「選択可・変更不可」制御 */
-function applyRowLeaveState(mainTr, isLeave) {
-  const subs = getSubrows(mainTr);
-  const all = [mainTr, ...subs];
-  all.forEach(tr => tr.classList.toggle('is-leave', !!isLeave));
-
-  // 退勤チェック自身の制御
-  const sel = mainTr.querySelector('.bulk-check');
-  if (sel) {
-    if (isLeave) { sel.checked = false; sel.disabled = true; }
-    else { sel.disabled = false; }
-  }
-
-  // 各入力要素の制御
-  const allEls = [
-    ...mainTr.querySelectorAll('input, select, button'),
-    ...subs.flatMap(s => Array.from(s.querySelectorAll('input, select, button')))
+  // 文字セット（カタカナ・ひらがな・英数大文字・英数小文字・数字）
+  const chars = [
+    ..."アイウエオカキクケコサシスセソタチツテトナニヌネノマミムメモヤユヨラリルレロワヲン",
+    ..."あいうえおかきくけこさしすせそたちつてとなにぬねのまみむめもやゆよらりるれろわをん",
+    ..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   ];
 
-  allEls.forEach(el => {
-    const isMinus = el.classList.contains('btl-minus');
-    const isLeaveCheck = el.classList.contains('bulk-leave');
+  matrixStopFlag = false;
 
-    if (isLeave) {
-      // --- 退勤中 ---
-      if (el.tagName === 'INPUT' && !isLeaveCheck) {
-        el.readOnly = true;        // ← 入力禁止だがフォーカス可
-      } else if (el.tagName === 'SELECT') {
-        el.dataset.readonly = '1'; // ← セレクト専用フラグ
-        el.addEventListener('mousedown', preventSelectChange, { once: true });
-      } else if (!isLeaveCheck && !isMinus) {
-        el.disabled = true;        // ボタン類などは無効化
+  function draw() {
+    ctx.fillStyle = 'rgba(25,30,44,0.23)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = fontSize + "px monospace";
+    ctx.fillStyle = "#47f7ff";
+    // 列ごとに複数行ドロップして密度UP
+    for (let i = 0; i < columns; i++) {
+      for (let d = 0; d < 2; d++) { // 1列あたり2個
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, (drops[i] - d) * fontSize);
       }
-    } else {
-      // --- 通常 ---
-      if (el.tagName === 'INPUT') el.readOnly = false;
-      if (el.tagName === 'SELECT') delete el.dataset.readonly;
-      el.disabled = false;
+      if (Math.random() > 0.975) drops[i] = 0;
+      drops[i] += Math.random() * 1.3 + 0.7; // 速さランダム
     }
-  });
+    if (!matrixStopFlag) matrixInterval = requestAnimationFrame(draw);
+  }
+
+  draw();
 }
 
-/* セレクト変更抑止 */
-function preventSelectChange(e) {
-  if (e.currentTarget.dataset.readonly === '1') {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return false;
+function stopMatrixEffect() {
+  matrixStopFlag = true;
+  if (matrixInterval) cancelAnimationFrame(matrixInterval);
+  const canvas = document.getElementById('matrixCanvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
-
-
-  function ensureLeaveCell(mainTr){
-    if(mainTr.querySelector('td.bulk-leave-cell'))return;
-    const td=document.createElement('td');
-    td.className='bulk-leave-cell';
-    td.innerHTML=`<input type="checkbox" class="bulk-leave" aria-label="退勤行">`;
-    mainTr.appendChild(td);
-  }
-
-  const tbody=grid.tBodies?.[0];
-  if(!tbody)return;
-  ensureLeaveHead();
-
-  const process=()=>{ ensureLeaveHead(); tbody.querySelectorAll('tr.bulk-mainrow').forEach(r=>ensureLeaveCell(r)); };
-  process();
-  new MutationObserver(process).observe(tbody,{childList:true,subtree:false});
-
-  document.addEventListener('change',e=>{
-    if(!e.target?.classList?.contains('bulk-leave'))return;
-    const tr=e.target.closest('tr.bulk-mainrow');
-    if(!tr)return;
-    applyRowLeaveState(tr,e.target.checked);
-  });
-
-  window._bulkLeave={applyRowLeaveState,getSubrows,isLeave:tr=>!!tr?.classList?.contains('is-leave')};
-})();
-
-// 退行などで data-readonly="1" の <select> はキー操作でも値を変えさせない
-document.addEventListener('keydown', (e) => {
-  const el = e.target;
-  if (!(el instanceof HTMLElement)) return;
-  if (el.tagName !== 'SELECT') return;
-  if (el.dataset.readonly !== '1') return;
-
-  // 値が変わり得るキーをブロック（上下/左右/確定など）
-  const k = e.key;
-  const block = [
-    'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
-    'PageUp','PageDown','Home','End','Enter',' '
-  ];
-  if (block.includes(k)) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-  }
-}, true);
-
-
-/* ============================================================
-   共通：app2ナビゲーション（Enter / 矢印キー 両対応）
-   - 退勤行・操作禁止セルを自動スキップ
-============================================================ */
-
-/* 有効フィールド取得関数 */
-function getApp2ActiveFields(current) {
-  const app2  = document.getElementById('app2');
-  const grid  = document.getElementById('bulkGrid');
-  if (!app2) return [];
-
-  const inGrid = !!(current && grid && grid.contains(current));
-  const scope  = inGrid ? grid : app2;
-
-  const all = Array.from(scope.querySelectorAll('input, select, textarea'));
-  return all.filter(el => {
-    if (!el.offsetParent) return false;        // 非表示は除外
-    if (el.disabled) return false;             // disabled は除外（退行で一部ボタン等）
-    // ※ readonly / data-readonly は “フォーカスOK” にするため除外しない
-    return true;
-  });
-}
-
-// === 幾何学ベースの次候補探索（列ズレに強い） ===
-// 幾何学ベース（左右 or 通常フォーム用／グリッド外）
-// ※ 上下でもグリッド外ではこれを使う
-function findNextByGeometry(fields, current, dir) {
-  const rect = current.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top  + rect.height/ 2;
-
-  let best = null, bestScore = Infinity;
-  const vertical = (dir === 'down' || dir === 'up');
-  const sign     = (dir === 'down') ? +1 : -1;
-
-  for (const el of fields) {
-    if (el === current) continue;
-    const r  = el.getBoundingClientRect();
-    const ex = r.left + r.width / 2;
-    const ey = r.top  + r.height/ 2;
-
-    if (vertical) {
-      const dy = ey - cy;
-      if (sign * dy <= 0) continue;     // 進行方向のみ
-      const dx = Math.abs(ex - cx);
-      const score = dy * 1000 + dx;     // 縦優先
-      if (score < bestScore) { best = el; bestScore = score; }
-    } else {
-      // 左右は同じ行近傍のみ
-      const dy = Math.abs(ey - cy);
-      if (dy > 8) continue;
-      const dx = ex - cx;
-      if ((dir === 'right' && dx <= 0) || (dir === 'left' && dx >= 0)) continue;
-      const score = Math.abs(dx);
-      if (score < bestScore) { best = el; bestScore = score; }
-    }
-  }
-  return best;
-}
-
-// 移動の入口：現在地に応じて探索範囲と手法を切り替え
-function moveFocus(dir, current) {
-  const grid = document.getElementById('bulkGrid');
-  const inGrid = !!(grid && current && grid.contains(current));
-
-  if (inGrid && (dir === 'down' || dir === 'up')) {
-    // ← グリッド内の上下は “同列維持” アルゴリズムを必ず使用
-    moveFocusGridVertical(current, dir);
-    return;
-  }
-
-  // それ以外は近傍幾何学
-  const fields = getApp2ActiveFields(current);
-  const next = findNextByGeometry(fields, current, dir);
-  if (next) {
-    next.focus();
-    next.select?.();
-  }
-}
-
-
-// === 共通移動 ===
-// グリッド行→次の「メイン行」へ（btl-subrow と退行を自動スキップ）
-function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
-  const grid = document.getElementById('bulkGrid');
-  if (!grid) return;
-
-  const curTr  = current.closest('tr');
-  if (!curTr) return;
-
-  // 現行行の列スロットを決める
-  const rowSlots = Array.from(curTr.querySelectorAll('input, select, textarea'));
-  const colIdx   = rowSlots.indexOf(current);
-  if (colIdx < 0) return;
-
-  // メイン行のみを縦走査対象にする（←ここは据え置き）
-  const allRows = Array.from(grid.tBodies?.[0]?.rows || [])
-    .filter(tr => tr.classList.contains('bulk-mainrow'));
-
-  const r0 = allRows.indexOf(curTr);
-  if (r0 < 0) return;
-
-  const step = (dir === 'up') ? -1 : +1;
-  let r = r0 + step;
-
-  while (r >= 0 && r < allRows.length) {
-    const tr = allRows[r];
-
-    // ★退行でもフォーカス可能にするため “スキップしない”
-    const cand = Array.from(tr.querySelectorAll('input, select, textarea'))[colIdx];
-
-    // フォーカス可能なら移動（readonly/data-readonlyでもOK）
-    if (cand && cand.offsetParent && !cand.disabled) {
-      cand.focus();
-      cand.select?.();
-      return;
-    }
-    r += step;
-  }
-}
-
-
-
-// === イベント統合（capture=true で最優先） ===
-(function attachGridNavOnce(){
-  if (window.__app2NavInstalled) return;
-  window.__app2NavInstalled = true;
-
-  document.addEventListener('keydown', (e) => {
-    // app2 以外・対象外要素は無視
-    const app2 = document.getElementById('app2');
-    if (!app2 || !app2.classList.contains('active')) return;
-    const target = e.target;
-    if (!target || !target.closest('#app2')) return;
-    if (!['INPUT','SELECT','TEXTAREA'].includes(target.tagName)) return;
-
-    // Enter は常に “下へ” ＋ submit を完全阻止
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-      moveFocus('down', target);
-      return;
-    }
-
-    // 矢印
-    let dir = null;
-    if (e.key === 'ArrowDown') dir = 'down';
-    else if (e.key === 'ArrowUp') dir = 'up';
-    else if (e.key === 'ArrowLeft') dir = 'left';
-    else if (e.key === 'ArrowRight') dir = 'right';
-    if (!dir) return;
-
-    e.preventDefault();
-    moveFocus(dir, target);
-  }, true);
-})();
-
-
-//app2一括入力JS終了
-
-
-
-
-
-
-
-
-
-
-
 
 /* ============================================================
    110万 Over ぷちゅん演出（target未定義対策・完全版）
@@ -7264,9 +7628,7 @@ function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
    - 変数はローカルに閉じ込め、グローバル汚染を防止
    ============================================================ */
 
-  window.CONGRATS_SFX_URL = './seven-flash.m4a?v=2';   // 同階層に保存
-  // 任意の予備（あれば）
-  // window.CONGRATS_SFX_FALLBACK = './seven-flash.mp3';
+window.CONGRATS_SFX_URL = './seven-flash.m4a?v=2';
 
 (function(){
   const THRESHOLD = 1100000,
@@ -7495,796 +7857,5 @@ function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
   window.__congratsTest = () => showOverlayT0();
 })();
 
-  //110万Overでぷちゅん演出終了
 
 
-
-
-//EXCELエクスポート関連コード開始-------------------------------------------------------------
-
-// APPの日付読み取り（既存処理）
-function readWorkDate(){
-  const el =
-    document.getElementById('workDate') ||
-    document.querySelector('input[name="workDate"]') ||
-    document.querySelector('#dateGroup input[type="date"]');
-  if (!el) return '';
-
-  if ('valueAsDate' in el && el.valueAsDate instanceof Date && !isNaN(el.valueAsDate)) {
-    const d = el.valueAsDate;
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${dd}`;
-  }
-
-  let v = (el.value || el.getAttribute('value') || el.textContent || '').trim();
-  if (!v) return '';
-  v = v.replace(/\./g,'/').replace(/-/g,'/');
-  const m = v.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
-  if (!m) return '';
-  const y = m[1];
-  const mm = String(parseInt(m[2],10)).padStart(2,'0');
-  const dd = String(parseInt(m[3],10)).padStart(2,'0');
-  return `${y}-${mm}-${dd}`;
-}
-
-
-// ---------------------------------------------------------
-// 日計シート列マッピング（PA）
-// ---------------------------------------------------------
-const COLMAP_PA = {
-  totalCustomers:  "B",
-  historyIndexCount: "C",
-  maleAttendance: "D",
-  cardSales: "F",
-  totalSales: "G",
-  femaleSalary: "H",
-  maleSalary: "I",
-  catchBack: "J",
-  scoutBack: "K",
-  adviserFee: "L",
-  driverFee: "M",
-  femaleTax: "O",
-  maleTax: "P",
-  alcohol: "R",
-  receipt6: "S",
-};
-
-
-// ---------------------------------------------------------
-// CBシート列マッピング（本数）★修正版
-// ---------------------------------------------------------
-const COLMAP_CB = {
-  UKcount:   "B",
-  Kcount:    "C",
-  ABcount:   "D",
-  LAcount:   "E",
-  PAcount:   "F",
-  BBcount:   "G",
-  MScount:   "H",
-  GMcount:   "I",
-  Bcount:    "J",
-  JOEcount:  "K",
-  KOSEcount: "L",
-  HEcount:   "M",
-  PBcount:   "N"
-};
-
-
-// ---------------------------------------------------------
-// 式行（上書き禁止）
-// ---------------------------------------------------------
-const FORMULA_ROWS = [17, 34, 35];
-
-
-// ---------------------------------------------------------
-// ★★★ メイン処理：日計 + CB に同時書き込み ★★★
-// ---------------------------------------------------------
-async function exportApp3MonthlyWrite_xpop(){
-
-  const workDate = readWorkDate();
-  if (!workDate){
-    alert("対象日付を入力してください。");
-    return;
-  }
-
-  const d = new Date(workDate.replace(/\./g,"/").replace(/-/g,"/"));
-  if (isNaN(d)) { alert("日付形式が不正です。"); return; }
-
-  const yyyy = d.getFullYear();
-  const mm   = String(d.getMonth()+1).padStart(2,"0");
-  const dd   = d.getDate();
-
-
-  // (1) ファイル選択
-  let fileHandle, file;
-  try{
-    [fileHandle] = await showOpenFilePicker({
-      types: [{
-        description: 'Excel',
-        accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] }
-      }],
-      excludeAcceptAllOption: false,
-      multiple: false
-    });
-    file = await fileHandle.getFile();
-  }catch{
-    alert("Excelファイルが選択されませんでした。");
-    return;
-  }
-
-  const buffer = await file.arrayBuffer();
-
-
-  // (2) ブック読み込み
-  const workbook = await XlsxPopulate.fromDataAsync(buffer);
-
-  // シート名は「日計」「CB」
-  const sheetPA = workbook.sheet("日計");
-  const sheetCB = workbook.sheet("CB");
-
-  if (!sheetPA){
-    alert("Excel内に『日計』シートがありません。");
-    return;
-  }
-  if (!sheetCB){
-    alert("Excel内に『CB』シートがありません。");
-    return;
-  }
-
-
-  // (3) A列で dd に一致する行を探す（1行目は表題なので2行目以降）
-  let targetRow = null;
-  for (let r = 2; r <= 40; r++) {
-    const v = sheetPA.cell("A" + r).value();
-
-    if (typeof v === "number" && v === dd){
-      targetRow = r;
-      break;
-    }
-    if (typeof v === "string"){
-      const n = parseInt(v,10);
-      if (!Number.isNaN(n) && n === dd){
-        targetRow = r;
-        break;
-      }
-    }
-  }
-
-  if (!targetRow){
-    alert(`${dd}日 に対応する行が A列に見つかりません。`);
-    return;
-  }
-
-  if (FORMULA_ROWS.includes(targetRow)) {
-    alert(`${dd}日は合計行（式行）のため上書きできません。`);
-    return;
-  }
-
-
-  const $ = (id)=>document.getElementById(id);
-
-  // (4) 日計シートへ書き込み
-  for (const [id, col] of Object.entries(COLMAP_PA)) {
-    const el = $(id);
-    if (!el) continue;
-
-    const raw = (el.value ?? el.textContent ?? "0").toString();
-    const num = parseFloat(raw.replace(/[^\d.-]/g,"")) || 0;
-
-    sheetPA.cell(`${col}${targetRow}`).value(num);
-  }
-
-  // (5) CBシートへ書き込み（本数）
-  for (const [id, col] of Object.entries(COLMAP_CB)) {
-    const el = $(id);
-    if (!el) continue;
-
-    const raw = (el.value ?? el.textContent ?? "0").toString();
-    const num = parseFloat(raw.replace(/[^\d.-]/g,"")) || 0;
-
-    sheetCB.cell(`${col}${targetRow}`).value(num);
-  }
-
-
-  // (6) 上書き保存
-  try{
-    const outBuffer = await workbook.outputAsync();
-    const writable = await fileHandle.createWritable();
-    await writable.write(outBuffer);
-    await writable.close();
-
-    alert(`Excelに書き込みました：\n${dd}日 → ${targetRow}行目（『日計』『CB』両方）`);
-  }catch(e){
-    console.error(e);
-    alert("Excel書き出しに失敗しました。");
-  }
-}
-
-
-// ボタン紐付け
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('exportExcelApp3');
-  if (btn) btn.addEventListener('click', exportApp3MonthlyWrite_xpop);
-});
-
-//EXCELエクスポート関連コード終了-------------------------------------------------------------
-
-
-
-
-
-window.collectApp1State = collectApp1State;
-window.applyApp1State   = applyApp1State;
-
-window.collectApp2State = collectApp2State;
-window.applyApp2State   = applyApp2State;
-
-window.collectApp3State = collectApp3State;
-window.applyApp3State   = applyApp3State;
-
-/* =========================================================
-   APP2 一括入力グリッド専用 iPad自作テンキー
-   対象:
-   - #bulkGrid .bulk-send
-   - #bulkGrid .bulk-num
-========================================================= */
-document.addEventListener('DOMContentLoaded', () => {
-  installBulkCustomKeypad();
-});
-
-function installBulkCustomKeypad() {
-  const keypad = document.getElementById('bulkCustomKeypad');
-  const keypadTitle = document.getElementById('bulkCustomKeypadTitle');
-
-  // ===== 端末判定 =====
-  // PCでは無効
-  // タッチ主体端末（iPhone / iPad / Android / Surfaceタブレット系）でのみ有効
-  function isCustomKeypadDevice() {
-    const ua = navigator.userAgent || '';
-    const isIOS =
-      /iPhone|iPad|iPod/i.test(ua) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    const isAndroid = /Android/i.test(ua);
-
-    const hasTouch =
-      ('ontouchstart' in window) ||
-      (navigator.maxTouchPoints > 0);
-
-    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-    const desktopWidth = window.matchMedia('(min-width: 1024px)').matches;
-
-    // 「PC幅かつマウス主体」は無効
-    if (desktopWidth && !coarsePointer) return false;
-
-    return isIOS || isAndroid || (hasTouch && coarsePointer);
-  }
-
-  const isMobileLike = isCustomKeypadDevice();
-
-  console.log('[custom keypad] init', {
-    isMobileLike,
-    keypadExists: !!keypad
-  });
-
-  // PC時はテンキー完全無効化
-  if (!isMobileLike || !keypad) {
-    document.querySelectorAll('input.bulk-custom-keypad-target').forEach(input => {
-      input.readOnly = false;
-      input.removeAttribute('inputmode');
-      input.classList.remove('bulk-custom-keypad-active');
-    });
-
-    if (keypad) {
-      keypad.hidden = true;
-    }
-
-    console.log('[custom keypad] stopped', {
-      reason: !isMobileLike ? 'desktop mode' : 'keypad not found'
-    });
-    return;
-  }
-
-  let activeInput = null;
-
-  function isTarget(el) {
-    return el instanceof HTMLInputElement
-      && el.classList.contains('bulk-custom-keypad-target')
-      && !el.disabled
-      && el.type !== 'hidden';
-  }
-
-  function stripCommas(v) {
-    return String(v ?? '').replace(/,/g, '');
-  }
-
-  function normalizeNumericString(v) {
-    return stripCommas(v).replace(/[^\d-]/g, '');
-  }
-
-  function dispatchInput(input) {
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  function applyReadonlyToCustomKeypadTargets() {
-    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
-
-    console.log('[custom keypad] applyReadonlyToCustomKeypadTargets', {
-      count: inputs.length
-    });
-
-    inputs.forEach(input => {
-      if (input.disabled) return;
-      input.readOnly = true;
-      input.setAttribute('inputmode', 'none');
-      input.setAttribute('autocomplete', 'off');
-      input.setAttribute('autocapitalize', 'off');
-      input.setAttribute('spellcheck', 'false');
-    });
-  }
-
-  function getLabel(input) {
-    return input.getAttribute('placeholder')
-      || input.dataset.k
-      || input.id
-      || input.className
-      || '数値入力';
-  }
-
-  function clearActiveState() {
-    document
-      .querySelectorAll('input.bulk-custom-keypad-active')
-      .forEach(el => el.classList.remove('bulk-custom-keypad-active'));
-  }
-
-  function showKeypad(input) {
-    if (!input) return;
-
-    console.log('[custom keypad] SHOW', input);
-
-    clearActiveState();
-
-    activeInput = input;
-    activeInput.classList.add('bulk-custom-keypad-active');
-
-    if (keypadTitle) {
-      keypadTitle.textContent = `入力中: ${getLabel(input)}`;
-    }
-
-    keypad.hidden = false;
-
-    console.log('[custom keypad] visible', {
-      hidden: keypad.hidden,
-      display: getComputedStyle(keypad).display,
-      visibility: getComputedStyle(keypad).visibility,
-      opacity: getComputedStyle(keypad).opacity
-    });
-  }
-
-  function hideKeypad() {
-    clearActiveState();
-    activeInput = null;
-    keypad.hidden = true;
-
-    console.log('[custom keypad] HIDE');
-  }
-
-  function setRawValue(input, raw) {
-    input.value = raw;
-    dispatchInput(input);
-  }
-
-  function appendText(input, text) {
-    if (!input) return;
-
-    let raw = normalizeNumericString(input.value);
-
-    if (text === '00' || text === '000') {
-      if (raw === '' || raw === '-') {
-        raw = raw === '-' ? '-0' : '0';
-      }
-      raw += text;
-      setRawValue(input, raw);
-      return;
-    }
-
-    raw += text;
-
-    if (!/^-?\d*$/.test(raw)) return;
-
-    setRawValue(input, raw);
-  }
-
-  function backspace(input) {
-    if (!input) return;
-    const raw = normalizeNumericString(input.value).slice(0, -1);
-    setRawValue(input, raw);
-  }
-
-  function clearValue(input) {
-    if (!input) return;
-    setRawValue(input, '');
-  }
-
-  function toggleMinus(input) {
-    if (!input) return;
-
-    let raw = normalizeNumericString(input.value);
-
-    if (raw.startsWith('-')) {
-      raw = raw.slice(1);
-    } else {
-      raw = '-' + raw;
-    }
-
-    setRawValue(input, raw);
-  }
-
-  function getTargetScope(input) {
-    if (!input) return document.body;
-
-    if (input.closest('#bulkGrid')) {
-      return document.getElementById('bulkGrid') || document.body;
-    }
-
-    if (input.closest('#app1')) {
-      return document.getElementById('app1') || document.body;
-    }
-
-    if (input.closest('#app3')) {
-      return document.getElementById('app3') || document.body;
-    }
-
-    return document.body;
-  }
-
-  function getScopedTargets(input) {
-    const scope = getTargetScope(input);
-
-    return Array.from(scope.querySelectorAll('input.bulk-custom-keypad-target'))
-      .filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
-  }
-
-  function focusTargetInput(next) {
-    if (!next) return;
-    showKeypad(next);
-  }
-
-  function focusNextTarget(current) {
-    const all = getScopedTargets(current);
-    const idx = all.indexOf(current);
-    if (idx === -1) return;
-
-    const next = all[idx + 1];
-    if (next) {
-      showKeypad(next);
-    } else {
-      hideKeypad();
-    }
-  }
-
-  function moveHorizontal(current, direction) {
-    const all = getScopedTargets(current);
-    const idx = all.indexOf(current);
-    if (idx === -1) return;
-
-    const currentRow = current.closest('tr');
-    if (currentRow) {
-      if (direction === 'left') {
-        for (let i = idx - 1; i >= 0; i--) {
-          const el = all[i];
-          if (el.closest('tr') === currentRow) {
-            focusTargetInput(el);
-            return;
-          }
-        }
-        return;
-      }
-
-      if (direction === 'right') {
-        for (let i = idx + 1; i < all.length; i++) {
-          const el = all[i];
-          if (el.closest('tr') === currentRow) {
-            focusTargetInput(el);
-            return;
-          }
-        }
-        return;
-      }
-    }
-
-    const currentGroup =
-      current.closest('.app3-row') ||
-      current.closest('.app3-line') ||
-      current.closest('.row') ||
-      current.parentElement;
-
-    if (!currentGroup) return;
-
-    const rowInputs = Array.from(
-      currentGroup.querySelectorAll('input.bulk-custom-keypad-target')
-    ).filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
-
-    const localIdx = rowInputs.indexOf(current);
-    if (localIdx === -1) return;
-
-    if (direction === 'left' && rowInputs[localIdx - 1]) {
-      focusTargetInput(rowInputs[localIdx - 1]);
-      return;
-    }
-
-    if (direction === 'right' && rowInputs[localIdx + 1]) {
-      focusTargetInput(rowInputs[localIdx + 1]);
-    }
-  }
-
-  function moveVerticalInBulkGrid(current, direction) {
-    const currentRow = current.closest('tr.bulk-mainrow');
-    const currentCell = current.closest('td');
-    if (!currentRow || !currentCell) return false;
-
-    const rowList = Array.from(
-      document.querySelectorAll('#bulkGrid tbody tr.bulk-mainrow')
-    );
-
-    const rowIndex = rowList.indexOf(currentRow);
-    if (rowIndex === -1) return false;
-
-    const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
-
-    let targetRow = null;
-
-    if (direction === 'up') {
-      for (let i = rowIndex - 1; i >= 0; i--) {
-        const row = rowList[i];
-        if (row) {
-          targetRow = row;
-          break;
-        }
-      }
-    }
-
-    if (direction === 'down') {
-      for (let i = rowIndex + 1; i < rowList.length; i++) {
-        const row = rowList[i];
-        if (row) {
-          targetRow = row;
-          break;
-        }
-      }
-    }
-
-    if (!targetRow) return true;
-
-    const cells = targetRow.children;
-    const targetCell = cells[cellIndex];
-    if (!targetCell) return true;
-
-    const next = targetCell.querySelector('input.bulk-custom-keypad-target');
-    if (next && !next.disabled) {
-      focusTargetInput(next);
-    }
-
-    return true;
-  }
-
-  function moveVerticalInApp1(current, direction) {
-    const currentRow = current.closest('#formRows tr.row');
-    const currentCell = current.closest('td');
-    if (!currentRow || !currentCell) return false;
-
-    const rowList = Array.from(document.querySelectorAll('#formRows tr.row'));
-    const rowIndex = rowList.indexOf(currentRow);
-    if (rowIndex === -1) return false;
-
-    const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
-
-    let targetRow = null;
-
-    if (direction === 'up') {
-      for (let i = rowIndex - 1; i >= 0; i--) {
-        const row = rowList[i];
-        if (row) {
-          targetRow = row;
-          break;
-        }
-      }
-    }
-
-    if (direction === 'down') {
-      for (let i = rowIndex + 1; i < rowList.length; i++) {
-        const row = rowList[i];
-        if (row) {
-          targetRow = row;
-          break;
-        }
-      }
-    }
-
-    if (!targetRow) return true;
-
-    const cells = targetRow.children;
-    const targetCell = cells[cellIndex];
-    if (!targetCell) return true;
-
-    const next = targetCell.querySelector('input.bulk-custom-keypad-target');
-    if (next && !next.disabled) {
-      focusTargetInput(next);
-    }
-
-    return true;
-  }
-
-  function moveVerticalFallback(current, direction) {
-    const all = getScopedTargets(current);
-    const idx = all.indexOf(current);
-    if (idx === -1) return;
-
-    if (direction === 'up' && all[idx - 1]) {
-      focusTargetInput(all[idx - 1]);
-      return;
-    }
-
-    if (direction === 'down' && all[idx + 1]) {
-      focusTargetInput(all[idx + 1]);
-    }
-  }
-
-  function moveVertical(current, direction) {
-    if (!current) return;
-
-    if (moveVerticalInBulkGrid(current, direction)) return;
-    if (moveVerticalInApp1(current, direction)) return;
-
-    moveVerticalFallback(current, direction);
-  }
-
-  applyReadonlyToCustomKeypadTargets();
-
-  const mo = new MutationObserver(() => {
-    applyReadonlyToCustomKeypadTargets();
-  });
-  mo.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  document.addEventListener('pointerdown', (e) => {
-    const target = e.target;
-
-    console.log('[custom keypad] pointerdown', target);
-
-    if (isTarget(target)) {
-      console.log('[custom keypad] TARGET OK', target);
-      e.preventDefault();
-      showKeypad(target);
-      return;
-    }
-
-    if (keypad.contains(target)) {
-      console.log('[custom keypad] keypad click area');
-      return;
-    }
-
-    hideKeypad();
-  }, true);
-
-  document.addEventListener('focusin', (e) => {
-    const target = e.target;
-
-    if (!isTarget(target)) return;
-
-    console.log('[custom keypad] focusin target', target);
-
-    target.readOnly = true;
-    showKeypad(target);
-
-    try {
-      target.blur();
-    } catch (_) {}
-  });
-
-  keypad.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn || !activeInput) return;
-
-    const key = btn.dataset.key;
-    const action = btn.dataset.action;
-
-    console.log('[custom keypad] button', {
-      key,
-      action,
-      activeInput
-    });
-
-    if (key != null) {
-      appendText(activeInput, key);
-      return;
-    }
-
-    if (action === 'backspace') {
-      backspace(activeInput);
-      return;
-    }
-
-    if (action === 'clear') {
-      clearValue(activeInput);
-      return;
-    }
-
-    if (action === 'minus') {
-      toggleMinus(activeInput);
-      return;
-    }
-
-    if (action === 'moveUp') {
-      moveVertical(activeInput, 'up');
-      return;
-    }
-
-    if (action === 'moveDown') {
-      moveVertical(activeInput, 'down');
-      return;
-    }
-
-    if (action === 'moveLeft') {
-      moveHorizontal(activeInput, 'left');
-      return;
-    }
-
-    if (action === 'moveRight') {
-      moveHorizontal(activeInput, 'right');
-      return;
-    }
-
-    if (action === 'done') {
-      focusNextTarget(activeInput);
-    }
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (!activeInput) return;
-    if (!isTarget(activeInput)) return;
-    if (e.key !== 'Enter') return;
-
-    e.preventDefault();
-    focusNextTarget(activeInput);
-  });
-
-  /* =========================
-     iPadダブルタップ拡大防止（テンキー限定）
-     ========================= */
-
-  let lastTouchEnd = 0;
-
-  keypad.addEventListener('touchend', function (e) {
-    const now = Date.now();
-
-    if (now - lastTouchEnd <= 300) {
-      e.preventDefault();
-    }
-
-    lastTouchEnd = now;
-  }, { passive: false });
-
-  keypad.addEventListener('dblclick', function (e) {
-    e.preventDefault();
-  });
-
-  keypad.addEventListener('gesturestart', function (e) {
-    e.preventDefault();
-  });
-
-  keypad.addEventListener('gesturechange', function (e) {
-    e.preventDefault();
-  });
-
-  keypad.addEventListener('gestureend', function (e) {
-    e.preventDefault();
-  });
-
-  window.applyReadonlyToBulkGridCustomKeypad = applyReadonlyToCustomKeypadTargets;
-}

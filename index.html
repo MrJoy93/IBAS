@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 9.3.1</title>
+<title>IBASD  Ver. 9.3</title>
 
 <script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
 
@@ -609,12 +609,13 @@
       <div class="group" id="extraGroup">
         <label><span>粗利益:</span> <input type="text" id="grossProfit_extra" disabled></label>
         <label><span>カード売上:</span> <input type="text" id="cardSales_extra" disabled></label>
+        <label><span> 顧問料:</span> <input type="text" id="adviserFee" disabled></label>
         <label><span>現金残:</span> <input type="text" id="remainingCash_extra" disabled></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalWithholdingTax" disabled></label>
 
         <div style="height: 1em;"></div>
 
-        <label><span>合計 (現金残 + 源泉費):</span><input type="text" id="totalGrossPlusTax" disabled></label>
+        <label><span>現金残 + 源泉費 + 顧問料:</span><input type="text" id="totalGrossPlusTax" disabled></label>
       </div>
       </section>
 
@@ -679,9 +680,6 @@
   </div>
 </div>
 
-<script src="app.js"></script>
-<script type="module" src="firebase.js"></script>
-
 <div id="bulkCustomKeypad" class="bulk-custom-keypad" hidden>
 
   <div class="bulk-custom-keypad__grid">
@@ -717,6 +715,8 @@
   </div>
 </div>
 
+<script src="app.js"></script>
+<script type="module" src="firebase.js"></script>
 
 </body>
 </html>
