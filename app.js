@@ -5118,82 +5118,6 @@ document.addEventListener('click', (e)=>{
   }
 });
 
-function createHistoryIndex() {
-  const historySection = document.getElementById('app2-historySection');
-  const mount =
-    document.getElementById('historyIndexMount') ||
-    document.getElementById('historyIndexArea') ||
-    document.getElementById('historyIndex');
-
-  // 履歴セクション自体がなければ何もしない
-  if (!historySection) return;
-
-  // 履歴アイテムを取得
-  let items = Array.from(historySection.querySelectorAll('.history-item'));
-
-  // 旧構造フォールバック
-  if (items.length === 0) {
-    const list = document.getElementById('historyList');
-    if (list) {
-      items = Array.from(list.querySelectorAll('li'));
-    }
-  }
-
-  // 件数表示だけでも更新
-  const countEl = document.getElementById('historyIndexCount');
-  if (countEl) {
-    countEl.textContent = `${items.length}人`;
-  }
-
-  // マウント先が無ければ件数更新だけして終了
-  if (!mount) return;
-
-  // 名前抽出
-  const rows = items.map((el, index) => {
-    const name =
-      el.querySelector('.history-name')?.textContent?.trim() ||
-      el.dataset.name ||
-      el.textContent.replace(/\s+/g, ' ').trim() ||
-      `履歴${index + 1}`;
-
-    return { name, el };
-  });
-
-  // 既存テーブルが無ければ作成
-  let table = document.getElementById('historyIndexTable');
-  if (!table) {
-    table = document.createElement('div');
-    table.id = 'historyIndexTable';
-    table.className = 'history-index-table';
-    mount.appendChild(table);
-  }
-
-  // 中身再生成
-  table.innerHTML = '';
-
-  if (rows.length === 0) {
-    table.innerHTML = '<div class="history-index-empty">履歴なし</div>';
-    return;
-  }
-
-  rows.forEach(({ name, el }, index) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'history-index-btn';
-    btn.textContent = name;
-
-    btn.addEventListener('click', () => {
-      try {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch (_) {
-        el.scrollIntoView();
-      }
-    });
-
-    table.appendChild(btn);
-  });
-}
-
 // 公開しておく（必要なら手動再生成で呼べる）
 window.createHistoryIndex = createHistoryIndex;
 
@@ -5611,16 +5535,7 @@ document.addEventListener('click', async (e) => {
       if (list) items = list.querySelectorAll('li');
     }
     items = Array.from(items);
-    if (!items.length) {
-    console.warn('復元できる履歴がありません。');
-    if (badge) {
-    badge.textContent = '復元対象なし';
-    badge.style.background = 'rgba(255,180,0,.18)';
-    badge.style.borderColor = 'rgba(255,180,0,.5)';
-    badge.style.boxShadow = '0 0 10px rgba(255,180,0,.35) inset';
-  }
-  return;
-}
+    if (!items.length) throw new Error('復元できる履歴がありません。');
     if (FILL_OLD_TO_NEW) items.reverse();
 
     const total = items.length; let done = 0;
@@ -7552,61 +7467,24 @@ function initSideCalcButton() {
 
 function initHistoryIndexObserver() {
   const historySection = document.getElementById('app2-historySection');
-
   if (!historySection) {
-    try {
-      if (typeof createHistoryIndex === 'function') {
-        createHistoryIndex();
-      }
-    } catch (e) {
-      console.error('[initHistoryIndexObserver] initial createHistoryIndex failed:', e);
-    }
+    createHistoryIndex();
     return;
   }
 
-  const mo = new MutationObserver(() => {
-    try {
-      if (typeof createHistoryIndex === 'function') {
-        createHistoryIndex();
-      }
-    } catch (e) {
-      console.error('[initHistoryIndexObserver] observer createHistoryIndex failed:', e);
-    }
-  });
-
+  const mo = new MutationObserver(() => createHistoryIndex());
   mo.observe(historySection, { childList: true, subtree: true });
 
-  try {
-    if (typeof createHistoryIndex === 'function') {
-      createHistoryIndex();
-    }
-  } catch (e) {
-    console.error('[initHistoryIndexObserver] first createHistoryIndex failed:', e);
-  }
+  createHistoryIndex();
 }
 
 function initOutputButtonsObserver() {
-  try {
-    if (typeof addOutputButtonsNextToRestore === 'function') {
-      addOutputButtonsNextToRestore();
-    }
-  } catch (e) {
-    console.error('[initOutputButtonsObserver] initial add failed:', e);
-  }
+  addOutputButtonsNextToRestore();
 
   const his = document.getElementById('app2-historySection');
   if (!his) return;
 
-  const mo = new MutationObserver(() => {
-    try {
-      if (typeof addOutputButtonsNextToRestore === 'function') {
-        addOutputButtonsNextToRestore();
-      }
-    } catch (e) {
-      console.error('[initOutputButtonsObserver] observer add failed:', e);
-    }
-  });
-
+  const mo = new MutationObserver(() => addOutputButtonsNextToRestore());
   mo.observe(his, { childList: true, subtree: true });
 }
 
@@ -7665,33 +7543,6 @@ function initWorkStartDate() {
 
 function initSlimHistoryUI() {
   setTimeout(slimHistoryUI, 0);
-}
-
-function initRestoreAllApps() {
-  try {
-    // 既存の復元系があれば順に呼ぶ
-    if (typeof restoreState === 'function') {
-      restoreState();
-    }
-
-    if (typeof restoreBulkGridState === 'function') {
-      restoreBulkGridState();
-    }
-
-    if (typeof refreshBottleDropdownsFromHistory === 'function') {
-      refreshBottleDropdownsFromHistory();
-    }
-
-    if (typeof createHistoryIndex === 'function') {
-      createHistoryIndex();
-    }
-
-    if (typeof window.scheduleApp3Update === 'function') {
-      window.scheduleApp3Update('initRestoreAllApps');
-    }
-  } catch (e) {
-    console.error('[initRestoreAllApps] restore failed:', e);
-  }
 }
 
 //DOMContentLoaded 統合初期化
@@ -8005,6 +7856,5 @@ window.CONGRATS_SFX_URL = './seven-flash.m4a?v=2';
   // デバッグ：手動同時発火（コンソールで）
   window.__congratsTest = () => showOverlayT0();
 })();
-
 
 
