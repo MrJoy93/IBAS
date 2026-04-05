@@ -7710,7 +7710,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initArrowNavigationApp1();
   initWorkStartDate();
   initSlimHistoryUI();
-  observeTotalCountForAdviserFee();
 });
 
 
