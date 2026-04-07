@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 9.3</title>
+<title>IBASD  Ver. 9.4β</title>
 
 <script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
 
@@ -126,49 +126,181 @@
 
 </section>
 
-<section id="summarySection">
- <p>総客数: <span id="totalCustomers">0</span></p>
- <p>現金合計: <span id="cashTotal">0</span></p>
- <p>カード合計: <span id="cardTotal">0</span></p>
- <p>総合計金額: <span id="totalAmount">0</span></p>
-</section>
-
 <section id="categorySection">
   <table>
-  <thead>
-    <tr>
-      <th>カテゴリ</th>
-      <th>人数</th>
-      <th>バック金額</th>
-    </tr>
-  </thead>
-  <tbody>
-<tr><td><input type="checkbox"> UK</td><td id="UKcount">0</td><td><span id="UKtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('UK')">出力</button></td></tr>
-<tr><td><input type="checkbox"> K</td><td id="Kcount">0</td><td><span id="Ktotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('K')">出力</button></td></tr>
-<tr><td><input type="checkbox"> AB</td><td id="ABcount">0</td><td><span id="ABtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('AB')">出力</button></td></tr>
-<tr><td><input type="checkbox"> LA</td><td id="LAcount">0</td><td><span id="LAtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('LA')">出力</button></td></tr>
-<tr><td><input type="checkbox"> PA</td><td id="PAcount">0</td><td><span id="PAtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('PA')">出力</button></td></tr>
-<tr><td><input type="checkbox"> BB</td><td id="BBcount">0</td><td><span id="BBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('BB')">出力</button></td></tr>
-<tr><td><input type="checkbox"> MS</td><td id="MScount">0</td><td><span id="MStotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('MS')">出力</button></td></tr>
-<tr><td><input type="checkbox"> GM</td><td id="GMcount">0</td><td><span id="GMtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('GM')">出力</button></td></tr>
-<tr><td><input type="checkbox"> B</td><td id="Bcount">0</td><td><span id="Btotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('B')">出力</button></td></tr>
-<tr><td><input type="checkbox"> JOE</td><td id="JOEcount">0</td><td><span id="JOEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('JOE')">出力</button></td></tr>
-<tr><td><input type="checkbox"> KOSE</td><td id="KOSEcount">0</td><td><span id="KOSEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('KOSE')">出力</button></td></tr>
-<tr><td><input type="checkbox"> HE</td><td id="HEcount">0</td><td><span id="HEtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('HE')">出力</button></td></tr>
-<tr><td><input type="checkbox"> PB</td><td id="PBcount">0</td><td><span id="PBtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('PB')">出力</button></td></tr>
-<tr><td><input type="checkbox"> X</td><td id="Xcount">0</td><td><span id="Xtotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('X')">出力</button></td></tr>
-<tr style="display: none;"><td><input type="checkbox"> Z</td><td id="Zcount">0</td><td><span id="Ztotal">0</span><button type="button" class="print-mini" onclick="printEnvelopeApp1('Z')">出力</button></td></tr>
+    <thead>
       <tr>
-       <td><strong>合計</strong></td>
-       <td id="totalCountCell">
-       <button type="button" class="print-mini" onclick="printEnvelopeApp1('ALL')">出力</button>
-       <span id="totalCountValue" class="count-value">1</span>
-       </td>
-    <td id="totalBackAmount">0</td>
-  </tr>
-  </tbody>
- </table>
- </section>
+        <th></th>
+        <th>カテゴリ</th>
+        <th>人数</th>
+        <th>バック金額</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>UK</td>
+        <td id="UKcount">0</td>
+        <td>
+          <span id="UKtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('UK')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>K</td>
+        <td id="Kcount">0</td>
+        <td>
+          <span id="Ktotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('K')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>AB</td>
+        <td id="ABcount">0</td>
+        <td>
+          <span id="ABtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('AB')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>LA</td>
+        <td id="LAcount">0</td>
+        <td>
+          <span id="LAtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('LA')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>PA</td>
+        <td id="PAcount">0</td>
+        <td>
+          <span id="PAtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('PA')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>BB</td>
+        <td id="BBcount">0</td>
+        <td>
+          <span id="BBtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('BB')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>MS</td>
+        <td id="MScount">0</td>
+        <td>
+          <span id="MStotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('MS')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>GM</td>
+        <td id="GMcount">0</td>
+        <td>
+          <span id="GMtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('GM')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>B</td>
+        <td id="Bcount">0</td>
+        <td>
+          <span id="Btotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('B')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>JOE</td>
+        <td id="JOEcount">0</td>
+        <td>
+          <span id="JOEtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('JOE')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>KOSE</td>
+        <td id="KOSEcount">0</td>
+        <td>
+          <span id="KOSEtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('KOSE')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>HE</td>
+        <td id="HEcount">0</td>
+        <td>
+          <span id="HEtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('HE')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>PB</td>
+        <td id="PBcount">0</td>
+        <td>
+          <span id="PBtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('PB')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td><input type="checkbox"></td>
+        <td>X</td>
+        <td id="Xcount">0</td>
+        <td>
+          <span id="Xtotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('X')">出力</button>
+        </td>
+      </tr>
+
+      <tr style="display: none;">
+        <td><input type="checkbox"></td>
+        <td>Z</td>
+        <td id="Zcount">0</td>
+        <td>
+          <span id="Ztotal">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('Z')">出力</button>
+        </td>
+      </tr>
+
+      <tr>
+        <td></td>
+        <td><strong>合計</strong></td>
+        <td id="totalCountCell">
+          <span id="totalCountValue" class="count-value">1</span>
+        </td>
+        <td>
+          <span id="totalBackAmount">0</span>
+          <button type="button" class="print-mini" onclick="printEnvelopeApp1('ALL')">出力</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
 </div>
 
 <!-- app2 サイドナビ（右固定） -->
@@ -192,7 +324,7 @@
 
 <div id="app2" class="content">
 
-  <div style="text-align: center; margin-top: 30px;">
+  <div class="app2-shell">
 
   <section id="app2-inputSection">
 
@@ -213,44 +345,52 @@
   </tbody>
 </table>
 
-<!-- ▲ 履歴インデックス -->
-<button type="button" id="toggleBulkInput" class="mini-btn" style="margin-left:8px;">一括入力</button>
+<!-- 一括入力切り替えボタンは削除 -->
 
-<!-- ▼ 一括入力パネル（通常は非表示） -->
- <div class="group group-bulk" style="background:#2e2e2e">
-<div id="bulkPanel" class="bulk-panel" hidden>
-  <div class="bulk-toolbar">
-    <div class="bulk-actions">
-        <select id="bulkRows">
+<div class="group group-bulk" style="background:#2e2e2e;">
+  <div id="bulkPanel" class="bulk-panel">
+
+<div class="bulk-toolbar">
+  <div class="bulk-toolbar-row">
+
+    <!-- 左 -->
+    <div class="bulk-left">
+      <select id="bulkRows">
         <option>10</option>
         <option>15</option>
         <option>20</option>
         <option>25</option>
-        <option>30</option> 
+        <option>30</option>
         <option>35</option>
         <option value="40" selected>40</option>
-        </select>
-      </label>
+      </select>
+
       <button type="button" id="bulkClear">クリア</button>
+    </div>
+
+    <!-- 中央 -->
+    <div class="bulk-center">
       <button type="button" id="bulkRegister">一括登録</button>
+      <button type="button" id="bulkPrintSelected">選択行を出力</button>
+    </div>
+
+    <!-- 右 -->
+    <div class="bulk-right">
+      <button type="button" id="bulkToggleChecks">選択反転</button>
       <button type="button" id="bulkImportFromHistory">一括復元</button>
     </div>
-  </div>
 
-  <div class="bulk-grid-wrap">
-    <table id="bulkGrid" class="bulk-grid" aria-label="一括入力グリッド">
-      <thead>
-        <tr>
-          <th style="width:3em;">#</th>
-          <th>氏名</th>
-          <th style="width:8.5em;">体験/貸出</th>
-          <th style="width:10em;">送迎（¥）</th>
-        </tr>
-      </thead>
-      <tbody><!-- JSで行を生成 --></tbody>
-    </table>
   </div>
 </div>
+
+    <div class="bulk-grid-wrap">
+      <table id="bulkGrid" class="bulk-grid" aria-label="一括入力グリッド">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
 </div>
 
     <form autocomplete="off" onsubmit="return confirmAndCalculate(event);">
@@ -609,12 +749,13 @@
       <div class="group" id="extraGroup">
         <label><span>粗利益:</span> <input type="text" id="grossProfit_extra" disabled></label>
         <label><span>カード売上:</span> <input type="text" id="cardSales_extra" disabled></label>
+        <label><span> 顧問料:</span> <input type="text" id="adviserFee_extra" disabled></label>
         <label><span>現金残:</span> <input type="text" id="remainingCash_extra" disabled></label>
         <label><span>源泉費合計:</span> <input type="text" id="totalWithholdingTax" disabled></label>
 
         <div style="height: 1em;"></div>
 
-        <label><span>合計 (現金残 + 源泉費):</span><input type="text" id="totalGrossPlusTax" disabled></label>
+        <label><span>現金残 + 源泉費 + 顧問料:</span><input type="text" id="totalGrossPlusTax" disabled></label>
       </div>
       </section>
 
@@ -649,38 +790,31 @@
 
 <div id="bottleHierarchyPicker" hidden>
   <div class="bhp-head">
-    <div class="bhp-title">ボトル選択</div>
+    <div class="bhp-title">割り人数 / 数量</div>
     <button type="button" class="bhp-close">閉じる</button>
   </div>
 
   <div class="bhp-current">
-    品名: <span class="bhp-current-detail">-</span> /
     割: <span class="bhp-current-split">-</span> /
     数: <span class="bhp-current-qty">-</span>
   </div>
 
-  <div class="bhp-section">
-    <div class="bhp-label">品名</div>
-    <div class="bhp-grid bhp-detail-grid"></div>
-  </div>
+  <div class="bhp-body-2col">
+    <div class="bhp-section">
+      <div class="bhp-label">割り人数</div>
+      <div class="bhp-grid bhp-split-grid"></div>
+    </div>
 
-  <div class="bhp-section">
-    <div class="bhp-label">割り人数</div>
-    <div class="bhp-grid bhp-split-grid"></div>
-  </div>
-
-  <div class="bhp-section">
-    <div class="bhp-label">数量</div>
-    <div class="bhp-grid bhp-qty-grid"></div>
+    <div class="bhp-section">
+      <div class="bhp-label">数量</div>
+      <div class="bhp-grid bhp-qty-grid"></div>
+    </div>
   </div>
 
   <div class="bhp-actions">
     <button type="button" class="bhp-confirm">決定</button>
   </div>
 </div>
-
-<script src="app.js"></script>
-<script type="module" src="firebase.js"></script>
 
 <div id="bulkCustomKeypad" class="bulk-custom-keypad" hidden>
 
@@ -717,6 +851,8 @@
   </div>
 </div>
 
+<script src="app.js"></script>
+<script type="module" src="firebase.js"></script>
 
 </body>
 </html>
