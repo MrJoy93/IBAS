@@ -6059,7 +6059,6 @@ document.addEventListener('click', async (e) => {
   tr.insertAdjacentHTML('beforeend', `
     <td class="btl-detail">
       <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
-      <input class="bottleFreeText" type="text" style="display:none;">
     </td>
     <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
     <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
