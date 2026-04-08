@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=M+PLUS+2:wght@400;500;700&display=swap" rel="stylesheet">
-<title>IBASD  Ver. 10.0β</title>
+<title>IBASD  Ver. 10.2β</title>
 
 <script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
 
@@ -52,26 +52,34 @@
 
 <div id="app1" class="content active">
  <section id="editSection">
- <div class="tab">
+<div class="tab app1-filter">
 
-  <button class="tablinks" onclick="filterCategory('all')">すべて表示</button>
-  <button class="tablinks" onclick="filterCashOnlyRows()">現金のみ抽出</button>
-  <button class="tablinks" onclick="filterCardInputRows()">カード抽出</button>
-  <button class="tablinks" onclick="filterCategory('UK')">UK</button>
-  <button class="tablinks" onclick="filterCategory('K')">K</button>
-  <button class="tablinks" onclick="filterCategory('AB')">AB</button>
-  <button class="tablinks" onclick="filterCategory('LA')">LA</button>
-  <button class="tablinks" onclick="filterCategory('PA')">PA</button>
-  <button class="tablinks" onclick="filterCategory('BB')">BB</button>
-  <button class="tablinks" onclick="filterCategory('MS')">MS</button>
-  <button class="tablinks" onclick="filterCategory('GM')">GM</button>
-  <button class="tablinks" onclick="filterCategory('B')">B</button>
-  <button class="tablinks" onclick="filterCategory('JOE')">JOE</button>
-  <button class="tablinks" onclick="filterCategory('KOSE')">KOSE</button>
-  <button class="tablinks" onclick="filterCategory('HE')">HE</button>
-  <button class="tablinks" onclick="filterCategory('PB')">PB</button>
-  <button class="tablinks" onclick="filterCategory('X')">X</button>
-  <button class="tablinks" onclick="filterCategory('Z')">Z</button>
+  <!-- 上段（固定3ボタン） -->
+  <div class="filter-row filter-main">
+    <button class="tablinks" onclick="filterCategory('all')">すべて表示</button>
+    <button class="tablinks" onclick="filterCashOnlyRows()">現金のみ抽出</button>
+    <button class="tablinks" onclick="filterCardInputRows()">カード抽出</button>
+  </div>
+
+  <!-- 下段（カテゴリ） -->
+  <div class="filter-row filter-cats">
+    <button class="tablinks" onclick="filterCategory('UK')">UK</button>
+    <button class="tablinks" onclick="filterCategory('K')">K</button>
+    <button class="tablinks" onclick="filterCategory('AB')">AB</button>
+    <button class="tablinks" onclick="filterCategory('LA')">LA</button>
+    <button class="tablinks" onclick="filterCategory('PA')">PA</button>
+    <button class="tablinks" onclick="filterCategory('BB')">BB</button>
+    <button class="tablinks" onclick="filterCategory('MS')">MS</button>
+    <button class="tablinks" onclick="filterCategory('GM')">GM</button>
+    <button class="tablinks" onclick="filterCategory('B')">B</button>
+    <button class="tablinks" onclick="filterCategory('JOE')">JOE</button>
+    <button class="tablinks" onclick="filterCategory('KOSE')">KOSE</button>
+    <button class="tablinks" onclick="filterCategory('HE')">HE</button>
+    <button class="tablinks" onclick="filterCategory('PB')">PB</button>
+    <button class="tablinks" onclick="filterCategory('X')">X</button>
+    <button class="tablinks" onclick="filterCategory('Z')">Z</button>
+  </div>
+
 </div>
 
 <table>

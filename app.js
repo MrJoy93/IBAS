@@ -5881,27 +5881,26 @@ document.addEventListener('change', e => {
   const row = e.target.closest('#bulkGrid tr.btl-subrow');
   if (!row) return;
 
-  if (
-    e.target.matches('.bottleDetails') ||
-    e.target.matches('.splitCount') ||
-    e.target.matches('.bottleQuantity') ||
-    e.target.matches('.bottleFreeText')
-  ) {
-    rememberBottleSelectionFromRow(row);
-  }
+if (
+  e.target.matches('.bottleDetails') ||
+  e.target.matches('.splitCount') ||
+  e.target.matches('.bottleQuantity')
+) {
+  rememberBottleSelectionFromRow(row);
+}
 });
 
 document.addEventListener('blur', e => {
   const row = e.target.closest?.('#bulkGrid tr.btl-subrow');
   if (!row) return;
 
-  if (
-    e.target.matches('.splitCount') ||
-    e.target.matches('.bottleQuantity') ||
-    e.target.matches('.bottleFreeText')
-  ) {
-    rememberBottleSelectionFromRow(row);
-  }
+if (
+  e.target.matches('.bottleDetails') ||
+  e.target.matches('.splitCount') ||
+  e.target.matches('.bottleQuantity')
+) {
+  rememberBottleSelectionFromRow(row);
+}
 }, true);
 
 window.addEventListener('scroll', requestRepositionBottleHierarchyPicker, true);
@@ -6039,13 +6038,14 @@ document.addEventListener('click', async (e) => {
         mainRow.nextElementSibling.remove();
       }
     };
-    const addAndGetSubrow = (mainRow) => {
+const addAndGetSubrow = (mainRow) => {
   const grid = document.getElementById('bulkGrid');
   const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
 
-  // ★ 修正点：「退」列を考慮した調整
-  // 新規追加と同じく cols - 5 に統一
-  const pads = Math.max(0, cols - 5);
+  /* 退列ありなら 5実セル、なしなら 4実セル */
+  const hasLeaveCol = cols >= 24;
+  const realCols = hasLeaveCol ? 5 : 4;
+  const pads = Math.max(0, cols - realCols);
 
   const tr = document.createElement('tr');
   tr.className = 'btl-subrow';
@@ -6057,12 +6057,43 @@ document.addEventListener('click', async (e) => {
   }
 
   tr.insertAdjacentHTML('beforeend', `
-    <td class="btl-detail">
-      <select class="bottleDetails">${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}</select>
+    <td class="btl-cell btl-detail-cell">
+      <div class="btl-field-wrap btl-detail-wrap">
+        <button type="button" class="bottle-hierarchy-btn" aria-label="ボトル選択">選択</button>
+        <select class="bottleDetails">
+          ${(window.BOTTLE_OPTIONS_HTML || '<option value=""></option>')}
+        </select>
+      </div>
     </td>
-    <td><input class="splitCount" inputmode="numeric" placeholder="割"></td>
-    <td><input class="bottleQuantity" inputmode="numeric" placeholder="数"></td>
-    <td><input class="bottleAmount" inputmode="numeric" placeholder="金額"></td>
+
+    <td class="btl-cell btl-split-cell">
+      <input
+        type="text"
+        class="splitCount bulk-custom-keypad-target"
+        inputmode="numeric"
+        placeholder="割"
+      >
+    </td>
+
+    <td class="btl-cell btl-qty-cell">
+      <input
+        type="text"
+        class="bottleQuantity bulk-custom-keypad-target"
+        inputmode="numeric"
+        placeholder="数量"
+      >
+    </td>
+
+    <td class="btl-cell btl-amount-cell">
+      <input
+        type="text"
+        class="bottleAmount bulk-custom-keypad-target"
+        inputmode="numeric"
+        placeholder="金額"
+      >
+    </td>
+
+    ${hasLeaveCol ? '<td class="btl-pad"></td>' : ''}
   `);
 
   let anchor = mainRow;
@@ -6070,6 +6101,7 @@ document.addEventListener('click', async (e) => {
     anchor = anchor.nextElementSibling;
   }
   anchor.insertAdjacentElement('afterend', tr);
+
   return tr;
 };
 
