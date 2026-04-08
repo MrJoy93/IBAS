@@ -1531,6 +1531,8 @@ body.bulk-wide #app2-sideNav {
 
 /* 選択ボタン */
 #bulkGrid .bottle-hierarchy-btn{
+  order: 2 !important;   /* ←追加 */
+
   flex: 0 0 44px !important;
   width: 44px !important;
   min-width: 44px !important;
@@ -1547,6 +1549,8 @@ body.bulk-wide #app2-sideNav {
 
 /* 品名セレクト */
 #bulkGrid .bottleDetails{
+  order: 1 !important;   /* ←追加 */
+
   flex: 1 1 auto !important;
   width: 100% !important;
   min-width: 0 !important;
