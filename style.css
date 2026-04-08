@@ -386,15 +386,12 @@ input:focus, select:focus {
   background:#00f5ff; color:#121212; box-shadow:0 2px 22px #00f5ff88;
 }
 
-#app1-nav, #app2-nav, #app3-nav { display: none; }
-
-body[data-active-app="app1"] #app1-nav { display: flex !important; }
-body[data-active-app="app2"] #app2-nav { display: flex !important; }
-body[data-active-app="app3"] #app3-nav { display: flex !important; }
-
-/* app3 ではどちらも非表示 */
-body[data-active-app="app3"] #app1-nav,
-body[data-active-app="app3"] #app2-nav { display: none !important; }
+/* サブナビは初期状態では全部非表示 */
+#app1-nav,
+#app2-nav,
+#app3-nav{
+  display: none !important;
+}
 
 #app1-nav, #app2-nav, #app3-nav{
   position: fixed;
@@ -2061,193 +2058,55 @@ input.bulk-custom-keypad-active {
   border-radius: 12px;
 }
 
-
 /* =========================================================
    16. レスポンシブ
 ========================================================= */
 
-@media (max-width:768px){
 
-  /* ======================
-     共通
-  ====================== */
-  .tabs{ font-size:15px; }
-  .tab{ font-size:15px; padding:9px 0; }
-
-  .content{
-    padding: calc(var(--tabs-h) + var(--subnav-h) - 40px) 12px 110px !important;
-  }
-
-  th, td{ font-size:15px; }
-
-  /* ======================
-     APP1
-  ====================== */
-
-  #app1 .group{
-    padding:12px 6px 8px;
-    margin:10px 0;
-    border-radius:12px;
-  }
-
-  #app1 .group label{
-    flex-direction:column;
-    gap:6px;
-  }
-
-  #app1 table,
-  #app1 tbody,
-  #app1 tr,
-  #app1 td{
-    display:block;
-    width:100% !important;
-  }
-
-  #app1 tr.row{
-    margin:14px 0;
-    padding:12px;
-    border-radius:12px;
-    background:rgba(25,35,55,.9);
-  }
-
-  /* ======================
-     APP2
-  ====================== */
-
-  #app2{
-    padding-right: calc(var(--side-nav-w) + var(--side-nav-gap)) !important;
-  }
-
-  #app2-nav button{
-    height:32px;
-    font-size:14px;
-  }
-
-  /* フォーム圧縮 */
-  #app2 .group label{
-    flex-direction:row;
-    gap:4px;
-  }
-
-  #app2 .group label span{
-    font-size:11px !important;
-    min-width:50px !important;
-  }
-
-  #app2 .group input,
-  #app2 .group select{
-    max-width:100px !important;
-    height:24px !important;
-    font-size:12px !important;
-  }
-
-  /* bottle */
-  #app2 .bottle-form{
-    flex-wrap:wrap;
-    gap:6px;
-  }
-
-  #app2 .bottle-form input{
-    flex:1 1 30%;
-  }
-
-  /* ======================
-     APP3
-  ====================== */
-
-  #app3 .group{
-    padding:10px;
-  }
-
-  #app3 .group h3{
-    font-size:18px;
-  }
-
-  /* driver系（最終値だけ残す） */
-  body[data-active-app="app3"] #laborGroup #driverExtra1,
-  body[data-active-app="app3"] #laborGroup #driverExtra2{
-    width:60px !important;
-    flex:0 0 60px !important;
-  }
-
-  body[data-active-app="app3"] #laborGroup #driverFee{
-    width:115px !important;
-  }
-
-  /* label */
-  body[data-active-app="app3"] #app3 .group label span{
-    font-size:10px !important;
-    min-width:50px !important;
-  }
-
-  /* ======================
-     その他
-  ====================== */
-
-  #app2-historySection .history-actions{
-    grid-template-columns:repeat(2,1fr) !important;
-  }
-
-  .bulk-actions{
-    gap:8px;
-  }
-
-  body[data-active-app="app2"] #app2-sideNav{
-    top:82px !important;
-    right:4px !important;
-    width:var(--side-nav-w);
-  }
-}
-
+/*検索用700------------------------------------------------------------------------------------*/
 @media (min-width:700px){
-  #app1 table{ table-layout:fixed; width:100%; }
-  #app1 th, #app1 td{ padding:6px 6px; vertical-align:middle; }
 
-  /* 10列割当 */
+  #app1 table{
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  #app1 th,
+  #app1 td{
+    padding: 6px 6px;
+    vertical-align: middle;
+  }
+
+  /* 列幅 */
   #app1 tr.row > td:nth-child(1){ width:50px;  text-align:center; }  /* 削除 */
   #app1 tr.row > td:nth-child(2){ width:40px;  text-align:center; }  /* 行番号 */
-  #app1 tr.row > td:nth-child(3){ width:70px;  }                     /* 卓番 */
-  #app1 tr.row > td:nth-child(4){ width:70px;  }                     /* 本指 */
-  #app1 tr.row > td:nth-child(5){ width:90px;  }                     /* 区分 */
+  #app1 tr.row > td:nth-child(3){ width:70px; }                      /* 卓番 */
+  #app1 tr.row > td:nth-child(4){ width:70px; }                      /* 本指 */
+  #app1 tr.row > td:nth-child(5){ width:90px; }                      /* 区分 */
   #app1 tr.row > td:nth-child(6){ width:120px; text-align:right; }   /* 金額 */
   #app1 tr.row > td:nth-child(7){ width:60px;  text-align:center; }  /* 人数 */
-  #app1 tr.row > td:nth-child(8){ width:90px;  }                     /* 詳細 */
+  #app1 tr.row > td:nth-child(8){ width:90px; }                      /* 詳細 */
   #app1 tr.row > td:nth-child(9){ width:100px; }                     /* カード */
   #app1 tr.row > td:nth-child(10){ width:120px; text-align:right; }  /* 総合計 */
 
-  #app1 input, #app1 select{
-    width:100% !important; max-width:100% !important;
-    height:32px; padding:4px 6px; font-size:15px; box-sizing:border-box;
+  #app1 input,
+  #app1 select{
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 32px;
+    padding: 4px 6px;
+    font-size: 15px;
+    box-sizing: border-box;
   }
 
 }
-
-@media (min-width:701px){
-  #app1 table{ table-layout:fixed; width:100%; }
-  #app1 th, #app1 td{ padding:6px 6px; vertical-align:middle; }
-
-  /* 10列割当 */
-  #app1 tr.row > td:nth-child(1){ width:50px;  text-align:center; }
-  #app1 tr.row > td:nth-child(2){ width:40px;  text-align:center; }
-  #app1 tr.row > td:nth-child(3){ width:70px; }
-  #app1 tr.row > td:nth-child(4){ width:70px; }
-  #app1 tr.row > td:nth-child(5){ width:90px; }
-  #app1 tr.row > td:nth-child(6){ width:120px; text-align:right; }
-  #app1 tr.row > td:nth-child(7){ width:60px;  text-align:center; }
-  #app1 tr.row > td:nth-child(8){ width:90px; }
-  #app1 tr.row > td:nth-child(9){ width:100px; }
-  #app1 tr.row > td:nth-child(10){ width:120px; text-align:right; }
-
-  #app1 input, #app1 select{
-    width:100% !important;
-    height:32px;
-    font-size:15px;
-  }
-}
-
 
 @media (max-width:700px){
-  #historyIndexTable {
+
+  /* ======================
+     履歴インデックス
+  ====================== */
+  #historyIndexTable{
     display: flex !important;
     flex-wrap: wrap !important;
     justify-content: flex-start !important;
@@ -2263,6 +2122,887 @@ input.bulk-custom-keypad-active {
     flex: 0 0 calc(33.333% - 6px) !important;
     font-size: 13px !important;
   }
+
+  /* ======================
+     ボトル階層ピッカー
+  ====================== */
+  #bottleHierarchyPicker{
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
+    left: 6px !important;
+    right: 6px;
+    top: 6px !important;
+    padding: 8px;
+  }
+
+  #bottleHierarchyPicker .bhp-grid{
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #bottleHierarchyPicker .bhp-btn{
+    height: 42px;
+    font-size: 13px;
+  }
+
+  /* ======================
+     APP1 合計エリア
+  ====================== */
+  #summarySection{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin: 14px 0 18px !important;
+  }
+
+  #summarySection p{
+    padding: 14px 14px !important;
+    font-size: 15px !important;
+  }
+
+  #summarySection p span{
+    font-size: 24px !important;
+  }
+
+}
+
+/*検索用768------------------------------------------------------------------------------------*/
+/* =========================================================
+   SP レスポンシブ統合版
+========================================================= */
+@media (max-width:768px){
+
+  /* ======================
+     変数上書き
+  ====================== */
+  :root{
+    --tabs-h: 40px;
+    --subnav-h: 40px;
+    --app3-input-w-pc: var(--app3-input-w-sp);
+  }
+
+  /* ======================
+     共通
+  ====================== */
+  html,
+  body{
+    overflow-x: hidden !important;
+  }
+
+  body{
+    padding-bottom: 0 !important;
+  }
+
+  .tabs{
+    font-size: 15px;
+    width: 100% !important;
+  }
+
+  .tab{
+    font-size: 15px;
+    padding: 9px 0;
+  }
+
+  .subnav{
+    width: 100% !important;
+  }
+
+  .content{
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding:
+      calc(var(--tabs-h) + var(--subnav-h) - 40px)
+      8px
+      24px
+      8px !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app1"] #app1,
+  body[data-active-app="app1"] #app1.content,
+  body[data-active-app="app2"] #app2,
+  body[data-active-app="app2"] #app2.content,
+  body[data-active-app="app3"] #app3,
+  body[data-active-app="app3"] #app3.content{
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  th,
+  td{
+    font-size: 15px;
+  }
+
+  /* ======================
+     APP1
+  ====================== */
+
+  body[data-active-app="app1"] #app1,
+  body[data-active-app="app1"] #app1.content{
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app1"] #editSection,
+  body[data-active-app="app1"] #summarySection,
+  body[data-active-app="app1"] #categorySection,
+  body[data-active-app="app1"] #categorySection table,
+  body[data-active-app="app1"] #app1 .group{
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+
+  #app1 .group{
+    padding: 12px 6px 8px !important;
+    margin: 10px 0 !important;
+    border-radius: 12px !important;
+  }
+
+  #app1 .group label{
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #app1 table{
+    display: table !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  #app1 tbody{
+    display: table-row-group !important;
+    width: auto !important;
+  }
+
+  #app1 tr{
+    display: table-row !important;
+    width: auto !important;
+  }
+
+  #app1 td,
+  #app1 th{
+    display: table-cell !important;
+    width: auto !important;
+  }
+
+  #formRows{
+    display: block !important;
+    width: 100% !important;
+  }
+
+  #formRows tr.row{
+    display: block !important;
+    width: 100% !important;
+    margin: 14px 0 !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    background: rgba(25,35,55,.9) !important;
+    box-sizing: border-box !important;
+  }
+
+  #formRows tr.row > td{
+    display: block !important;
+    width: 100% !important;
+    border: none !important;
+    padding: 4px 0 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+  }
+
+  #formRows input,
+  #formRows select{
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app1"] #summarySection{
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 14px 0 18px !important;
+    padding: 0 !important;
+  }
+
+  body[data-active-app="app1"] #summarySection p{
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 14px 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app1"] #summarySection p span{
+    font-size: 24px !important;
+  }
+
+  body[data-active-app="app1"] #categorySection{
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app1"] #categorySection table{
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+/* ======================
+   ticket toolbar
+====================== */
+.ticket-toolbar{
+  display: grid !important;
+  grid-template-columns: minmax(88px, 110px) minmax(0, 1fr) !important;
+  grid-template-rows: auto auto;
+  gap: 10px 12px;
+  align-items: stretch;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.ticket-toolbar .add-btn{
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  padding: 12px 0;
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  box-sizing: border-box !important;
+}
+
+.ticket-toolbar .search-box{
+  grid-column: 2;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 92px !important;
+  gap: 8px 10px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  align-items: stretch !important;
+}
+
+.ticket-toolbar .search-box > *{
+  min-width: 0 !important;
+}
+
+.ticket-toolbar .search-box input,
+.ticket-toolbar .search-box select{
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.ticket-toolbar .search-box button{
+  width: 92px !important;
+  min-width: 92px !important;
+  max-width: 92px !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+  padding: 0 8px !important;
+}
+
+/* かなり狭い端末では縦積みにする */
+@media (max-width: 420px){
+  .ticket-toolbar{
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+  }
+
+  .ticket-toolbar .search-box{
+    grid-template-columns: 1fr !important;
+  }
+
+  .ticket-toolbar .search-box button{
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ======================
+   APP2
+====================== */
+
+/* サイドナビ常駐 */
+body[data-active-app="app2"] #app2-sideNav{
+  display: block !important;
+  position: fixed !important;
+  top: calc(var(--tabs-h) + var(--subnav-h) + 8px) !important;
+  right: 6px !important;
+  z-index: 1950 !important;
+
+  width: 88px !important;
+  max-width: 88px !important;
+  padding: 8px 6px !important;
+
+  background: rgba(10,20,40,.94) !important;
+  border: 1px solid rgba(0,245,255,.35) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
+  overflow: hidden !important;
+}
+
+/* APP2以外では非表示 */
+body[data-active-app="app1"] #app2-sideNav,
+body[data-active-app="app3"] #app2-sideNav{
+  display: none !important;
+}
+
+/* サイドナビ安全幅 */
+body[data-active-app="app2"]{
+  --app2-safe: 92px;
+}
+
+/* 一括入力はフル幅維持 */
+body[data-active-app="app2"] .group.group-bulk,
+body[data-active-app="app2"] #bulkPanel,
+body[data-active-app="app2"] .bulk-panel,
+body[data-active-app="app2"] .bulk-grid-wrap{
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* app2-inputSection 自体は縮めない */
+body[data-active-app="app2"] #app2-inputSection{
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 個別フォーム・結果・履歴・ボタン列だけ右へ逃がす */
+body[data-active-app="app2"] #app2-inputSection form,
+body[data-active-app="app2"] #result,
+body[data-active-app="app2"] .button-row,
+body[data-active-app="app2"] #app2-historySection{
+  width: calc(100% - var(--app2-safe)) !important;
+  max-width: calc(100% - var(--app2-safe)) !important;
+  margin-right: var(--app2-safe) !important;
+  box-sizing: border-box !important;
+}
+
+/* groupは幅維持 */
+body[data-active-app="app2"] #app2 .group{
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 10px 8px !important;
+  margin: 8px 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 個別フォーム内 */
+body[data-active-app="app2"] #app2 .group label{
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 6px !important;
+}
+
+body[data-active-app="app2"] #app2 input,
+body[data-active-app="app2"] #app2 select{
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 36px !important;
+  font-size: 16px !important;
+  box-sizing: border-box !important;
+}
+
+/* 一括入力ツールバー崩れ防止 */
+body[data-active-app="app2"] .bulk-toolbar-row{
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+
+body[data-active-app="app2"] .bulk-left,
+body[data-active-app="app2"] .bulk-center,
+body[data-active-app="app2"] .bulk-right{
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+body[data-active-app="app2"] .bulk-left > *,
+body[data-active-app="app2"] .bulk-center > *,
+body[data-active-app="app2"] .bulk-right > *{
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+body[data-active-app="app2"] .bulk-toolbar button,
+body[data-active-app="app2"] .bulk-toolbar select{
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 40px !important;
+  font-size: 12px !important;
+  padding: 0 6px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  line-height: 1.15 !important;
+  white-space: normal !important;
+}
+
+/* サイドナビ見た目 */
+#app2-sideNav .sideNav-title{
+  font-size: 10px !important;
+  margin-bottom: 4px !important;
+  text-align: center !important;
+}
+
+#app2-sideNav ul{
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+#app2-sideNav li{
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#app2-sideNav button{
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 8px 2px !important;
+  font-size: 12px !important;
+  line-height: 1.1 !important;
+  height: auto !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+  box-sizing: border-box !important;
+}
+
+/* 横はみ出し防止 */
+body[data-active-app="app2"] #app2{
+  overflow-x: hidden !important;
+}
+
+  /* ======================
+     APP3
+  ====================== */
+
+  body[data-active-app="app3"] #app3,
+  body[data-active-app="app3"] #app3.content{
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  #app3 .group{
+    padding: 10px !important;
+  }
+
+  #app3 .group h3{
+    font-size: 18px !important;
+  }
+
+  body[data-active-app="app3"] #app3 table.outer-table{
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    margin-bottom: 16px !important;
+  }
+
+  body[data-active-app="app3"] #app3 table.outer-table > tbody > tr > td{
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 8px 6px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  body[data-active-app="app3"] #app3 table.outer-table label{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  body[data-active-app="app3"] #app3 table.outer-table label > span,
+  body[data-active-app="app3"] #app3 table.outer-table label > strong,
+  body[data-active-app="app3"] #app3 table.outer-table label > b{
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 15px !important;
+  }
+
+  body[data-active-app="app3"] #app3 table.outer-table input:not([type="checkbox"]),
+  body[data-active-app="app3"] #app3 table.outer-table select,
+  body[data-active-app="app3"] #app3 table.outer-table button{
+    margin: 0 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app3"] #customersCount,
+  body[data-active-app="app3"] #femaleAttendance,
+  body[data-active-app="app3"] #maleAttendance,
+  body[data-active-app="app3"] #driverExtra1,
+  body[data-active-app="app3"] #driverExtra2{
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    flex: 0 0 56px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    text-align: right !important;
+    font-size: 14px !important;
+  }
+
+  /* 通常ボタン */
+  body[data-active-app="app3"] #app3 table.outer-table button{
+    width: 78px !important;
+    min-width: 78px !important;
+    max-width: 78px !important;
+    flex: 0 0 78px !important;
+    height: 34px !important;
+    padding: 0 6px !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    text-align: center !important;
+  }
+
+  /* ドライバー代 行だけ専用 */
+  body[data-active-app="app3"] #app3 label:has(#driverFee){
+    display: grid !important;
+    grid-template-columns: 1fr 86px 78px 56px !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body[data-active-app="app3"] #app3 label:has(#driverFee) > span{
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  body[data-active-app="app3"] #driverFee{
+    width: 86px !important;
+    min-width: 86px !important;
+    max-width: 86px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    text-align: right !important;
+    font-size: 14px !important;
+  }
+
+  body[data-active-app="app3"] #app3 label:has(#driverFee) button{
+    width: 78px !important;
+    min-width: 78px !important;
+    max-width: 78px !important;
+    height: 34px !important;
+    padding: 0 6px !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  body[data-active-app="app3"] #driverExtra1{
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    text-align: right !important;
+  }
+
+  body[data-active-app="app3"] #app3 input[type="checkbox"]{
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    flex: 0 0 18px !important;
+    margin: 0 !important;
+  }
+
+  /* チェックボックスは大きさを固定 */
+  body[data-active-app="app3"] #app3 input[type="checkbox"]{
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    flex: 0 0 18px !important;
+    margin: 0 !important;
+  }
+
+  /* ======================
+     subnav ボタンはみ出し修正
+  ====================== */
+  .subnav{
+    display: flex !important;
+    gap: 4px !important;
+    padding: 0 4px !important;
+  }
+
+  .subnav button{
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    height: 32px !important;
+    padding: 0 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    font-family: 'M PLUS 2', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', sans-serif !important;
+  }
+
+}
+
+/*検索用1100-----------------------------------------------------------------------------------*/
+/* タブレット */
+@media (max-width: 1100px){
+  #summarySection{
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
+  }
+}
+
+@media (min-width:700px) and (max-width:1100px) and (max-height:820px){
+
+  /* =====================================================
+     bulkGrid 圧縮
+  ===================================================== */
+  #bulkGrid th{
+    height:30px !important;
+    padding:2px 4px !important;
+    font-size:12px !important;
+  }
+
+  #bulkGrid td{
+    height:26px !important;
+    padding:1px 2px !important;
+  }
+
+  #bulkGrid tr.bulk-mainrow{
+    height:26px !important;
+  }
+
+  #bulkGrid input[type="text"],
+  #bulkGrid input[type="number"],
+  #bulkGrid input:not([type="checkbox"]){
+    height:22px !important;
+    line-height:22px !important;
+    font-size:12px !important;
+    padding:0 4px !important;
+  }
+
+  #bulkGrid input[type="checkbox"]{
+    width:14px !important;
+    height:14px !important;
+  }
+
+  #bulkGrid .btl-anchor{
+    padding:1px 2px !important;
+  }
+
+  #bulkGrid .btl-toolbar{
+    height:20px !important;
+    gap:1px !important;
+  }
+
+  #bulkGrid .btl-toolbar .mini-btn,
+  #bulkGrid .btl-plus,
+  #bulkGrid .btl-minus,
+  #bulkGrid .btl-toolbar button{
+    height:20px !important;
+    min-height:20px !important;
+    font-size:11px !important;
+    border-radius:5px !important;
+  }
+
+  #bulkGrid tr.btl-subrow td{
+    height:28px !important;
+    padding:1px 2px !important;
+  }
+
+  /* =====================================================
+     ボトル列侵食防止
+  ===================================================== */
+  #bulkGrid tr.btl-subrow td.btl-cell{
+    overflow:hidden !important;
+    min-width:0 !important;
+  }
+
+  #bulkGrid .bottle-hierarchy-btn{
+    flex:0 0 42px !important;
+    width:42px !important;
+    min-width:42px !important;
+    max-width:42px !important;
+    height:22px !important;
+    line-height:22px !important;
+    font-size:11px !important;
+    padding:0 4px !important;
+  }
+
+  #bulkGrid .bottleDetails{
+    min-width:0 !important;
+    height:22px !important;
+    line-height:22px !important;
+    font-size:11px !important;
+    padding:0 4px !important;
+  }
+
+  #bulkGrid .btl-split-cell input,
+  #bulkGrid .btl-qty-cell input,
+  #bulkGrid .btl-amount-cell input{
+    height:22px !important;
+    line-height:22px !important;
+    font-size:11px !important;
+    padding:0 2px !important;
+  }
+
+  #bulkGrid .bulk-num{
+    font-size:12px !important;
+    padding:0 2px !important;
+  }
+
+  /* =====================================================
+     APP2
+  ===================================================== */
+  body[data-active-app="app2"] #app2,
+  body[data-active-app="app2"] #app2.content{
+    width:100% !important;
+    padding-left:4px !important;
+    padding-right:4px !important;
+  }
+
+  body[data-active-app="app2"] #app2-sideNav{
+    display:none !important;
+  }
+
+  body[data-active-app="app2"].bulk-wide #app2{
+    width:100vw !important;
+    padding-left:4px !important;
+    padding-right:4px !important;
+  }
+
+  body[data-active-app="app2"].bulk-wide #app2 .group.group-bulk{
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  body[data-active-app="app2"].bulk-wide .bulk-grid-wrap{
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  /* =====================================================
+     APP1
+  ===================================================== */
+body[data-active-app="app1"] #app1,
+body[data-active-app="app1"] #app1.content{
+  width:100% !important;
+  max-width:none !important;
+  margin:0 !important;
+
+  padding-left:4px !important;
+  padding-right:4px !important;
+
+  box-sizing:border-box !important;
+}
+
+  body[data-active-app="app1"] #app1 .group{
+    width:100% !important;
+    padding-left:6px !important;
+    padding-right:6px !important;
+  }
+
+  body[data-active-app="app1"] #app1 table{
+    width:100% !important;
+  }
+
+  /* =====================================================
+     APP3
+  ===================================================== */
+  body[data-active-app="app3"] #app3,
+  body[data-active-app="app3"] #app3.content{
+    width:100vw !important;
+    padding-left:4px !important;
+    padding-right:4px !important;
+  }
+
+  body[data-active-app="app3"] #app3 .group{
+    padding:16px 12px 12px !important;
+  }
+
+  body[data-active-app="app3"] #app3 .group label{
+    flex-wrap:wrap !important;
+  }
+
+  body[data-active-app="app3"] #app3 .group label span{
+    min-width:110px !important;
+    max-width:150px !important;
+  }
+
+  body[data-active-app="app3"] #app3 .group label input{
+    width:160px !important;
+  }
+
+  body[data-active-app="app3"] #driverExtra1,
+  body[data-active-app="app3"] #driverExtra2{
+    width:60px !important;
+  }
+
+  body[data-active-app="app3"] #driverFee{
+    width:150px !important;
+  }
+
 }
 
 /* =========================================================
@@ -2313,105 +3053,6 @@ input.bulk-custom-keypad-active {
   }
 }
 
-@media (min-width:900px) and (max-width:1100px) and (max-height:820px){
-
-/* ==============================
-   APP2
-============================== */
-
-body[data-active-app="app2"] #app2,
-body[data-active-app="app2"] #app2.content{
-  width:100% !important;
-  padding-left:4px !important;
-  padding-right:4px !important;
-}
-
-body[data-active-app="app2"] #app2-sideNav{
-  display:none !important;
-}
-
-
-
-
-
-
-
-body[data-active-app="app2"].bulk-wide #app2{
-  width:100vw !important;
-  padding-left:4px !important;
-  padding-right:4px !important;
-}
-
-body[data-active-app="app2"].bulk-wide #app2 .group.group-bulk{
-  margin:0 !important;
-  padding:0 !important;
-}
-
-body[data-active-app="app2"].bulk-wide .bulk-grid-wrap{
-  margin:0 !important;
-  padding:0 !important;
-}
-
-/* ==============================
-   APP1
-============================== */
-
-body[data-active-app="app1"] #app1,
-body[data-active-app="app1"] #app1.content{
-  width:100vw !important;
-  padding-left:4px !important;
-  padding-right:4px !important;
-}
-
-body[data-active-app="app1"] #app1 .group{
-  width:100% !important;
-  padding-left:6px !important;
-  padding-right:6px !important;
-}
-
-body[data-active-app="app1"] #app1 table{
-  width:100% !important;
-}
-
-/* ==============================
-   APP3
-============================== */
-
-body[data-active-app="app3"] #app3,
-body[data-active-app="app3"] #app3.content{
-  width:100vw !important;
-  padding-left:4px !important;
-  padding-right:4px !important;
-}
-
-body[data-active-app="app3"] #app3 .group{
-  padding:16px 12px 12px !important;
-}
-
-body[data-active-app="app3"] #app3 .group label span{
-  min-width:110px !important;
-  max-width:150px !important;
-}
-
-body[data-active-app="app3"] #app3 .group label input{
-  width:160px !important;
-}
-
-body[data-active-app="app3"] #driverExtra1,
-body[data-active-app="app3"] #driverExtra2{
-  width:60px !important;
-}
-
-body[data-active-app="app3"] #driverFee{
-  width:150px !important;
-}
-
-body[data-active-app="app3"] #app3 .group label{
-  flex-wrap:wrap !important;
-}
-
-}
-
 /* PCでは自作テンキーを表示しない */
 @media screen and (min-width: 1024px) and (pointer: fine) {
   #bulkCustomKeypad {
@@ -2419,246 +3060,4 @@ body[data-active-app="app3"] #app3 .group label{
   }
 }
 
-/* =========================================================
-   iPad Mini 横向き：APP2 一括入力のボトル列侵食防止
-========================================================= */
-@media (min-width: 900px) and (max-width: 1100px) and (max-height: 820px){
 
-  /* ボトル追加行の後半4セルははみ出し禁止 */
-  #bulkGrid tr.btl-subrow td.btl-cell{
-    overflow: hidden !important;
-    min-width: 0 !important;
-  }
-
-  /* 品名セル内の選択ボタンを少し縮める */
-  #bulkGrid .bottle-hierarchy-btn{
-    flex: 0 0 42px !important;
-    width: 42px !important;
-    min-width: 42px !important;
-    max-width: 42px !important;
-    font-size: 11px !important;
-    padding: 0 4px !important;
-  }
-
-  /* 品名セレクトを詰める */
-  #bulkGrid .bottleDetails{
-    min-width: 0 !important;
-    font-size: 11px !important;
-    padding: 0 4px !important;
-  }
-
-  /* 割・数量・金額も少し詰める */
-  #bulkGrid .btl-split-cell input,
-  #bulkGrid .btl-qty-cell input,
-  #bulkGrid .btl-amount-cell input{
-    font-size: 11px !important;
-    padding: 0 2px !important;
-  }
-
-  /* E列までの通常入力も少しだけ細く見せる */
-  #bulkGrid .bulk-num{
-    font-size: 12px !important;
-    padding: 0 2px !important;
-  }
-
-  /* ヘッダ文字も詰める */
-  #bulkGrid th{
-    font-size: 12px !important;
-    padding: 2px 2px !important;
-  }
-}
-
-/* ===============================
-   SP上書き（レスポンシブ）
-================================ */
-@media (max-width: 768px){
-  :root{
-    --tabs-h: 40px;
-    --subnav-h: 40px;
-
-    /* SP時はPC幅変数を上書きして流用 */
-    --app3-input-w-pc: var(--app3-input-w-sp);
-  }
-}
-
-/* ===== スマホ：2×2グリッド ===== */
-@media (max-width: 768px){
-  .ticket-toolbar{
-    display: grid;
-    grid-template-columns: 110px 1fr;
-    grid-template-rows: auto auto;
-    gap: 10px 12px;
-    align-items: stretch;
-  }
-
-  .ticket-toolbar .add-btn{
-    grid-row: 1 / span 2;
-    grid-column: 1;
-    padding: 12px 0;
-    width: 100%;
-    min-width: 0;
-    font-size: 16px;
-    line-height: 1.2;
-  }
-
-  .ticket-toolbar .search-box{
-    grid-column: 2;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 8px 10px;
-  }
-
-  .ticket-toolbar .search-box #searchAmount{
-    grid-column: 1 / -1;
-    width: 100%;
-    text-align: right;
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-
-  .ticket-toolbar .search-box button{
-    width: 100%;
-    padding: 10px 0;
-    font-size: 14px;
-    margin: 0;
-  }
-}
-
-@media (max-width: 768px){
-  body[data-active-app="app2"] #app2-sideNav{
-    right: 4px;
-    width: 100px;
-    padding: 8px;
-  }
-}
-
-@media (max-width: 700px) {
-  #bottleHierarchyPicker {
-    width: calc(100vw - 12px);
-    max-width: calc(100vw - 12px);
-    left: 6px !important;
-    right: 6px;
-    top: 6px !important;
-    padding: 8px;
-  }
-
-  #bottleHierarchyPicker .bhp-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  #bottleHierarchyPicker .bhp-btn {
-    height: 42px;
-    font-size: 13px;
-  }
-}
-
-/* =========================================================
-   compact landscape / iPad mini 横向きなど
-========================================================= */
-@media (min-width: 700px) and (max-width: 1100px) and (max-height: 820px){
-  #bulkGrid th{
-    height: 30px !important;
-    padding: 2px 4px !important;
-    font-size: 12px !important;
-  }
-
-  #bulkGrid td{
-    height: 26px !important;
-    padding: 1px 2px !important;
-  }
-
-  #bulkGrid tr.bulk-mainrow{
-    height: 26px !important;
-  }
-
-  #bulkGrid input[type="text"],
-  #bulkGrid input[type="number"],
-  #bulkGrid input:not([type="checkbox"]){
-    height: 22px !important;
-    line-height: 22px !important;
-    font-size: 12px !important;
-    padding: 0 4px !important;
-  }
-
-  #bulkGrid input[type="checkbox"]{
-    width: 14px !important;
-    height: 14px !important;
-  }
-
-  #bulkGrid .btl-anchor{
-    padding: 1px 2px !important;
-  }
-
-  #bulkGrid .btl-toolbar{
-    height: 20px !important;
-    gap: 1px !important;
-  }
-
-  #bulkGrid .btl-toolbar .mini-btn,
-  #bulkGrid .btl-plus,
-  #bulkGrid .btl-minus,
-  #bulkGrid .btl-toolbar button{
-    height: 20px !important;
-    min-height: 20px !important;
-    font-size: 11px !important;
-    border-radius: 5px !important;
-  }
-
-  #bulkGrid tr.btl-subrow td{
-    height: 28px !important;
-    padding: 1px 2px !important;
-  }
-
-  #bulkGrid .bottle-hierarchy-btn{
-    flex: 0 0 40px !important;
-    width: 40px !important;
-    min-width: 40px !important;
-    max-width: 40px !important;
-    height: 22px !important;
-    line-height: 22px !important;
-    font-size: 11px !important;
-  }
-
-  #bulkGrid .bottleDetails{
-    height: 22px !important;
-    line-height: 22px !important;
-    font-size: 11px !important;
-    padding: 0 4px !important;
-  }
-
-  #bulkGrid .btl-split-cell input,
-  #bulkGrid .btl-qty-cell input,
-  #bulkGrid .btl-amount-cell input{
-    height: 22px !important;
-    line-height: 22px !important;
-    font-size: 11px !important;
-    padding: 0 3px !important;
-  }
-}
-
-/* タブレット */
-@media (max-width: 1100px){
-  #summarySection{
-    grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
-  }
-}
-
-/* スマホ */
-@media (max-width: 700px){
-  #summarySection{
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-    margin: 14px 0 18px !important;
-  }
-
-  #summarySection p{
-    padding: 14px 14px !important;
-    font-size: 15px !important;
-  }
-
-  #summarySection p span{
-    font-size: 24px !important;
-  }
-}

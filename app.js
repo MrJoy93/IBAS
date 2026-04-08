@@ -184,11 +184,12 @@ function _pxVar(name, fallback = 0){
 }
 
 function _currentSubnavH(){
-  const nav = document.querySelector(
-    'body[data-active-app="app1"] #app1-nav,'+
-    'body[data-active-app="app2"] #app2-nav,'+
-    'body[data-active-app="app3"] #app3-nav'
-  );
+  const nav = Array.from(document.querySelectorAll('nav.subnav'))
+    .find(el => {
+      const cs = getComputedStyle(el);
+      return cs.display !== 'none' && cs.visibility !== 'hidden';
+    });
+
   return nav ? nav.offsetHeight : _pxVar('--subnav-h', 50);
 }
 
@@ -901,38 +902,58 @@ function attachCommaFormatApp1and3() {
     });
   }, { passive: true });
 
-  function apply(targetId) {
-    // 切替前に現在の位置を保存
-    const prevId = document.body.getAttribute('data-active-app');
-    if (prevId) {
-      scrollMap[prevId] = getY();
-      saveMap(scrollMap);
-    }
-
-    // ページ表示/非表示
-    pagesById.forEach((el, id) => {
-      const on = id === targetId;
-      if (!el) return;
-      el.style.display = on ? '' : 'none';
-      el.classList.toggle('active', on);
-      el.toggleAttribute('hidden', !on);
-    });
-
-    // タブの見た目/ARIA
-    tabsRoot.querySelectorAll('.tab').forEach(t => {
-      const on = t.dataset.target === targetId;
-      t.classList.toggle('active', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', on ? '0' : '-1');
-      t.setAttribute('role', 'tab');
-    });
-
-    document.body.setAttribute('data-active-app', targetId);
-    try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
-
-    // そのAPPの以前の位置へ復帰
-    restoreY(targetId);
+function apply(targetId) {
+  // 切替前に現在の位置を保存
+  const prevId = document.body.getAttribute('data-active-app');
+  if (prevId) {
+    scrollMap[prevId] = getY();
+    saveMap(scrollMap);
   }
+
+  // ページ表示/非表示
+  pagesById.forEach((el, id) => {
+    const on = id === targetId;
+    if (!el) return;
+    el.style.display = on ? '' : 'none';
+    el.classList.toggle('active', on);
+    el.toggleAttribute('hidden', !on);
+  });
+
+  // タブの見た目/ARIA
+  tabsRoot.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.target === targetId;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', on ? '0' : '-1');
+    t.setAttribute('role', 'tab');
+  });
+
+  // ここを追加：サブナビをJSで強制切替
+  const navMap = {
+    app1: document.getElementById('app1-nav'),
+    app2: document.getElementById('app2-nav'),
+    app3: document.getElementById('app3-nav')
+  };
+
+  Object.entries(navMap).forEach(([id, nav]) => {
+    if (!nav) return;
+    if (id === targetId) {
+      nav.style.setProperty('display', 'flex', 'important');
+      nav.hidden = false;
+      nav.setAttribute('aria-hidden', 'false');
+    } else {
+      nav.style.setProperty('display', 'none', 'important');
+      nav.hidden = true;
+      nav.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  document.body.setAttribute('data-active-app', targetId);
+  try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
+
+  // そのAPPの以前の位置へ復帰
+  restoreY(targetId);
+}
 
   // 外からも呼べるように
   window.showApp = apply;
@@ -4297,25 +4318,25 @@ const isCompactLandscapeApp2 =
   const widths = isCompactLandscapeApp2
     ? [
         '3.0%',  // 1  #
-        '5.5%',  // 2  氏名
+        '7.5%',  // 2  氏名
         '3.0%',  // 3  体/貸
         '6.0%',  // 4  送迎
 
-        '3.5%',  // 5  2k
-        '3.5%',  // 6  F
-        '3.5%',  // 7  場内
-        '3.5%',  // 8  本指
-        '3.5%',  // 9  同伴
-        '3.5%',  // 10 枝
-        '3.5%',  // 11 HE
-        '3.5%',  // 12 40
-        '3.5%',  // 13 20
-        '3.5%',  // 14 VIP
-        '3.5%',  // 15 A
-        '3.5%',  // 16 B
-        '3.5%',  // 17 C
-        '3.5%',  // 18 D
-        '3.5%',  // 19 E
+        '3.2%',  // 5  2k
+        '3.2%',  // 6  F
+        '3.2%',  // 7  場内
+        '3.2%',  // 8  本指
+        '3.2%',  // 9  同伴
+        '2.0%',  // 10 枝
+        '3.2%',  // 11 HE
+        '3.2%',  // 12 40
+        '3.2%',  // 13 20
+        '3.2%',  // 14 VIP
+        '3.2%',  // 15 A
+        '3.2%',  // 16 B
+        '3.2%',  // 17 C
+        '3.2%',  // 18 D
+        '3.2%',  // 19 E
 
         '12.0%', // 20 品名
         '3.0%',  // 21 割
@@ -6199,6 +6220,110 @@ for (const f of forms) {
 
 window.collectApp2State = collectApp2State;
 window.applyApp2State   = applyApp2State;
+
+/* =========================================================
+   APP2: サイドナビを一括入力グリッドの下端より上へ行かせない
+========================================================= */
+/* =========================================================
+   APP2: スマホ時だけ sideNav を bulkPanel の下端より上へ行かせない
+========================================================= */
+/* =========================================================
+   APP2: サイドナビを bulkPanel の下端より上へ行かせない
+========================================================= */
+(function () {
+  const sideNav = document.getElementById('app2-sideNav');
+  if (!sideNav) return;
+
+  function isApp2Mobile() {
+    return (
+      document.body.getAttribute('data-active-app') === 'app2' &&
+      window.innerWidth <= 768
+    );
+  }
+
+  function pxVar(name, fallback = 0) {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim();
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function getNormalTop() {
+    const tabsH = pxVar('--tabs-h', 40);
+    const subH  = pxVar('--subnav-h', 40);
+    return tabsH + subH + 8;
+  }
+
+  function isVisible(el) {
+    if (!el) return false;
+    const cs = getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden' && el.offsetParent !== null;
+  }
+
+  function updateApp2SideNavClamp() {
+    if (!sideNav) return;
+
+    const normalTop = getNormalTop();
+
+    /* APP2スマホ以外では通常位置へ戻す */
+    if (!isApp2Mobile()) {
+      sideNav.style.setProperty('top', `${normalTop}px`, 'important');
+      return;
+    }
+
+    const bulkPanel = document.getElementById('bulkPanel');
+
+    /* bulkPanel が無い/見えていないなら通常位置 */
+    if (!isVisible(bulkPanel)) {
+      sideNav.style.setProperty('top', `${normalTop}px`, 'important');
+      return;
+    }
+
+    const gap = 8; /* bulkグリッド下端との余白 */
+    const rect = bulkPanel.getBoundingClientRect();
+
+    /* bulkPanel の下端より上へ行かせない */
+    const clampedTop = Math.max(normalTop, Math.round(rect.bottom + gap));
+
+    sideNav.style.setProperty('top', `${clampedTop}px`, 'important');
+  }
+
+  let rafId = 0;
+  function requestUpdate() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      updateApp2SideNavClamp();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', requestUpdate);
+  window.addEventListener('load', requestUpdate);
+  window.addEventListener('resize', requestUpdate, { passive: true });
+  window.addEventListener('scroll', requestUpdate, { passive: true });
+
+  const mo = new MutationObserver(requestUpdate);
+  mo.observe(document.body, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ['class', 'style', 'data-active-app']
+  });
+
+  /* bulkPanel 自体の変化にも追従 */
+  const bulkPanel = document.getElementById('bulkPanel');
+  if (bulkPanel) {
+    const mo2 = new MutationObserver(requestUpdate);
+    mo2.observe(bulkPanel, {
+      attributes: true,
+      childList: true,
+      subtree: true
+    });
+  }
+
+  window.updateApp2SideNavClamp = requestUpdate;
+})();
 
 
 
