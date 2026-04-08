@@ -808,6 +808,21 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   vertical-align: middle; /* 数字と高さを揃える */
 }
 
+/* 下段カテゴリだけ詰める */
+.filter-cats{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+
+  gap:8px;              /* ← 12px → 8px に縮小 */
+}
+
+/* カテゴリボタン幅を少し小さく */
+.filter-cats .tablinks{
+  padding:8px 16px !important;
+  min-width:52px !important;
+}
+
 /* =========================================================
    APP1：伝票の合計エリアを強制表示
 ========================================================= */
@@ -2283,10 +2298,60 @@ input.bulk-custom-keypad-active {
     border-radius: 12px !important;
   }
 
-  #app1 .group label{
-    flex-direction: column;
-    gap: 6px;
-  }
+/* ======================
+   APP1 カテゴリ調整（スマホのみ）
+====================== */
+
+/* 行レイアウト */
+#app1 .group label{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:6px;
+  width:100%;
+}
+
+/* チェック列 */
+#categorySection th:nth-child(1),
+#categorySection td:nth-child(1){
+  width:26px;
+  text-align:center;
+  padding-left:2px;
+  padding-right:2px;
+}
+
+#categorySection td:nth-child(1) input[type="checkbox"]{
+  transform:scale(.95);
+  margin:0 auto;
+  display:block;
+}
+
+/* カテゴリ */
+#categorySection th:nth-child(2),
+#categorySection td:nth-child(2){
+  width:32%;
+  text-align:left;
+}
+
+/* 本数 */
+#categorySection th:nth-child(3),
+#categorySection td:nth-child(3){
+  width:16%;
+  text-align:right;
+}
+
+/* 金額 */
+#categorySection th:nth-child(4),
+#categorySection td:nth-child(4){
+  width:52%;
+  text-align:right;
+}
+
+/* 余白詰め */
+#categorySection th,
+#categorySection td{
+  padding:6px 4px;
+}
 
   #app1 table{
     display: table !important;
@@ -2305,11 +2370,14 @@ input.bulk-custom-keypad-active {
     width: auto !important;
   }
 
-  #app1 td,
-  #app1 th{
-    display: table-cell !important;
-    width: auto !important;
-  }
+#app1 td,
+#app1 th{
+  display: table-cell !important;
+}
+
+#formRows tr.row > td{
+  width: 100% !important;
+}
 
   #formRows{
     display: block !important;
