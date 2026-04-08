@@ -982,22 +982,35 @@ body[data-active-app="app2"] #result {
 }
 
 /* ボタンの見た目・間隔統一 */
-.history-index-table .idx-btn {
-  display: block !important;
+.history-index-table .history-index-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
   width: 100% !important;
-  max-width: 120px !important;
+  min-width: 0 !important;
+  max-width: 140px !important;
+  height: 64px !important;
+
   margin: 0 !important;
   padding: 8px 10px !important;
+
   text-align: center !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;      /* ← 改行させない */
+  word-break: keep-all !important;     /* ← 日本語の途中改行防止 */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+
   border: 1px solid #00eaff !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   background: rgba(0, 245, 255, 0.08) !important;
   color: #00f5ff !important;
   cursor: pointer !important;
   transition: transform .15s, background .15s, color .15s !important;
 }
 
-.history-index-table .idx-btn:hover {
+.history-index-table .history-index-btn:hover {
   background: #00f5ff !important;
   color: #111 !important;
   transform: translateY(-2px) scale(1.03) !important;
@@ -2118,8 +2131,8 @@ input.bulk-custom-keypad-active {
     border-radius: 10px !important;
   }
 
-  #historyIndexTable .idx-btn{
-    flex: 0 0 calc(33.333% - 6px) !important;
+  #historyIndexTable .history-index-btn{
+   flex: 0 0 calc(33.333% - 6px) !important;
     font-size: 13px !important;
   }
 
