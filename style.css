@@ -1450,6 +1450,7 @@ body.bulk-wide #app2-sideNav {
   line-height: 1 !important;
 }
 
+
 /* =========================================================
    13-2. 追加ボトル行
 ========================================================= */
@@ -1459,6 +1460,7 @@ body.bulk-wide #app2-sideNav {
   background: rgba(10,18,40,.92) !important;
 }
 
+/* 追加ボトル行の共通セル */
 #bulkGrid tr.btl-subrow td{
   padding: 2px 3px !important;
   height: 32px !important;
@@ -1467,7 +1469,7 @@ body.bulk-wide #app2-sideNav {
   min-width: 0 !important;
 }
 
-/* ダミーセル */
+/* 前半ダミーセル */
 #bulkGrid tr.btl-subrow td.btl-pad{
   padding: 0 !important;
   border: none !important;
@@ -1479,6 +1481,7 @@ body.bulk-wide #app2-sideNav {
   background: rgba(20,36,72,.96) !important;
   border-top: 1px solid rgba(0,245,255,.24) !important;
   border-bottom: 1px solid rgba(0,245,255,.24) !important;
+  border-right: 1px solid rgba(0,234,255,.22) !important;
   overflow: hidden !important;
   min-width: 0 !important;
 }
@@ -1488,11 +1491,24 @@ body.bulk-wide #app2-sideNav {
   box-shadow: inset 0 1px 0 rgba(0,245,255,.15);
 }
 
+/* 5マスまとまりの左端 */
+#bulkGrid tr.btl-subrow td.btl-group-start{
+  border-left: 2px solid #00f5ff !important;
+  box-shadow: inset 1px 0 6px rgba(0,245,255,.22) !important;
+}
+
+/* 5マスまとまりの右端 */
+#bulkGrid tr.btl-subrow td.btl-group-end{
+  border-right: 2px solid #00f5ff !important;
+  box-shadow: 1px 0 6px rgba(0,245,255,.22) !important;
+}
+
 /* 各実セル */
 #bulkGrid .btl-detail-cell,
 #bulkGrid .btl-split-cell,
 #bulkGrid .btl-qty-cell,
-#bulkGrid .btl-amount-cell{
+#bulkGrid .btl-amount-cell,
+#bulkGrid .btl-leave-ghost-cell{
   min-width: 0 !important;
   overflow: hidden !important;
 }
@@ -1565,6 +1581,100 @@ body.bulk-wide #app2-sideNav {
 /* 金額強調 */
 #bulkGrid .btl-amount-cell input{
   font-weight: 700 !important;
+}
+
+/* 退列あり時の5個目セル（見た目維持用の空セル） */
+#bulkGrid .btl-leave-ghost-cell{
+  padding: 0 !important;
+  background: rgba(18,26,44,.96) !important;
+}
+
+/* 旧tail-padが残っても極力崩れにくくする保険 */
+#bulkGrid .btl-tail-pad{
+  padding: 0 !important;
+  background: rgba(18,26,44,.96) !important;
+  border-left: 1px solid rgba(0,234,255,.22) !important;
+  border-right: 2px solid #00f5ff !important;
+}
+
+/* =========================================================
+   13-3. 入力済みセルの視認性強化（app.js の is-filled / cell-filled に合わせる）
+========================================================= */
+
+/* 通常状態 */
+#bulkGrid input,
+#bulkGrid select,
+#bulkGrid textarea{
+  color: #9beaff !important;
+  transition:
+    color .15s ease,
+    background .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    text-shadow .15s ease !important;
+}
+
+/* 入力済みのセル側も少し光らせる */
+#bulkGrid td.cell-filled{
+  background: rgba(0, 140, 200, .10) !important;
+  box-shadow: inset 0 0 0 1px rgba(0,245,255,.10) !important;
+}
+
+/* 入力済みの要素本体 */
+#bulkGrid input.is-filled,
+#bulkGrid select.is-filled,
+#bulkGrid textarea.is-filled{
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 7px rgba(0,245,255,.78) !important;
+  background: rgba(0,170,255,.28) !important;
+  border-color: rgba(0,245,255,.78) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,245,255,.18),
+    0 0 8px rgba(0,245,255,.18) !important;
+}
+
+/* 氏名はさらに強調 */
+#bulkGrid .bulk-name.is-filled{
+  background: rgba(0,200,255,.32) !important;
+  text-shadow: 0 0 9px rgba(0,245,255,.92) !important;
+  letter-spacing: .04em;
+}
+
+/* ボトル品名 */
+#bulkGrid .bottleDetails.is-filled{
+  background: rgba(0,170,255,.24) !important;
+  color: #ffffff !important;
+}
+
+/* ボトル割・数量 */
+#bulkGrid .btl-split-cell input.is-filled,
+#bulkGrid .btl-qty-cell input.is-filled{
+  background: rgba(0,185,255,.28) !important;
+}
+
+/* 金額は最強 */
+#bulkGrid .btl-amount-cell input.is-filled{
+  background: rgba(0,220,255,.34) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 9px rgba(0,245,255,.95) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,245,255,.24),
+    0 0 10px rgba(0,245,255,.24) !important;
+}
+
+/* フォーカス中 */
+#bulkGrid input:focus,
+#bulkGrid select:focus,
+#bulkGrid textarea:focus{
+  color: #ffffff !important;
+  background: rgba(0,190,255,.36) !important;
+  border-color: #00f5ff !important;
+  text-shadow: 0 0 9px rgba(0,245,255,.92) !important;
+  box-shadow:
+    0 0 12px rgba(0,245,255,.80),
+    inset 0 0 6px rgba(0,245,255,.22) !important;
 }
 
 /* =========================================================

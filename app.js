@@ -4071,127 +4071,14 @@ function removeBottleSubrow(mainTr, subTr) {
   }
 }
 
- // === サブ行追加 ===========================================================
 function addBottleSubrow(mainTr) {
   const { grid } = getBulkDom();
   if (!grid || !mainTr) return null;
 
   const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
-  const hasLeaveCol = !!grid.querySelector('.bulk-leave-head');
-
-  // 後半に置く実セル数
-  // 品名 / 割 / 数量 / 金額 / （退勤列があればそのぶん）
-  const realCols = hasLeaveCol ? 5 : 4;
-
-  // 前半のダミーセル数
-  const padCount = Math.max(0, cols - realCols);
-
-  const tr = document.createElement('tr');
-  tr.className = 'btl-subrow';
-
-  let html = '';
-
-  // 前半のダミーセル
-  for (let i = 0; i < padCount; i++) {
-    html += '<td class="btl-pad"></td>';
-  }
-
-  // 後半の実セル
-  html += `
-    <td class="btl-cell btl-detail-cell">
-      <div class="btl-field-wrap btl-detail-wrap">
-        <button type="button" class="bottle-hierarchy-btn" aria-label="ボトル選択">選択</button>
-        <select class="bottleDetails">
-          ${getBottleOptionsHTML()}
-        </select>
-      </div>
-    </td>
-
-    <td class="btl-cell btl-split-cell">
-      <input
-        type="text"
-        class="splitCount bulk-custom-keypad-target"
-        inputmode="numeric"
-        placeholder="割"
-      >
-    </td>
-
-    <td class="btl-cell btl-qty-cell">
-      <input
-        type="text"
-        class="bottleQuantity bulk-custom-keypad-target"
-        inputmode="numeric"
-        placeholder="数"
-      >
-    </td>
-
-    <td class="btl-cell btl-amount-cell">
-      <input
-        type="text"
-        class="bottleAmount bulk-custom-keypad-target"
-        inputmode="numeric"
-        placeholder="金額"
-      >
-    </td>
-  `;
-
-  if (hasLeaveCol) {
-    html += `<td class="btl-pad btl-tail-pad"></td>`;
-  }
-
-  tr.innerHTML = html;
-
-  // 既存サブ行の末尾に追加する
-  const subs = getBottleSubrows(mainTr);
-  const insertAfter = subs.length ? subs[subs.length - 1] : mainTr;
-  insertAfter.parentNode.insertBefore(tr, insertAfter.nextSibling);
-
-  // ボトル選択候補の補完
-  if (typeof refreshBottleDropdownsFromHistory === 'function') {
-    refreshBottleDropdownsFromHistory();
-  }
-
-  // カスタムテンキー対象へ readonly 適用
-  if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
-    window.applyReadonlyToBulkGridCustomKeypad();
-  }
-
-  // 追加直後の初期値
-  const splitEl = tr.querySelector('.splitCount');
-  const qtyEl = tr.querySelector('.bottleQuantity');
-  const amountEl = tr.querySelector('.bottleAmount');
-
-  if (splitEl && !splitEl.value) splitEl.value = '';
-  if (qtyEl && !qtyEl.value) qtyEl.value = '';
-  if (amountEl && !amountEl.value) amountEl.value = '';
-
-  // マイナスボタンの活性更新
-  const minusBtn = mainTr.querySelector('.btl-minus');
-  if (minusBtn) {
-    const subsNow = getBottleSubrows(mainTr);
-    minusBtn.disabled = subsNow.length <= 0;
-  }
-
-  mainTr.dataset.bottleCount = String(getBottleSubrows(mainTr).length);
-
-  return tr;
-}
-
-// === サブ行追加 ===========================================================
-function addBottleSubrow(mainTr) {
-  const { grid } = getBulkDom();
-  if (!grid || !mainTr) return null;
-
-  const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
-
-  // 24列なら退列あり
   const hasLeaveCol = cols >= 24;
 
-  // 後半に置く実セル数
-  // 品名 / 割 / 数量 / 金額 / （退勤列があればそのぶん）
   const realCols = hasLeaveCol ? 5 : 4;
-
-  // 前半のダミーセル数
   const padCount = Math.max(0, cols - realCols);
 
   const tr = document.createElement('tr');
@@ -4199,14 +4086,14 @@ function addBottleSubrow(mainTr) {
 
   let html = '';
 
-  // 前半のダミーセル
+  // 前半ダミー
   for (let i = 0; i < padCount; i++) {
     html += '<td class="btl-pad"></td>';
   }
 
-  // 後半の実セル
+  // 後半実セル
   html += `
-    <td class="btl-cell btl-detail-cell">
+    <td class="btl-cell btl-detail-cell btl-group-start">
       <div class="btl-field-wrap btl-detail-wrap">
         <button type="button" class="bottle-hierarchy-btn" aria-label="ボトル選択">選択</button>
         <select class="bottleDetails">
@@ -4233,7 +4120,7 @@ function addBottleSubrow(mainTr) {
       >
     </td>
 
-    <td class="btl-cell btl-amount-cell">
+    <td class="btl-cell btl-amount-cell${hasLeaveCol ? '' : ' btl-group-end'}">
       <input
         type="text"
         class="bottleAmount bulk-custom-keypad-target"
@@ -4243,29 +4130,25 @@ function addBottleSubrow(mainTr) {
     </td>
   `;
 
-  // 退列がある場合は最後に1セルぶん空ける
+  // 退列ありなら、5個目の見た目セルを入れる
   if (hasLeaveCol) {
-    html += `<td class="btl-pad btl-tail-pad"></td>`;
+    html += `<td class="btl-cell btl-leave-ghost-cell btl-group-end"></td>`;
   }
 
   tr.innerHTML = html;
 
-  // 既存サブ行の末尾に追加する
   const subs = getBottleSubrows(mainTr);
   const insertAfter = subs.length ? subs[subs.length - 1] : mainTr;
   insertAfter.parentNode.insertBefore(tr, insertAfter.nextSibling);
 
-  // ボトル選択候補の補完
   if (typeof refreshBottleDropdownsFromHistory === 'function') {
     refreshBottleDropdownsFromHistory();
   }
 
-  // カスタムテンキー対象へ readonly 適用
   if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
     window.applyReadonlyToBulkGridCustomKeypad();
   }
 
-  // 追加直後の初期値
   const splitEl = tr.querySelector('.splitCount');
   const qtyEl = tr.querySelector('.bottleQuantity');
   const amountEl = tr.querySelector('.bottleAmount');
@@ -4274,7 +4157,6 @@ function addBottleSubrow(mainTr) {
   if (qtyEl && !qtyEl.value) qtyEl.value = '';
   if (amountEl && !amountEl.value) amountEl.value = '';
 
-  // マイナスボタンの活性更新
   const minusBtn = mainTr.querySelector('.btl-minus');
   if (minusBtn) {
     const subsNow = getBottleSubrows(mainTr);
@@ -6355,6 +6237,37 @@ window.applyApp2State   = applyApp2State;
 
   window.updateApp2SideNavClamp = requestUpdate;
 })();
+
+/* =========================================================
+   入力済みセルに filled クラスを付与
+========================================================= */
+function updateBulkFilledState(root = document) {
+  root.querySelectorAll('#bulkGrid input[type="text"], #bulkGrid input[type="number"], #bulkGrid select')
+    .forEach(el => {
+      const val = (el.value || '').trim();
+      if (val !== '') {
+        el.classList.add('filled');
+      } else {
+        el.classList.remove('filled');
+      }
+    });
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.closest('#bulkGrid')) {
+    updateBulkFilledState(e.target.closest('#bulkGrid'));
+  }
+}, true);
+
+document.addEventListener('change', (e) => {
+  if (e.target.closest('#bulkGrid')) {
+    updateBulkFilledState(e.target.closest('#bulkGrid'));
+  }
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateBulkFilledState(document);
+});
 
 
 
