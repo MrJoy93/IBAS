@@ -4626,23 +4626,6 @@ function buildGrid(n) {
       toggle.style.display = 'none';
     }
 
-    sel?.addEventListener('change', () => {
-      const currentData = localStorage.getItem(GRID_KEY);
-      if (currentData) {
-        const old = JSON.parse(currentData || '[]');
-        const newCount = parseInt(sel.value || '40', 10) || 40;
-
-        if (old.length !== newCount) {
-          buildGrid(newCount);
-          saveBulkGridState();
-        } else {
-          restoreBulkGridState();
-        }
-      } else {
-        buildGrid(parseInt(sel.value || '40', 10) || 40);
-      }
-    });
-
     clearBt?.addEventListener('click', () => {
       document.querySelectorAll('.bulk-num, .bulk-name, .bulk-send, .splitCount, .bottleQuantity, .bottleAmount')
         .forEach(e => { e.value = ''; });
@@ -8163,11 +8146,17 @@ function initBulkRowsChangeHandler() {
   const sel = document.getElementById('bulkRows');
   if (!sel) return;
 
+  // 二重登録防止
+  if (sel.dataset.boundBulkRowsChange === '1') return;
+  sel.dataset.boundBulkRowsChange = '1';
+
   sel.addEventListener('change', () => {
     window.BULK_RESTORING = true;
 
-    const snapshot = (typeof snapshotBulkGrid === 'function') ? snapshotBulkGrid() : [];
     const nextN = parseInt(sel.value || '40', 10) || 40;
+    const snapshot = (typeof snapshotBulkGrid === 'function')
+      ? snapshotBulkGrid()
+      : [];
 
     if (typeof buildGrid === 'function') {
       buildGrid(nextN);
@@ -8177,8 +8166,9 @@ function initBulkRowsChangeHandler() {
       restoreBulkGrid((snapshot || []).slice(0, nextN));
     }
 
-    document.querySelectorAll('#bulkGrid input')
-      .forEach(el => el.dispatchEvent(new Event('input', { bubbles: true })));
+    document.querySelectorAll('#bulkGrid input').forEach(el => {
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
     window.BULK_RESTORING = false;
   });
