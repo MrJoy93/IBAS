@@ -4210,7 +4210,7 @@ function buildGrid(n) {
 
   const widths = [
     '2.2%',  // 1  #
-    '18.0%', // 2  氏名
+    '8.0%', // 2  氏名
     '3.2%',  // 3  体/貸
     '5.0%',  // 4  送迎
 
@@ -4230,7 +4230,7 @@ function buildGrid(n) {
     '3.2%',  // 18 D
     '3.2%',  // 19 E
 
-    '3.6%',  // 20 品名
+    '13.6%',  // 20 品名
     '3.0%',  // 21 割
     '3.0%',  // 22 数量
     '10.0%', // 23 金額
@@ -4351,9 +4351,11 @@ function buildGrid(n) {
     window.applyReadonlyToBulkGridCustomKeypad();
   }
 
+  requestAnimationFrame(()=>{
   if (typeof applyApp2MobileView === 'function') {
     applyApp2MobileView();
   }
+});
 }
 
   // === 保存 ================================================================
@@ -8146,17 +8148,14 @@ function initBulkRowsChangeHandler() {
   const sel = document.getElementById('bulkRows');
   if (!sel) return;
 
-  // 二重登録防止
   if (sel.dataset.boundBulkRowsChange === '1') return;
   sel.dataset.boundBulkRowsChange = '1';
 
   sel.addEventListener('change', () => {
     window.BULK_RESTORING = true;
 
+    const snapshot = (typeof snapshotBulkGrid === 'function') ? snapshotBulkGrid() : [];
     const nextN = parseInt(sel.value || '40', 10) || 40;
-    const snapshot = (typeof snapshotBulkGrid === 'function')
-      ? snapshotBulkGrid()
-      : [];
 
     if (typeof buildGrid === 'function') {
       buildGrid(nextN);
@@ -8166,9 +8165,8 @@ function initBulkRowsChangeHandler() {
       restoreBulkGrid((snapshot || []).slice(0, nextN));
     }
 
-    document.querySelectorAll('#bulkGrid input').forEach(el => {
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    document.querySelectorAll('#bulkGrid input')
+      .forEach(el => el.dispatchEvent(new Event('input', { bubbles: true })));
 
     window.BULK_RESTORING = false;
   });
