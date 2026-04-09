@@ -4161,24 +4161,20 @@ function buildGrid(n) {
   grid.querySelector('colgroup')?.remove();
 
   // --------------------------------------------------
-  // iPad Mini 横向きなど、横幅がやや厳しい端末向け
+  // iPad系 実機の横向きだけ compact 扱い
   // --------------------------------------------------
-const isCompactLandscapeApp2 =
-  window.innerWidth <= 1100 && window.innerWidth >= 700;
+  const isIPadLike =
+    /iPad/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // 列幅
-  // 1 : #
-  // 2 : 氏名
-  // 3 : 体/貸
-  // 4 : 送迎
-  // 5-19 : 2k ～ E
-  // 20 : 品名
-  // 21 : 割
-  // 22 : 数量
-  // 23 : 金額
-  // 24 : 退
+  const isLandscape = window.innerWidth > window.innerHeight;
+
+  const isCompactLandscapeApp2 =
+    isIPadLike &&
+    isLandscape &&
+    window.innerWidth <= 1100;
+
   const widths = isCompactLandscapeApp2
-      //iPad Mini
     ? [
         '2.3%',  // 1  #
         '6.8%',  // 2  氏名
@@ -4201,14 +4197,12 @@ const isCompactLandscapeApp2 =
         '4.0%',  // 18 D
         '4.0%',  // 19 E
 
-        '9.0%', // 20 品名
+        '9.0%',  // 20 品名
         '3.0%',  // 21 割
         '3.0%',  // 22 数量
         '7.2%',  // 23 金額
         '3.0%'   // 24 退
       ]
-
-      //PC
     : [
         '3.2%',  // 1  #
         '8.0%',  // 2  氏名
@@ -4231,10 +4225,10 @@ const isCompactLandscapeApp2 =
         '3.2%',  // 18 D
         '3.2%',  // 19 E
 
-        '14.6%', // 20 品名
+        '13.6%', // 20 品名
         '3.0%',  // 21 割
         '3.0%',  // 22 数量
-        '10.0%',  // 23 金額
+        '10.0%', // 23 金額
         '3.0%'   // 24 退
       ];
 
@@ -4260,13 +4254,12 @@ const isCompactLandscapeApp2 =
     trh.appendChild(th);
   });
 
-// 24列目「退」が COLS に含まれていない場合に備えて追加
-if (!COLS.some(c => c && c.header === '退')) {
-  const thLeave = document.createElement('th');
-  thLeave.textContent = '退';
-  thLeave.className = 'bulk-leave-head';
-  trh.appendChild(thLeave);
-}
+  if (!COLS.some(c => c && c.header === '退')) {
+    const thLeave = document.createElement('th');
+    thLeave.textContent = '退';
+    thLeave.className = 'bulk-leave-head';
+    trh.appendChild(thLeave);
+  }
 
   thead.appendChild(trh);
 
