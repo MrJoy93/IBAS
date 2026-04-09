@@ -4403,72 +4403,96 @@ function buildGrid(n) {
   window.saveBulkGridState = saveBulkGridState;
 
   // === 復元 ================================================================
-  function restoreBulkGridState() {
-    const { grid, sel } = getBulkDom();
-    if (!grid) return;
+function restoreBulkGridState(forcedRowCount = null) {
+  const { grid, sel } = getBulkDom();
+  if (!grid) return;
 
-    const raw = localStorage.getItem(GRID_KEY);
-    const data = JSON.parse(raw || '[]');
+  const raw = localStorage.getItem(GRID_KEY);
+  const data = JSON.parse(raw || '[]');
 
-    const rowCount = data.length || parseInt(sel?.value || '40', 10) || 40;
-    buildGrid(rowCount);
+  // forcedRowCount があればそれを最優先
+  const rowCount =
+    Number.isInteger(forcedRowCount) && forcedRowCount > 0
+      ? forcedRowCount
+      : (data.length || parseInt(sel?.value || '40', 10) || 40);
 
-    if (!data.length) {
-      return;
+  buildGrid(rowCount);
+
+  if (!data.length) {
+    return;
+  }
+
+  const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+
+  data.slice(0, rowCount).forEach((r, i) => {
+    const tr = mains[i];
+    if (!tr) return;
+
+    const nameEl = tr.querySelector('.bulk-name');
+    const expEl  = tr.querySelector('.bulk-exp');
+    const sendEl = tr.querySelector('.bulk-send');
+
+    if (nameEl) nameEl.value = r.name || '';
+    if (expEl)  expEl.checked = !!r.exp;
+    if (sendEl) sendEl.value = norm(r.send);
+
+    const kmap = {};
+    tr.querySelectorAll('[data-k]').forEach(el => {
+      kmap[el.dataset.k] = el;
+    });
+
+    const nums = r.nums || {};
+    for (const k in nums) {
+      const el = kmap[k];
+      if (!el) continue;
+
+      if (el.type === 'checkbox') {
+        el.checked = !!nums[k];
+      } else {
+        el.value = norm(nums[k]);
+      }
     }
 
-    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+    if (Array.isArray(r.bottles) && r.bottles.length) {
+      r.bottles.forEach(b => {
+        addBottleSubrow(tr);
 
-    data.forEach((r, i) => {
-      const tr = mains[i];
-      if (!tr) return;
+        const subs = getBottleSubrows(tr);
+        const last = subs[subs.length - 1];
+        if (!last) return;
 
-      tr.querySelector('.bulk-name').value = r.name || '';
-      tr.querySelector('.bulk-exp').checked = !!r.exp;
-      tr.querySelector('.bulk-send').value = norm(r.send);
-
-      const kmap = {};
-      tr.querySelectorAll('[data-k]').forEach(el => {
-        kmap[el.dataset.k] = el;
-      });
-
-      const nums = r.nums || {};
-      for (const k in nums) {
-        const el = kmap[k];
-        if (!el) continue;
-
-        if (el.type === 'checkbox') {
-          el.checked = !!nums[k];
-        } else {
-          el.value = norm(nums[k]);
+        const detailSelect = last.querySelector('.bottleDetails');
+        if (detailSelect && typeof setBottleDetailValue === 'function') {
+          setBottleDetailValue(detailSelect, b.detail || '');
         }
-      }
 
-      if (r.bottles?.length) {
-        r.bottles.forEach(b => {
-          addBottleSubrow(tr);
+        const splitEl  = last.querySelector('.splitCount');
+        const qtyEl    = last.querySelector('.bottleQuantity');
+        const amountEl = last.querySelector('.bottleAmount');
 
-          const subs = getBottleSubrows(tr);
-          const last = subs[subs.length - 1];
-          if (!last) return;
+        if (splitEl)  splitEl.value  = norm(b.split);
+        if (qtyEl)    qtyEl.value    = norm(b.qty);
+        if (amountEl) amountEl.value = norm(b.amount);
 
-          const detailSelect = last.querySelector('.bottleDetails');
-          if (detailSelect && typeof setBottleDetailValue === 'function') {
-            setBottleDetailValue(detailSelect, b.detail || '');
-            detailSelect.dispatchEvent(new Event('change', { bubbles: true }));
-          }
+        if (typeof updateBottleAmountForRow === 'function') {
+          updateBottleAmountForRow(last);
+        }
+      });
+    }
+  });
 
-          const splitEl = last.querySelector('.splitCount');
-          const qtyEl = last.querySelector('.bottleQuantity');
-          const amountEl = last.querySelector('.bottleAmount');
-
-          if (splitEl) splitEl.value = norm(b.split);
-          if (qtyEl) qtyEl.value = norm(b.qty);
-          if (amountEl) amountEl.value = norm(b.amount);
-        });
-      }
-    });
+  if (typeof updateBulkFilledState === 'function') {
+    updateBulkFilledState(grid);
   }
+
+  if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+    window.applyReadonlyToBulkGridCustomKeypad();
+  }
+
+  if (typeof window.applyApp2MobileView === 'function') {
+    window.applyApp2MobileView();
+  }
+}
 
   // === メイン行→ボトル選択記憶 =============================================
   function rememberBottleSelectionsFromMainRow(mainRow) {
@@ -4646,6 +4670,11 @@ function buildGrid(n) {
     });
 
     regBt?.addEventListener('click', bulkRegister);
+    sel?.addEventListener('change', () => {
+  const n = parseInt(sel.value || '40', 10) || 40;
+  saveBulkGridState();
+  restoreBulkGridState(n);
+});
 
     grid.addEventListener('click', e => {
       let main = e.target.closest('tr.bulk-mainrow');
@@ -8144,71 +8173,40 @@ function initBulkRowsChangeHandler() {
   const sel = document.getElementById('bulkRows');
   if (!sel) return;
 
-  // 二重登録防止
   if (sel._bulkRowsChangeBound) return;
   sel._bulkRowsChangeBound = true;
 
-  // 実際の再構築処理を関数化
-  const applyBulkRowsChange = () => {
+  sel.addEventListener('change', () => {
     const nextN = parseInt(sel.value || '40', 10) || 40;
 
-    // いったん現在の入力内容を保存
+    // 今の入力を保存
     if (typeof saveBulkGridState === 'function') {
       saveBulkGridState();
     }
 
-    window.BULK_RESTORING = true;
-
-    try {
-      // 保存済みデータを読む
-      const raw = localStorage.getItem('app2_bulkGridData');
-      const data = JSON.parse(raw || '[]');
-
-      // 選択行数を優先して切り詰める
-      const trimmed = Array.isArray(data) ? data.slice(0, nextN) : [];
-
-      // ローカル保存も選択行数に合わせて更新
-      localStorage.setItem('app2_bulkGridData', JSON.stringify(trimmed));
-
-      // 行数を選択値で再構築
-      if (typeof buildGrid === 'function') {
-        buildGrid(nextN);
-      }
-
-      // 再構築後に保存内容を復元
-      if (typeof restoreBulkGridState === 'function') {
-        restoreBulkGridState();
-      }
-
-      // 見た目更新
-      document.querySelectorAll('#bulkGrid input, #bulkGrid select').forEach(el => {
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-
-      if (typeof updateBulkFilledState === 'function') {
-        updateBulkFilledState(document.getElementById('bulkGrid'));
-      }
-
-      if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
-        window.applyReadonlyToBulkGridCustomKeypad();
-      }
-
-      if (typeof window.applyApp2MobileView === 'function') {
-        window.applyApp2MobileView();
-      }
-    } catch (e) {
-      console.error('[bulkRows change] failed:', e);
-    } finally {
-      window.BULK_RESTORING = false;
+    // restoreBulkGridState が内部で buildGrid(rowCount) を呼ぶので、
+    // ここで buildGrid(nextN) を先に呼ばない
+    if (typeof restoreBulkGridState === 'function') {
+      restoreBulkGridState(nextN);
+    } else if (typeof buildGrid === 'function') {
+      buildGrid(nextN);
     }
-  };
 
-  // iPad/Safari対策:
-  // input, change, blur の3系統で拾う
-  sel.addEventListener('input', applyBulkRowsChange);
-  sel.addEventListener('change', applyBulkRowsChange);
-  sel.addEventListener('blur', applyBulkRowsChange);
+    // UI更新
+    const grid = document.getElementById('bulkGrid');
+
+    if (typeof updateBulkFilledState === 'function') {
+      updateBulkFilledState(grid);
+    }
+
+    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+      window.applyReadonlyToBulkGridCustomKeypad();
+    }
+
+    if (typeof window.applyApp2MobileView === 'function') {
+      window.applyApp2MobileView();
+    }
+  });
 }
 
 function initBottleCustomOptions() {
