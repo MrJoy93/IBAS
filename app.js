@@ -4180,7 +4180,7 @@ const isCompactLandscapeApp2 =
   const widths = isCompactLandscapeApp2
       //iPad Mini
     ? [
-        '2.3%',  // 1  #
+        '300.3%',  // 1  #
         '6.8%',  // 2  氏名
         '3.0%',  // 3  体/貸
         '7.5%',  // 4  送迎
