@@ -843,45 +843,6 @@ function attachCommaFormatApp1and3() {
     });
 }
 
-function rerenderBulkGridForDeviceLayout() {
-  if (document.body.getAttribute('data-active-app') !== 'app2') return;
-
-  const bulkRowsEl = document.getElementById('bulkRows');
-  const n = parseInt(bulkRowsEl?.value || '40', 10) || 40;
-
-  if (typeof buildGrid === 'function') {
-    buildGrid(n);
-  }
-
-  if (typeof restoreBulkGridState === 'function') {
-    restoreBulkGridState();
-  }
-
-  if (typeof applyApp2MobileView === 'function') {
-    applyApp2MobileView();
-  }
-
-  if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
-    applyReadonlyToBulkGridCustomKeypad();
-  }
-}
-
-let _bulkGridResizeTimer = 0;
-
-function scheduleBulkGridRelayout() {
-  clearTimeout(_bulkGridResizeTimer);
-  _bulkGridResizeTimer = setTimeout(() => {
-    rerenderBulkGridForDeviceLayout();
-  }, 120);
-}
-
-window.addEventListener('resize', scheduleBulkGridRelayout, { passive: true });
-window.addEventListener('orientationchange', scheduleBulkGridRelayout, { passive: true });
-
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', scheduleBulkGridRelayout, { passive: true });
-}
-
 /* ========= タブ切替 + 各APPのスクロール記憶 =============================================================================== */
 (function () {
   const tabsRoot = document.querySelector('.tabs');
@@ -937,11 +898,11 @@ function apply(targetId) {
     const on = t.dataset.target === targetId;
     t.classList.toggle('active', on);
     t.setAttribute('aria-selected', on ? 'true' : 'false');
-    t.setAttribute('tabindex', on ? '0' : '-1');
+    if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', on ? '0' : '-1');
     t.setAttribute('role', 'tab');
   });
 
-  // サブナビ切替
+  // ここを追加：サブナビをJSで強制切替
   const navMap = {
     app1: document.getElementById('app1-nav'),
     app2: document.getElementById('app2-nav'),
@@ -950,7 +911,6 @@ function apply(targetId) {
 
   Object.entries(navMap).forEach(([id, nav]) => {
     if (!nav) return;
-
     if (id === targetId) {
       nav.style.setProperty('display', 'flex', 'important');
       nav.hidden = false;
@@ -963,55 +923,10 @@ function apply(targetId) {
   });
 
   document.body.setAttribute('data-active-app', targetId);
-  try {
-    localStorage.setItem('selectedTab', targetId);
-  } catch (e) {}
+  try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
 
   // そのAPPの以前の位置へ復帰
   restoreY(targetId);
-
-  /* =====================================================
-     APP2を開いた直後に一括グリッドを再構築
-     iPad実機の初回レイアウトずれ対策
-  ===================================================== */
-  if (targetId === 'app2') {
-    const rerenderApp2BulkGrid = () => {
-      const bulkRowsEl = document.getElementById('bulkRows');
-      const n = parseInt(bulkRowsEl?.value || '40', 10) || 40;
-
-      if (typeof buildGrid === 'function') {
-        buildGrid(n);
-      }
-
-      if (typeof restoreBulkGridState === 'function') {
-        restoreBulkGridState();
-      }
-
-      if (typeof applyApp2MobileView === 'function') {
-        applyApp2MobileView();
-      }
-
-      if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
-        applyReadonlyToBulkGridCustomKeypad();
-      }
-    };
-
-    requestAnimationFrame(() => {
-      rerenderApp2BulkGrid();
-
-      requestAnimationFrame(() => {
-        rerenderApp2BulkGrid();
-      });
-
-      setTimeout(() => {
-        rerenderApp2BulkGrid();
-      }, 60);
-
-      setTimeout(() => {
-        rerenderApp2BulkGrid();
-      }, 180);
-    });
-  }
 }
 
   // 外からも呼べるように
@@ -4246,20 +4161,24 @@ function buildGrid(n) {
   grid.querySelector('colgroup')?.remove();
 
   // --------------------------------------------------
-  // iPad系 実機の横向きだけ compact 扱い
+  // iPad Mini 横向きなど、横幅がやや厳しい端末向け
   // --------------------------------------------------
-  const isIPadLike =
-    /iPad/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isCompactLandscapeApp2 =
+  window.innerWidth <= 1100 && window.innerWidth >= 700;
 
-  const isLandscape = window.innerWidth > window.innerHeight;
-
-  const isCompactLandscapeApp2 =
-    isIPadLike &&
-    isLandscape &&
-    window.innerWidth <= 1100;
-
+  // 列幅
+  // 1 : #
+  // 2 : 氏名
+  // 3 : 体/貸
+  // 4 : 送迎
+  // 5-19 : 2k ～ E
+  // 20 : 品名
+  // 21 : 割
+  // 22 : 数量
+  // 23 : 金額
+  // 24 : 退
   const widths = isCompactLandscapeApp2
+      //iPad Mini
     ? [
         '2.3%',  // 1  #
         '6.8%',  // 2  氏名
@@ -4282,12 +4201,14 @@ function buildGrid(n) {
         '4.0%',  // 18 D
         '4.0%',  // 19 E
 
-        '9.0%',  // 20 品名
+        '9.0%', // 20 品名
         '3.0%',  // 21 割
         '3.0%',  // 22 数量
         '7.2%',  // 23 金額
         '3.0%'   // 24 退
       ]
+
+      //PC
     : [
         '3.2%',  // 1  #
         '8.0%',  // 2  氏名
@@ -4310,10 +4231,10 @@ function buildGrid(n) {
         '3.2%',  // 18 D
         '3.2%',  // 19 E
 
-        '13.6%', // 20 品名
+        '14.6%', // 20 品名
         '3.0%',  // 21 割
         '3.0%',  // 22 数量
-        '10.0%', // 23 金額
+        '10.0%',  // 23 金額
         '3.0%'   // 24 退
       ];
 
@@ -4339,12 +4260,13 @@ function buildGrid(n) {
     trh.appendChild(th);
   });
 
-  if (!COLS.some(c => c && c.header === '退')) {
-    const thLeave = document.createElement('th');
-    thLeave.textContent = '退';
-    thLeave.className = 'bulk-leave-head';
-    trh.appendChild(thLeave);
-  }
+// 24列目「退」が COLS に含まれていない場合に備えて追加
+if (!COLS.some(c => c && c.header === '退')) {
+  const thLeave = document.createElement('th');
+  thLeave.textContent = '退';
+  thLeave.className = 'bulk-leave-head';
+  trh.appendChild(thLeave);
+}
 
   thead.appendChild(trh);
 
