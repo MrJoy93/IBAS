@@ -843,6 +843,45 @@ function attachCommaFormatApp1and3() {
     });
 }
 
+function rerenderBulkGridForDeviceLayout() {
+  if (document.body.getAttribute('data-active-app') !== 'app2') return;
+
+  const bulkRowsEl = document.getElementById('bulkRows');
+  const n = parseInt(bulkRowsEl?.value || '40', 10) || 40;
+
+  if (typeof buildGrid === 'function') {
+    buildGrid(n);
+  }
+
+  if (typeof restoreBulkGridState === 'function') {
+    restoreBulkGridState();
+  }
+
+  if (typeof applyApp2MobileView === 'function') {
+    applyApp2MobileView();
+  }
+
+  if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
+    applyReadonlyToBulkGridCustomKeypad();
+  }
+}
+
+let _bulkGridResizeTimer = 0;
+
+function scheduleBulkGridRelayout() {
+  clearTimeout(_bulkGridResizeTimer);
+  _bulkGridResizeTimer = setTimeout(() => {
+    rerenderBulkGridForDeviceLayout();
+  }, 120);
+}
+
+window.addEventListener('resize', scheduleBulkGridRelayout, { passive: true });
+window.addEventListener('orientationchange', scheduleBulkGridRelayout, { passive: true });
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', scheduleBulkGridRelayout, { passive: true });
+}
+
 /* ========= タブ切替 + 各APPのスクロール記憶 =============================================================================== */
 (function () {
   const tabsRoot = document.querySelector('.tabs');
@@ -933,51 +972,44 @@ function apply(targetId) {
 
   /* =====================================================
      APP2を開いた直後に一括グリッドを再構築
-     初回だけ均等割り表示になる症状の対策
+     iPad実機の初回レイアウトずれ対策
   ===================================================== */
   if (targetId === 'app2') {
-    requestAnimationFrame(() => {
+    const rerenderApp2BulkGrid = () => {
       const bulkRowsEl = document.getElementById('bulkRows');
       const n = parseInt(bulkRowsEl?.value || '40', 10) || 40;
 
-      // 1回再構築
       if (typeof buildGrid === 'function') {
         buildGrid(n);
       }
 
-      // 復元処理があるなら再適用
       if (typeof restoreBulkGridState === 'function') {
         restoreBulkGridState();
       }
 
-      // モバイル表示調整があるなら再適用
       if (typeof applyApp2MobileView === 'function') {
         applyApp2MobileView();
       }
 
-      // テンキー対象のreadOnly再適用
       if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
         applyReadonlyToBulkGridCustomKeypad();
       }
+    };
 
-      // レイアウト確定後にもう1回だけ保険
+    requestAnimationFrame(() => {
+      rerenderApp2BulkGrid();
+
       requestAnimationFrame(() => {
-        if (typeof buildGrid === 'function') {
-          buildGrid(n);
-        }
-
-        if (typeof restoreBulkGridState === 'function') {
-          restoreBulkGridState();
-        }
-
-        if (typeof applyApp2MobileView === 'function') {
-          applyApp2MobileView();
-        }
-
-        if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
-          applyReadonlyToBulkGridCustomKeypad();
-        }
+        rerenderApp2BulkGrid();
       });
+
+      setTimeout(() => {
+        rerenderApp2BulkGrid();
+      }, 60);
+
+      setTimeout(() => {
+        rerenderApp2BulkGrid();
+      }, 180);
     });
   }
 }
