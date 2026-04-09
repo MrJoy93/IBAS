@@ -3268,14 +3268,10 @@ body[data-active-app="app1"] #app1.content{
   }
 }
 
-/* iPad mini 横向き対策 */
-@media (min-width: 700px) and (max-width: 1100px) and (orientation: landscape) {
-
-  body[data-active-app="app2"] #app2,
-  body[data-active-app="app2"] #app2.content{
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
+/* =========================================================
+   APP2 iPad mini 横実機対策
+========================================================= */
+@media (min-width: 700px) and (max-width: 1400px) and (orientation: landscape) {
 
   body[data-active-app="app2"] .group.group-bulk,
   body[data-active-app="app2"] #bulkPanel,
@@ -3289,12 +3285,16 @@ body[data-active-app="app1"] #app1.content{
 
   #bulkGrid th{
     padding: 2px 3px !important;
-    font-size: 11px !important;
     height: 30px !important;
+    font-size: 11px !important;
   }
 
   #bulkGrid td{
     padding: 1px 1px !important;
+    height: 28px !important;
+  }
+
+  #bulkGrid tr.bulk-mainrow{
     height: 28px !important;
   }
 
@@ -3305,10 +3305,40 @@ body[data-active-app="app1"] #app1.content{
     line-height: 22px !important;
     font-size: 11px !important;
     padding: 0 2px !important;
+    border-radius: 4px !important;
+  }
+
+  #bulkGrid .bulk-name{
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  #bulkGrid input[type="checkbox"]{
+    width: 14px !important;
+    height: 14px !important;
   }
 
   #bulkGrid .btl-toolbar{
-    gap: 0 !important;
+    gap: 1px !important;
+    height: 22px !important;
+  }
+
+  #bulkGrid .btl-toolbar button,
+  #bulkGrid .mini-btn,
+  #bulkGrid .btl-plus,
+  #bulkGrid .btl-minus{
+    min-width: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+    font-size: 11px !important;
+    line-height: 20px !important;
+    margin: 0 !important;
+  }
+
+  #bulkGrid tr.btl-subrow td{
+    height: 26px !important;
+    padding: 1px !important;
   }
 
   #bulkGrid .bottle-hierarchy-btn{
@@ -3316,11 +3346,15 @@ body[data-active-app="app1"] #app1.content{
     width: 34px !important;
     min-width: 34px !important;
     max-width: 34px !important;
+    height: 22px !important;
+    line-height: 22px !important;
     font-size: 10px !important;
     padding: 0 2px !important;
   }
 
   #bulkGrid .bottleDetails{
+    height: 22px !important;
+    line-height: 22px !important;
     font-size: 10px !important;
     padding: 0 2px !important;
   }
@@ -3328,6 +3362,8 @@ body[data-active-app="app1"] #app1.content{
   #bulkGrid .btl-split-cell input,
   #bulkGrid .btl-qty-cell input,
   #bulkGrid .btl-amount-cell input{
+    height: 22px !important;
+    line-height: 22px !important;
     font-size: 10px !important;
     padding: 0 1px !important;
   }

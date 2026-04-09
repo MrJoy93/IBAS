@@ -4162,47 +4162,65 @@ function buildGrid(n) {
 
   // --------------------------------------------------
   // iPad系 実機の横向きだけ compact 扱い
+  // Safari実機では innerWidth が想定より広く出ることがあるので
+  // innerWidth 単独ではなく vw を作って判定する
   // --------------------------------------------------
   const isIPadLike =
     /iPad/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const isLandscape = window.innerWidth > window.innerHeight;
+  const vw = Math.min(window.innerWidth, window.outerWidth || window.innerWidth);
+  const vh = Math.min(window.innerHeight, window.outerHeight || window.innerHeight);
+
+  const isLandscape = vw > vh;
 
   const isCompactLandscapeApp2 =
     isIPadLike &&
     isLandscape &&
-    window.innerWidth <= 1100;
+    vw <= 1300;
+
+  console.log('[APP2 buildGrid]', {
+    userAgent: navigator.userAgent,
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
+    outerWidth: window.outerWidth,
+    outerHeight: window.outerHeight,
+    vw,
+    vh,
+    isIPadLike,
+    isLandscape,
+    isCompactLandscapeApp2
+  });
 
   const widths = isCompactLandscapeApp2
-  ? [
-      '2.2%',  // #
-      '6.5%',  // 氏名
-      '2.8%',  // 体/貸
-      '6.8%',  // 送迎
+    ? [
+        '2.2%',  // 1  #
+        '6.4%',  // 2  氏名
+        '2.8%',  // 3  体/貸
+        '6.6%',  // 4  送迎
 
-      '3.0%',  // 2k
-      '3.6%',  // F
-      '3.6%',  // 場内
-      '3.6%',  // 本指
-      '3.6%',  // 同伴
-      '1.8%',  // 枝
-      '1.8%',  // HE
-      '3.6%',  // 40
-      '3.6%',  // 20
-      '3.6%',  // VIP
-      '3.6%',  // A
-      '3.6%',  // B
-      '3.6%',  // C
-      '3.6%',  // D
-      '3.6%',  // E
+        '3.0%',  // 5  2k
+        '3.6%',  // 6  F
+        '3.6%',  // 7  場内
+        '3.6%',  // 8  本指
+        '3.6%',  // 9  同伴
+        '1.8%',  // 10 枝
+        '1.8%',  // 11 HE
+        '3.6%',  // 12 40
+        '3.6%',  // 13 20
+        '3.6%',  // 14 VIP
+        '3.6%',  // 15 A
+        '3.6%',  // 16 B
+        '3.6%',  // 17 C
+        '3.6%',  // 18 D
+        '3.6%',  // 19 E
 
-      '10.8%', // 品名
-      '3.2%',  // 割
-      '3.2%',  // 数量
-      '7.3%',  // 金額
-      '2.8%'   // 退
-    ]
+        '11.2%', // 20 品名
+        '3.0%',  // 21 割
+        '3.0%',  // 22 数量
+        '6.8%',  // 23 金額
+        '2.8%'   // 24 退
+      ]
     : [
         '3.2%',  // 1  #
         '8.0%',  // 2  氏名
