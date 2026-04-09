@@ -260,10 +260,6 @@ function installBulkCustomKeypad() {
 
   const isMobileLike = isCustomKeypadDevice();
 
-  console.log('[custom keypad] init', {
-    isMobileLike,
-    keypadExists: !!keypad
-  });
 
   // PC時はテンキー完全無効化
   if (!isMobileLike || !keypad) {
@@ -277,9 +273,6 @@ function installBulkCustomKeypad() {
       keypad.hidden = true;
     }
 
-    console.log('[custom keypad] stopped', {
-      reason: !isMobileLike ? 'desktop mode' : 'keypad not found'
-    });
     return;
   }
 
@@ -301,16 +294,12 @@ function installBulkCustomKeypad() {
   }
 
   function dispatchInput(input) {
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+   input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   function applyReadonlyToCustomKeypadTargets() {
     const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
 
-    console.log('[custom keypad] applyReadonlyToCustomKeypadTargets', {
-      count: inputs.length
-    });
 
     inputs.forEach(input => {
       if (input.disabled) return;
@@ -339,7 +328,6 @@ function installBulkCustomKeypad() {
   function showKeypad(input) {
     if (!input) return;
 
-    console.log('[custom keypad] SHOW', input);
 
     clearActiveState();
 
@@ -352,12 +340,6 @@ function installBulkCustomKeypad() {
 
     keypad.hidden = false;
 
-    console.log('[custom keypad] visible', {
-      hidden: keypad.hidden,
-      display: getComputedStyle(keypad).display,
-      visibility: getComputedStyle(keypad).visibility,
-      opacity: getComputedStyle(keypad).opacity
-    });
   }
 
   function hideKeypad() {
@@ -365,7 +347,6 @@ function installBulkCustomKeypad() {
     activeInput = null;
     keypad.hidden = true;
 
-    console.log('[custom keypad] HIDE');
   }
 
   function setRawValue(input, raw) {
@@ -640,40 +621,30 @@ function installBulkCustomKeypad() {
 
   applyReadonlyToCustomKeypadTargets();
 
-  const mo = new MutationObserver(() => {
-    applyReadonlyToCustomKeypadTargets();
+  document.addEventListener('touchstart', (e) => {
+  const target = e.target;
+
+  if (isTarget(target)) {
+    e.preventDefault();
+    showKeypad(target);
+    return;
+  }
+
+  if (keypad.contains(target)) {
+    return;
+  }
+
+  hideKeypad();
+  }, {
+  capture: true,
+  passive: false
   });
-  mo.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  document.addEventListener('pointerdown', (e) => {
-    const target = e.target;
-
-    console.log('[custom keypad] pointerdown', target);
-
-    if (isTarget(target)) {
-      console.log('[custom keypad] TARGET OK', target);
-      e.preventDefault();
-      showKeypad(target);
-      return;
-    }
-
-    if (keypad.contains(target)) {
-      console.log('[custom keypad] keypad click area');
-      return;
-    }
-
-    hideKeypad();
-  }, true);
 
   document.addEventListener('focusin', (e) => {
     const target = e.target;
 
     if (!isTarget(target)) return;
 
-    console.log('[custom keypad] focusin target', target);
 
     target.readOnly = true;
     showKeypad(target);
@@ -683,18 +654,13 @@ function installBulkCustomKeypad() {
     } catch (_) {}
   });
 
-  keypad.addEventListener('click', (e) => {
+  keypad.addEventListener('touchstart', (e) => {
     const btn = e.target.closest('button');
     if (!btn || !activeInput) return;
 
     const key = btn.dataset.key;
     const action = btn.dataset.action;
 
-    console.log('[custom keypad] button', {
-      key,
-      action,
-      activeInput
-    });
 
     if (key != null) {
       appendText(activeInput, key);
@@ -5541,7 +5507,6 @@ function createHistoryIndex() {
     }
   }
 
-  console.log('[createHistoryIndex] rendered:', items.length);
 }
 
 window.createHistoryIndex = createHistoryIndex;
