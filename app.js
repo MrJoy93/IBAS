@@ -6238,10 +6238,6 @@ document.addEventListener('change', (e) => {
   }
 }, true);
 
-document.addEventListener('DOMContentLoaded', () => {
-  updateBulkFilledState(document);
-});
-
 
 
 
@@ -8148,13 +8144,18 @@ function initBulkRowsChangeHandler() {
   const sel = document.getElementById('bulkRows');
   if (!sel) return;
 
-  if (sel.dataset.boundBulkRowsChange === '1') return;
-  sel.dataset.boundBulkRowsChange = '1';
+  // HTML属性ではなくJSプロパティで二重登録防止
+  if (sel._bulkRowsChangeBound) return;
+  sel._bulkRowsChangeBound = true;
 
   sel.addEventListener('change', () => {
     window.BULK_RESTORING = true;
 
-    const snapshot = (typeof snapshotBulkGrid === 'function') ? snapshotBulkGrid() : [];
+    const snapshot =
+      (typeof snapshotBulkGrid === 'function')
+        ? snapshotBulkGrid()
+        : [];
+
     const nextN = parseInt(sel.value || '40', 10) || 40;
 
     if (typeof buildGrid === 'function') {
@@ -8165,8 +8166,23 @@ function initBulkRowsChangeHandler() {
       restoreBulkGrid((snapshot || []).slice(0, nextN));
     }
 
-    document.querySelectorAll('#bulkGrid input')
-      .forEach(el => el.dispatchEvent(new Event('input', { bubbles: true })));
+    document.querySelectorAll('#bulkGrid input, #bulkGrid select')
+      .forEach(el => {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+    if (typeof updateBulkFilledState === 'function') {
+      updateBulkFilledState(document.getElementById('bulkGrid'));
+    }
+
+    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+      window.applyReadonlyToBulkGridCustomKeypad();
+    }
+
+    if (typeof window.applyApp2MobileView === 'function') {
+      window.applyApp2MobileView();
+    }
 
     window.BULK_RESTORING = false;
   });
@@ -8233,6 +8249,8 @@ function initRestoreAllApps() {
 
 //DOMContentLoaded 統合初期化
 document.addEventListener('DOMContentLoaded', () => {
+  updateBulkFilledState(document);
+
   initUpdateRowGrayOut();
   initExperienceAndRentalConfirm();
   initRestoreAllApps();
