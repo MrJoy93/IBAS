@@ -8144,48 +8144,71 @@ function initBulkRowsChangeHandler() {
   const sel = document.getElementById('bulkRows');
   if (!sel) return;
 
-  // HTML属性ではなくJSプロパティで二重登録防止
+  // 二重登録防止
   if (sel._bulkRowsChangeBound) return;
   sel._bulkRowsChangeBound = true;
 
-  sel.addEventListener('change', () => {
-    window.BULK_RESTORING = true;
-
-    const snapshot =
-      (typeof snapshotBulkGrid === 'function')
-        ? snapshotBulkGrid()
-        : [];
-
+  // 実際の再構築処理を関数化
+  const applyBulkRowsChange = () => {
     const nextN = parseInt(sel.value || '40', 10) || 40;
 
-    if (typeof buildGrid === 'function') {
-      buildGrid(nextN);
+    // いったん現在の入力内容を保存
+    if (typeof saveBulkGridState === 'function') {
+      saveBulkGridState();
     }
 
-    if (typeof restoreBulkGrid === 'function') {
-      restoreBulkGrid((snapshot || []).slice(0, nextN));
-    }
+    window.BULK_RESTORING = true;
 
-    document.querySelectorAll('#bulkGrid input, #bulkGrid select')
-      .forEach(el => {
+    try {
+      // 保存済みデータを読む
+      const raw = localStorage.getItem('app2_bulkGridData');
+      const data = JSON.parse(raw || '[]');
+
+      // 選択行数を優先して切り詰める
+      const trimmed = Array.isArray(data) ? data.slice(0, nextN) : [];
+
+      // ローカル保存も選択行数に合わせて更新
+      localStorage.setItem('app2_bulkGridData', JSON.stringify(trimmed));
+
+      // 行数を選択値で再構築
+      if (typeof buildGrid === 'function') {
+        buildGrid(nextN);
+      }
+
+      // 再構築後に保存内容を復元
+      if (typeof restoreBulkGridState === 'function') {
+        restoreBulkGridState();
+      }
+
+      // 見た目更新
+      document.querySelectorAll('#bulkGrid input, #bulkGrid select').forEach(el => {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
       });
 
-    if (typeof updateBulkFilledState === 'function') {
-      updateBulkFilledState(document.getElementById('bulkGrid'));
-    }
+      if (typeof updateBulkFilledState === 'function') {
+        updateBulkFilledState(document.getElementById('bulkGrid'));
+      }
 
-    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
-      window.applyReadonlyToBulkGridCustomKeypad();
-    }
+      if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+        window.applyReadonlyToBulkGridCustomKeypad();
+      }
 
-    if (typeof window.applyApp2MobileView === 'function') {
-      window.applyApp2MobileView();
+      if (typeof window.applyApp2MobileView === 'function') {
+        window.applyApp2MobileView();
+      }
+    } catch (e) {
+      console.error('[bulkRows change] failed:', e);
+    } finally {
+      window.BULK_RESTORING = false;
     }
+  };
 
-    window.BULK_RESTORING = false;
-  });
+  // iPad/Safari対策:
+  // input, change, blur の3系統で拾う
+  sel.addEventListener('input', applyBulkRowsChange);
+  sel.addEventListener('change', applyBulkRowsChange);
+  sel.addEventListener('blur', applyBulkRowsChange);
 }
 
 function initBottleCustomOptions() {
