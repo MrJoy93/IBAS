@@ -4157,8 +4157,6 @@ function buildGrid(n) {
   const tbody = grid.querySelector('tbody');
   if (!thead || !tbody) return;
 
-  // 既存 colgroup を削除
-  grid.querySelector('colgroup')?.remove();
 
   // --------------------------------------------------
   // iPad系 実機の横向きだけ compact 扱い
