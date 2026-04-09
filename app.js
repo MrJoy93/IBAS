@@ -4235,6 +4235,12 @@ function addBottleSubrow(mainTr) {
 
 // === グリッド構築 =========================================================
 function buildGrid(n) {
+
+  console.log('isCompactLandscapeApp2 =', isCompactLandscapeApp2);
+console.log('window.innerWidth =', window.innerWidth);
+console.log('window.innerHeight =', window.innerHeight);
+console.log('userAgent =', navigator.userAgent);
+
   const { grid } = getBulkDom();
   if (!grid) return;
 
@@ -4316,7 +4322,7 @@ const isCompactLandscapeApp2 =
         '3.2%',  // 18 D
         '3.2%',  // 19 E
 
-        '14.6%', // 20 品名
+        '13.6%', // 20 品名
         '3.0%',  // 21 割
         '3.0%',  // 22 数量
         '10.0%',  // 23 金額
