@@ -3255,4 +3255,25 @@ body[data-active-app="app1"] #app1.content{
   }
 }
 
+/* iPad mini 横専用 */
+@media (min-width:700px) and (max-width:1100px){
 
+#bulkGrid input{
+  padding:4px 4px !important;
+  font-size:14px !important;
+}
+
+#bulkGrid select{
+  padding:4px 4px !important;
+  font-size:14px !important;
+}
+
+#bulkGrid .bulk-name{
+  font-size:14px !important;
+}
+
+#bulkGrid .bottleDetails{
+  font-size:13px !important;
+}
+
+}
