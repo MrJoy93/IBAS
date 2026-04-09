@@ -4195,18 +4195,6 @@ function buildGrid(n) {
     isLandscape &&
     vw <= 1300;
 
-  console.log('[APP2 buildGrid]', {
-    userAgent: navigator.userAgent,
-    innerWidth: window.innerWidth,
-    innerHeight: window.innerHeight,
-    outerWidth: window.outerWidth,
-    outerHeight: window.outerHeight,
-    vw,
-    vh,
-    isIPadLike,
-    isLandscape,
-    isCompactLandscapeApp2
-  });
 
   const widths = [
     '2.2%',  // 1  #
@@ -4237,7 +4225,6 @@ function buildGrid(n) {
     '3.0%'   // 24 退
   ];
 
-  console.log('[WIDTHS CHECK]', widths);
 
   // colgroup 再生成
   const cg = document.createElement('colgroup');
@@ -4248,9 +4235,6 @@ function buildGrid(n) {
   });
   grid.insertBefore(cg, grid.firstChild);
 
-  console.log('[AFTER INSERT]', grid.outerHTML);
-  console.log('[AFTER INSERT COLGROUP]', grid.querySelector('colgroup'));
-  console.log('[COLGROUP CHECK]', grid.querySelector('colgroup')?.outerHTML);
 
   // ヘッダ再構築
   thead.innerHTML = '';
@@ -4358,47 +4342,63 @@ function buildGrid(n) {
 });
 }
 
-  // === 保存 ================================================================
-  function saveBulkGridState() {
-    const { grid } = getBulkDom();
-    if (!grid) return;
+// === 保存 ================================================================
+let bulkSaveTimer = 0;
+let lastBulkGridStateJson = '';
 
-    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+function saveBulkGridState() {
+  const { grid } = getBulkDom();
+  if (!grid) return;
 
-    const rows = mains.map(tr => {
-      const row = {
-        name: tr.querySelector('.bulk-name')?.value || '',
-        exp: tr.querySelector('.bulk-exp')?.checked || false,
-        send: tr.querySelector('.bulk-send')?.value || '',
-        nums: {},
-        bottles: []
-      };
+  const mains = [...grid.querySelectorAll('.bulk-mainrow')];
 
-      tr.querySelectorAll('[data-k]').forEach(el => {
-        const k = el.dataset.k;
-        if (el.type === 'checkbox') {
-          row.nums[k] = !!el.checked;
-        } else {
-          row.nums[k] = el.value || '';
-        }
-      });
+  const rows = mains.map(tr => {
+    const row = {
+      name: tr.querySelector('.bulk-name')?.value || '',
+      exp: tr.querySelector('.bulk-exp')?.checked || false,
+      send: tr.querySelector('.bulk-send')?.value || '',
+      nums: {},
+      bottles: []
+    };
 
-      let n = tr.nextElementSibling;
-      while (n && n.classList.contains('btl-subrow')) {
-        row.bottles.push({
-          detail: (typeof getSelectedDetail === 'function') ? (getSelectedDetail(n) || '') : '',
-          split: n.querySelector('.splitCount')?.value || '',
-          qty: n.querySelector('.bottleQuantity')?.value || '',
-          amount: n.querySelector('.bottleAmount')?.value || ''
-        });
-        n = n.nextElementSibling;
+    tr.querySelectorAll('[data-k]').forEach(el => {
+      const k = el.dataset.k;
+      if (el.type === 'checkbox') {
+        row.nums[k] = !!el.checked;
+      } else {
+        row.nums[k] = el.value || '';
       }
-
-      return row;
     });
 
-    localStorage.setItem(GRID_KEY, JSON.stringify(rows));
-  }
+    let n = tr.nextElementSibling;
+    while (n && n.classList.contains('btl-subrow')) {
+      row.bottles.push({
+        detail: (typeof getSelectedDetail === 'function') ? (getSelectedDetail(n) || '') : '',
+        split: n.querySelector('.splitCount')?.value || '',
+        qty: n.querySelector('.bottleQuantity')?.value || '',
+        amount: n.querySelector('.bottleAmount')?.value || ''
+      });
+      n = n.nextElementSibling;
+    }
+
+    return row;
+  });
+
+  const json = JSON.stringify(rows);
+
+  // 前回保存内容と同じなら localStorage に書かない
+  if (json === lastBulkGridStateJson) return;
+
+  lastBulkGridStateJson = json;
+  localStorage.setItem(GRID_KEY, json);
+}
+
+function scheduleSaveBulkGridState(delay = 120) {
+  clearTimeout(bulkSaveTimer);
+  bulkSaveTimer = setTimeout(() => {
+    saveBulkGridState();
+  }, delay);
+}
 
   window.saveBulkGridState = saveBulkGridState;
 
@@ -4492,6 +4492,13 @@ function restoreBulkGridState(forcedRowCount = null) {
   if (typeof window.applyApp2MobileView === 'function') {
     window.applyApp2MobileView();
   }
+
+  try {
+  lastBulkGridStateJson = localStorage.getItem(GRID_KEY) || '';
+} catch (_) {
+  lastBulkGridStateJson = '';
+}
+
 }
 
   // === メイン行→ボトル選択記憶 =============================================
@@ -4723,17 +4730,17 @@ function restoreBulkGridState(forcedRowCount = null) {
       }
     });
 
-    grid.addEventListener('input', e => {
-      if (e.target.closest('.bulk-mainrow, .btl-subrow')) {
-        saveBulkGridState();
-      }
-    });
+grid.addEventListener('input', e => {
+  if (e.target.closest('.bulk-mainrow, .btl-subrow')) {
+    scheduleSaveBulkGridState(120);
+  }
+});
 
-    grid.addEventListener('change', e => {
-      if (e.target.closest('.bulk-mainrow, .btl-subrow')) {
-        saveBulkGridState();
-      }
-    });
+grid.addEventListener('change', e => {
+  if (e.target.closest('.bulk-mainrow, .btl-subrow')) {
+    scheduleSaveBulkGridState(0);
+  }
+});
 
     window.addEventListener('resize', () => {
       if (typeof applyApp2MobileView === 'function') {
@@ -8179,32 +8186,22 @@ function initBulkRowsChangeHandler() {
   sel.addEventListener('change', () => {
     const nextN = parseInt(sel.value || '40', 10) || 40;
 
-    // 今の入力を保存
-    if (typeof saveBulkGridState === 'function') {
-      saveBulkGridState();
-    }
+    // 行数変更前だけは即保存
+    saveBulkGridState();
 
-    // restoreBulkGridState が内部で buildGrid(rowCount) を呼ぶので、
-    // ここで buildGrid(nextN) を先に呼ばない
     if (typeof restoreBulkGridState === 'function') {
       restoreBulkGridState(nextN);
     } else if (typeof buildGrid === 'function') {
       buildGrid(nextN);
     }
 
-    // UI更新
     const grid = document.getElementById('bulkGrid');
-
     if (typeof updateBulkFilledState === 'function') {
       updateBulkFilledState(grid);
     }
 
     if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
       window.applyReadonlyToBulkGridCustomKeypad();
-    }
-
-    if (typeof window.applyApp2MobileView === 'function') {
-      window.applyApp2MobileView();
     }
   });
 }
