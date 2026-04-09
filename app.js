@@ -898,11 +898,11 @@ function apply(targetId) {
     const on = t.dataset.target === targetId;
     t.classList.toggle('active', on);
     t.setAttribute('aria-selected', on ? 'true' : 'false');
-    if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', on ? '0' : '-1');
+    t.setAttribute('tabindex', on ? '0' : '-1');
     t.setAttribute('role', 'tab');
   });
 
-  // ここを追加：サブナビをJSで強制切替
+  // サブナビ切替
   const navMap = {
     app1: document.getElementById('app1-nav'),
     app2: document.getElementById('app2-nav'),
@@ -911,6 +911,7 @@ function apply(targetId) {
 
   Object.entries(navMap).forEach(([id, nav]) => {
     if (!nav) return;
+
     if (id === targetId) {
       nav.style.setProperty('display', 'flex', 'important');
       nav.hidden = false;
@@ -923,10 +924,62 @@ function apply(targetId) {
   });
 
   document.body.setAttribute('data-active-app', targetId);
-  try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
+  try {
+    localStorage.setItem('selectedTab', targetId);
+  } catch (e) {}
 
   // そのAPPの以前の位置へ復帰
   restoreY(targetId);
+
+  /* =====================================================
+     APP2を開いた直後に一括グリッドを再構築
+     初回だけ均等割り表示になる症状の対策
+  ===================================================== */
+  if (targetId === 'app2') {
+    requestAnimationFrame(() => {
+      const bulkRowsEl = document.getElementById('bulkRows');
+      const n = parseInt(bulkRowsEl?.value || '40', 10) || 40;
+
+      // 1回再構築
+      if (typeof buildGrid === 'function') {
+        buildGrid(n);
+      }
+
+      // 復元処理があるなら再適用
+      if (typeof restoreBulkGridState === 'function') {
+        restoreBulkGridState();
+      }
+
+      // モバイル表示調整があるなら再適用
+      if (typeof applyApp2MobileView === 'function') {
+        applyApp2MobileView();
+      }
+
+      // テンキー対象のreadOnly再適用
+      if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
+        applyReadonlyToBulkGridCustomKeypad();
+      }
+
+      // レイアウト確定後にもう1回だけ保険
+      requestAnimationFrame(() => {
+        if (typeof buildGrid === 'function') {
+          buildGrid(n);
+        }
+
+        if (typeof restoreBulkGridState === 'function') {
+          restoreBulkGridState();
+        }
+
+        if (typeof applyApp2MobileView === 'function') {
+          applyApp2MobileView();
+        }
+
+        if (typeof applyReadonlyToBulkGridCustomKeypad === 'function') {
+          applyReadonlyToBulkGridCustomKeypad();
+        }
+      });
+    });
+  }
 }
 
   // 外からも呼べるように
@@ -4180,7 +4233,7 @@ const isCompactLandscapeApp2 =
   const widths = isCompactLandscapeApp2
       //iPad Mini
     ? [
-        '300.3%',  // 1  #
+        '2.3%',  // 1  #
         '6.8%',  // 2  氏名
         '3.0%',  // 3  体/貸
         '7.5%',  // 4  送迎
