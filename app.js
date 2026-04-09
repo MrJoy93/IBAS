@@ -277,6 +277,7 @@ function installBulkCustomKeypad() {
   }
 
   let activeInput = null;
+  window.isCustomKeypadInput = false;
 
   function isTarget(el) {
     return el instanceof HTMLInputElement
@@ -343,10 +344,10 @@ function installBulkCustomKeypad() {
   }
 
   function hideKeypad() {
-    clearActiveState();
-    activeInput = null;
-    keypad.hidden = true;
-
+  clearActiveState();
+  activeInput = null;
+  keypad.hidden = true;
+  window.isCustomKeypadInput = false;
   }
 
   function setRawValue(input, raw) {
@@ -355,49 +356,55 @@ function installBulkCustomKeypad() {
   }
 
   function appendText(input, text) {
-    if (!input) return;
+  if (!input) return;
 
-    let raw = normalizeNumericString(input.value);
+  window.isCustomKeypadInput = true;
 
-    if (text === '00' || text === '000') {
-      if (raw === '' || raw === '-') {
-        raw = raw === '-' ? '-0' : '0';
-      }
-      raw += text;
-      setRawValue(input, raw);
-      return;
+  let raw = normalizeNumericString(input.value);
+
+  if (text === '00' || text === '000') {
+    if (raw === '' || raw === '-') {
+      raw = raw === '-' ? '-0' : '0';
     }
-
     raw += text;
-
-    if (!/^-?\d*$/.test(raw)) return;
-
     setRawValue(input, raw);
+    return;
+  }
+
+  raw += text;
+
+  if (!/^-?\d*$/.test(raw)) return;
+
+  setRawValue(input, raw);
   }
 
   function backspace(input) {
-    if (!input) return;
-    const raw = normalizeNumericString(input.value).slice(0, -1);
-    setRawValue(input, raw);
+   if (!input) return;
+  window.isCustomKeypadInput = true;
+  const raw = normalizeNumericString(input.value).slice(0, -1);
+   setRawValue(input, raw);
   }
 
   function clearValue(input) {
-    if (!input) return;
-    setRawValue(input, '');
+   if (!input) return;
+  window.isCustomKeypadInput = true;
+   setRawValue(input, '');
   }
 
   function toggleMinus(input) {
     if (!input) return;
 
-    let raw = normalizeNumericString(input.value);
+  window.isCustomKeypadInput = true;
 
-    if (raw.startsWith('-')) {
-      raw = raw.slice(1);
-    } else {
-      raw = '-' + raw;
-    }
+  let raw = normalizeNumericString(input.value);
 
-    setRawValue(input, raw);
+  if (raw.startsWith('-')) {
+    raw = raw.slice(1);
+  } else {
+    raw = '-' + raw;
+  }
+
+  setRawValue(input, raw);
   }
 
   function getTargetScope(input) {
@@ -703,8 +710,9 @@ function installBulkCustomKeypad() {
     }
 
     if (action === 'done') {
-      focusNextTarget(activeInput);
-    }
+  window.isCustomKeypadInput = false;
+  focusNextTarget(activeInput);
+  }
   });
 
   document.addEventListener('keydown', (e) => {
@@ -1121,14 +1129,20 @@ document.addEventListener('touchmove', function (e) {
 document.addEventListener('input', (e) => {
   const t = e.target;
   if (!t) return;
+
+  if (window.isCustomKeypadInput) return;
+
   if (t.closest('#app1') || t.closest('#app2') || t.closest('#app3')) {
-  scheduleApp3Update('input(app1/app2/app3)');
-}
+    scheduleApp3Update('input(app1/app2/app3)');
+  }
 }, true);
 
 document.addEventListener('change', (e) => {
   const t = e.target;
   if (!t) return;
+
+  if (window.isCustomKeypadInput) return;
+
   if (t.closest('#app1') || t.closest('#app2')) {
     scheduleApp3Update('change(app1/app2)');
   }
@@ -4165,31 +4179,31 @@ const isCompactLandscapeApp2 =
   // 24 : 退
   const widths = isCompactLandscapeApp2
     ? [
-        '3.0%',  // 1  #
-        '7.5%',  // 2  氏名
+        '2.3%',  // 1  #
+        '7.0%',  // 2  氏名
         '3.0%',  // 3  体/貸
-        '6.0%',  // 4  送迎
+        '7.0%',  // 4  送迎
 
         '3.2%',  // 5  2k
-        '3.2%',  // 6  F
-        '3.2%',  // 7  場内
-        '3.2%',  // 8  本指
-        '3.2%',  // 9  同伴
+        '3.5%',  // 6  F
+        '3.5%',  // 7  場内
+        '3.5%',  // 8  本指
+        '3.5%',  // 9  同伴
         '2.0%',  // 10 枝
-        '3.2%',  // 11 HE
-        '3.2%',  // 12 40
-        '3.2%',  // 13 20
-        '3.2%',  // 14 VIP
-        '3.2%',  // 15 A
-        '3.2%',  // 16 B
-        '3.2%',  // 17 C
-        '3.2%',  // 18 D
-        '3.2%',  // 19 E
+        '3.5%',  // 11 HE
+        '3.5%',  // 12 40
+        '3.5%',  // 13 20
+        '3.5%',  // 14 VIP
+        '3.5%',  // 15 A
+        '3.5%',  // 16 B
+        '3.5%',  // 17 C
+        '3.5%',  // 18 D
+        '3.5%',  // 19 E
 
         '12.0%', // 20 品名
         '3.0%',  // 21 割
         '3.0%',  // 22 数量
-        '10.0%',  // 23 金額
+        '9.0%',  // 23 金額
         '3.0%'   // 24 退
       ]
     : [

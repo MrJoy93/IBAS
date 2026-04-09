@@ -160,7 +160,10 @@ wrapAndSync("resetSearch",         { immediate:false });
 
 function attachAutosave(){
   ['input','change'].forEach(evt=>{
-    document.body.addEventListener(evt, scheduleAutosave, { capture:true });
+    document.body.addEventListener(evt, (e) => {
+      if (window.isCustomKeypadInput) return;
+      scheduleAutosave();
+    }, { capture:true });
   });
 }
 
