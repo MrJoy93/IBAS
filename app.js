@@ -4221,6 +4221,8 @@ function buildGrid(n) {
     '3.0%'   // 24 退
   ];
 
+  console.log('[WIDTHS CHECK]', widths);
+
   const cg = document.createElement('colgroup');
   widths.forEach(w => {
     const c = document.createElement('col');
@@ -4228,6 +4230,7 @@ function buildGrid(n) {
     cg.appendChild(c);
   });
   grid.insertBefore(cg, grid.firstChild);
+  console.log('[COLGROUP CHECK]', grid.querySelector('colgroup')?.outerHTML);
 
   // ヘッダ再構築
   thead.innerHTML = '';
