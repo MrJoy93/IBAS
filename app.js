@@ -4157,11 +4157,29 @@ function buildGrid(n) {
   const tbody = grid.querySelector('tbody');
   if (!thead || !tbody) return;
 
+  // ==================================================
+  // 毎回まっさらから組み直す
+  // ==================================================
+
+  // 古い colgroup を全部削除
+  grid.querySelectorAll('colgroup').forEach(el => el.remove());
+
+  // 以前の表示制御の残骸を消す
+  grid.querySelectorAll('thead th, tbody td, tbody tr').forEach(el => {
+    el.style.display = '';
+  });
+
+  // table の inline style を初期化
+  grid.style.tableLayout = '';
+  grid.style.width = '';
+  grid.style.borderCollapse = '';
+
+  const wrap = grid.closest('.bulk-grid-wrap');
+  if (wrap) wrap.style.overflowX = '';
 
   // --------------------------------------------------
-  // iPad系 実機の横向きだけ compact 扱い
-  // Safari実機では innerWidth が想定より広く出ることがあるので
-  // innerWidth 単独ではなく vw を作って判定する
+  // iPad系 実機の横向きだけ compact 判定ログ
+  // （今は widths 分岐には使っていない）
   // --------------------------------------------------
   const isIPadLike =
     /iPad/i.test(navigator.userAgent) ||
@@ -4192,7 +4210,7 @@ function buildGrid(n) {
 
   const widths = [
     '2.2%',  // 1  #
-    '18.0%',  // 2  氏名
+    '18.0%', // 2  氏名
     '3.2%',  // 3  体/貸
     '5.0%',  // 4  送迎
 
@@ -4212,7 +4230,7 @@ function buildGrid(n) {
     '3.2%',  // 18 D
     '3.2%',  // 19 E
 
-    '3.6%', // 20 品名
+    '3.6%',  // 20 品名
     '3.0%',  // 21 割
     '3.0%',  // 22 数量
     '10.0%', // 23 金額
@@ -4221,6 +4239,7 @@ function buildGrid(n) {
 
   console.log('[WIDTHS CHECK]', widths);
 
+  // colgroup 再生成
   const cg = document.createElement('colgroup');
   widths.forEach(w => {
     const c = document.createElement('col');
@@ -4228,6 +4247,7 @@ function buildGrid(n) {
     cg.appendChild(c);
   });
   grid.insertBefore(cg, grid.firstChild);
+
   console.log('[AFTER INSERT]', grid.outerHTML);
   console.log('[AFTER INSERT COLGROUP]', grid.querySelector('colgroup'));
   console.log('[COLGROUP CHECK]', grid.querySelector('colgroup')?.outerHTML);
@@ -4884,43 +4904,44 @@ function updateBottleAmountForRow(tr) {
 
 // === スマホ表示：氏名・体/貸・送迎 だけ表示（一本化） ==================
 (function(){
-  function applyApp2MobileView(){
-    const grid = document.getElementById('bulkGrid');
-    if (!grid || !grid.tHead || !grid.tBodies[0]) return;
+function applyApp2MobileView() {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid || !grid.tHead || !grid.tBodies[0]) return;
 
-    const isMobile = window.innerWidth <= 768;
+  const isMobile = window.innerWidth <= 768;
 
-    // ✅ モバイルでは colgroup を外して、隠した列の幅配分をリセット
-    const cg = grid.querySelector('colgroup');
-    if (isMobile && cg) cg.remove();
+  // モバイルだけ colgroup を外す
+  const cg = grid.querySelector('colgroup');
+  if (isMobile && cg) cg.remove();
 
-    // サブ行（ボトル行）はスマホで隠す
-    grid.querySelectorAll('tbody tr.btl-subrow')
-      .forEach(tr => tr.style.display = isMobile ? 'none' : '');
+  // サブ行（ボトル行）はスマホで隠す
+  grid.querySelectorAll('tbody tr.btl-subrow').forEach(tr => {
+    tr.style.display = isMobile ? 'none' : '';
+  });
 
-    const ths  = Array.from(grid.tHead.rows[0].cells || []);
-    const rows = Array.from(grid.tBodies[0].rows || []);
+  const ths = Array.from(grid.tHead.rows[0].cells || []);
+  const rows = Array.from(grid.tBodies[0].rows || []);
 
-    for (let i = 0; i < ths.length; i++){
-      const colIndex = i + 1; // 1-based
-      const show = !isMobile || (colIndex === 2 || colIndex === 3 || colIndex === 4);
+  for (let i = 0; i < ths.length; i++) {
+    const colIndex = i + 1; // 1-based
+    const show = !isMobile || (colIndex === 2 || colIndex === 3 || colIndex === 4);
 
-      if (ths[i]) ths[i].style.display = show ? 'table-cell' : 'none';
+    if (ths[i]) ths[i].style.display = show ? 'table-cell' : 'none';
 
-      rows.forEach(tr => {
-        if (tr.classList.contains('btl-subrow')) return;
-        const td = tr.cells[i];
-        if (td) td.style.display = show ? 'table-cell' : 'none';
-      });
-    }
-
-    // 見た目補助
-    const wrap = grid.closest('.bulk-grid-wrap');
-    if (wrap) wrap.style.overflowX = isMobile ? 'hidden' : '';
-    grid.style.tableLayout = 'fixed';
-    grid.style.width = '100%';
-    grid.style.borderCollapse = 'collapse';
+    rows.forEach(tr => {
+      if (tr.classList.contains('btl-subrow')) return;
+      const td = tr.cells[i];
+      if (td) td.style.display = show ? 'table-cell' : 'none';
+    });
   }
+
+  const wrap = grid.closest('.bulk-grid-wrap');
+  if (wrap) wrap.style.overflowX = isMobile ? 'hidden' : '';
+
+  grid.style.tableLayout = 'fixed';
+  grid.style.width = '100%';
+  grid.style.borderCollapse = 'collapse';
+}
 
   // グローバルに公開（buildGrid 直後でも呼べるように）
   window.applyApp2MobileView = applyApp2MobileView;
