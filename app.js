@@ -4230,6 +4230,8 @@ function buildGrid(n) {
     cg.appendChild(c);
   });
   grid.insertBefore(cg, grid.firstChild);
+  console.log('[AFTER INSERT]', grid.outerHTML);
+  console.log('[AFTER INSERT COLGROUP]', grid.querySelector('colgroup'));
   console.log('[COLGROUP CHECK]', grid.querySelector('colgroup')?.outerHTML);
 
   // ヘッダ再構築
