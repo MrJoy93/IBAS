@@ -1831,16 +1831,16 @@ body.bulk-wide #app2-sideNav {
 ========================================================= */
 body[data-active-app="app2"] #bulkGrid {
   table-layout: fixed !important;
-  width: 100% !important;
+  width: calc(100vw - 4px) !important;
+  margin-left: -2px !important;
   border-collapse: collapse !important;
   border-spacing: 0 !important;
   background: rgba(16, 24, 44, 0.96) !important;
 
-  /* 外枠 */
   border-top: 2px solid #00eaff !important;
-  border-left: 2px solid #00eaff !important;
-  border-right: 2px solid #00eaff !important;
   border-bottom: 2px solid #00eaff !important;
+  border-left: none !important;
+  border-right: none !important;
 
   box-shadow:
     0 0 10px rgba(0, 234, 255, 0.18),
