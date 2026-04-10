@@ -6,6 +6,8 @@ import {
   serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+let isApplyingRemote = false;
+
 /*** ←ここをコンソールの値で置き換え ***/
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -85,6 +87,8 @@ function subscribeRemote(key = monthKey()){
     const data = snap.data();
     if(data?.lastAuthor === CLIENT_ID) return;
 
+    isApplyingRemote = true;
+
     if (typeof window.applyApp1State === "function") {
       window.applyApp1State(data.app1 || {});
     }
@@ -94,12 +98,16 @@ function subscribeRemote(key = monthKey()){
     if (typeof window.applyApp3State === "function") {
       window.applyApp3State(data.app3 || {});
     }
+
+    isApplyingRemote = false;
   });
 }
 
 /*** ==== オートセーブ（デバウンス） ==== ***/
 let _saveTimer = null;
 function scheduleAutosave(){
+  if(isApplyingRemote) return;
+
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=> saveAllApps(monthKey()), 800);
 }
