@@ -232,7 +232,7 @@ function addComma(numStr) {
   return parseInt(val, 10).toLocaleString('ja-JP');
 }
 
-// APP2 一括入力グリッド専用 iPad自作テンキー
+// APP1 / APP2 / APP3 共通 iPad自作テンキー
 function installBulkCustomKeypad() {
   const keypad = document.getElementById('bulkCustomKeypad');
   const keypadTitle = document.getElementById('bulkCustomKeypadTitle');
@@ -282,12 +282,14 @@ function installBulkCustomKeypad() {
   let activeInput = null;
   window.isCustomKeypadInput = false;
 
-  function isTarget(el) {
-    return el instanceof HTMLInputElement
-      && el.classList.contains('bulk-custom-keypad-target')
-      && !el.disabled
-      && el.type !== 'hidden';
-  }
+function isTarget(el) {
+  return el instanceof HTMLInputElement
+    && el.classList.contains('bulk-custom-keypad-target')
+    && !el.disabled
+    && !el.hidden
+    && el.type !== 'hidden'
+    && el.offsetParent !== null;
+}
 
   function stripCommas(v) {
     return String(v ?? '').replace(/,/g, '');
@@ -301,20 +303,20 @@ function installBulkCustomKeypad() {
    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  function applyReadonlyToCustomKeypadTargets() {
-    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
+function applyReadonlyToCustomKeypadTargets() {
+  const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
 
+  inputs.forEach(input => {
+    if (input.disabled) return;
+    if (input.type === 'hidden') return;
 
-    inputs.forEach(input => {
-      if (input.disabled) return;
-      input.readOnly = true;
-      input.setAttribute('inputmode', 'none');
-      input.setAttribute('autocomplete', 'off');
-      input.setAttribute('autocapitalize', 'off');
-      input.setAttribute('spellcheck', 'false');
-    });
-  }
-
+    input.readOnly = true;
+    input.setAttribute('inputmode', 'none');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+  });
+}
   function getLabel(input) {
     return input.getAttribute('placeholder')
       || input.dataset.k
@@ -512,23 +514,27 @@ function installBulkCustomKeypad() {
       .filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
   }
 
-  function focusTargetInput(next) {
-    if (!next) return;
+function focusTargetInput(next) {
+  if (!next) return;
 
+  try {
+    next.focus({ preventScroll: true });
+  } catch (_) {
     try {
-      next.focus({ preventScroll: true });
-    } catch (_) {
-      try {
-        next.focus();
-      } catch (_) {}
-    }
-
-    showKeypad(next);
-
-    try {
-      next.blur();
+      next.focus();
     } catch (_) {}
   }
+
+  showKeypad(next);
+
+  requestAnimationFrame(() => {
+    ensureCustomKeypadTargetVisible(next);
+  });
+
+  try {
+    next.blur();
+  } catch (_) {}
+}
 
   function focusNextTarget(current) {
     const all = getScopedTargets(current);
