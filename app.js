@@ -849,7 +849,7 @@ function installBulkCustomKeypad() {
     e.preventDefault();
   });
 
-  window.applyReadonlyToBulkGridCustomKeypad = applyReadonlyToCustomKeypadTargets;
+  window.applyReadonlyToCustomKeypadTargets = applyReadonlyToCustomKeypadTargets;
 }
 
 
@@ -1373,8 +1373,29 @@ function createEmptyRow(number) {
   tr.innerHTML = `
     <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
     <td class="rowNumber" contenteditable="true">${number}</td>
-    <td><input class="table-number" type="text" inputmode="numeric" placeholder="卓番" oninput="updateTotals()" /></td>
-    <td><input class="honshi" type="text" inputmode="numeric" placeholder="本指" oninput="updateTotals()" /></td>
+
+    <td>
+      <input
+        class="table-number bulk-custom-keypad-target"
+        type="text"
+        inputmode="numeric"
+        pattern="\\d*"
+        placeholder="卓番"
+        oninput="updateTotals()"
+      />
+    </td>
+
+    <td>
+      <input
+        class="honshi bulk-custom-keypad-target"
+        type="text"
+        inputmode="numeric"
+        pattern="\\d*"
+        placeholder="本指"
+        oninput="updateTotals()"
+      />
+    </td>
+
     <td>
       <select class="c" oninput="updateRowColor(this); updateTotals()">
         <option value="">-</option>
@@ -1395,11 +1416,58 @@ function createEmptyRow(number) {
         <option value="Z">Z</option>
       </select>
     </td>
-    <td><input class="amount" type="text" inputmode="numeric" placeholder="金額" oninput="updateTotals()" /></td>
-    <td><input class="num" type="text" inputmode="numeric" placeholder="人数" oninput="updateTotals()" /></td>
-    <td><input class="detail" type="text" placeholder="詳細" /></td>
-    <td><input class="card" type="text" inputmode="numeric" placeholder="カード" oninput="updateTotals()" /></td>
-    <td><input class="total" type="text" inputmode="numeric" placeholder="総合計" oninput="updateTotals()" /></td>
+
+    <td>
+      <input
+        class="amount bulk-custom-keypad-target"
+        type="text"
+        inputmode="numeric"
+        pattern="\\d*"
+        placeholder="金額"
+        oninput="updateTotals()"
+      />
+    </td>
+
+    <td>
+      <input
+        class="num bulk-custom-keypad-target"
+        type="text"
+        inputmode="numeric"
+        pattern="\\d*"
+        placeholder="人数"
+        oninput="updateTotals()"
+      />
+    </td>
+
+    <td>
+      <input
+        class="detail"
+        type="text"
+        placeholder="詳細"
+      />
+    </td>
+
+    <td>
+      <input
+        class="card bulk-custom-keypad-target"
+        type="text"
+        inputmode="numeric"
+        pattern="\\d*"
+        placeholder="カード"
+        oninput="updateTotals()"
+      />
+    </td>
+
+    <td>
+      <input
+        class="total bulk-custom-keypad-target"
+        type="text"
+        inputmode="numeric"
+        pattern="\\d*"
+        placeholder="総合計"
+        oninput="updateTotals()"
+      />
+    </td>
   `;
   return tr;
 }
@@ -1576,7 +1644,11 @@ function addRow() {
   attachCommaFormatApp1and3();
   saveForm();
 
-  // ここで番号の「振り直し」はしない or 下の改造版 renumberRows を呼ぶ
+  // 追加行にも自作テンキー用 readonly / inputmode=none を反映
+if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+  window.applyReadonlyToCustomKeypadTargets();
+}
+
   // renumberRows();
 }
 
