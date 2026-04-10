@@ -329,9 +329,81 @@ function installBulkCustomKeypad() {
       .forEach(el => el.classList.remove('bulk-custom-keypad-active'));
   }
 
-  function showKeypad(input) {
+    function getKeypadSafeTop() {
+    const tabsH = _pxVar('--tabs-h', 56);
+    const subH = _currentSubnavH();
+    return Math.round(tabsH + subH + 12);
+  }
+
+  function getKeypadSafeBottom() {
+    const keypadRect = keypad && !keypad.hidden
+      ? keypad.getBoundingClientRect()
+      : { height: 0 };
+
+    const bottomGap = 12;
+    const safeBottom = window.innerHeight - (keypadRect.height || 0) - bottomGap;
+
+    // 念のため、上端より極端に狭くならないようにする
+    return Math.max(getKeypadSafeTop() + 80, Math.round(safeBottom));
+  }
+
+  function scrollBulkGridWrapToInput(input) {
+    const wrap = input?.closest('.bulk-grid-wrap');
+    if (!wrap) return;
+
+    const inputRect = input.getBoundingClientRect();
+    const wrapRect  = wrap.getBoundingClientRect();
+
+    const safeTop = Math.max(wrapRect.top, getKeypadSafeTop());
+    const safeBottom = Math.min(wrapRect.bottom, getKeypadSafeBottom());
+
+    const margin = 10;
+
+    if (inputRect.bottom > safeBottom - margin) {
+      wrap.scrollTop += (inputRect.bottom - (safeBottom - margin));
+    } else if (inputRect.top < safeTop + margin) {
+      wrap.scrollTop -= ((safeTop + margin) - inputRect.top);
+    }
+  }
+
+  function scrollWindowToInput(input) {
+    const rect = input.getBoundingClientRect();
+    const safeTop = getKeypadSafeTop();
+    const safeBottom = getKeypadSafeBottom();
+    const margin = 10;
+
+    if (rect.bottom > safeBottom - margin) {
+      window.scrollBy({
+        top: rect.bottom - (safeBottom - margin),
+        behavior: 'smooth'
+      });
+      return;
+    }
+
+    if (rect.top < safeTop + margin) {
+      window.scrollBy({
+        top: rect.top - (safeTop + margin),
+        behavior: 'smooth'
+      });
+    }
+  }
+
+  function ensureCustomKeypadTargetVisible(input) {
     if (!input) return;
 
+    // まずグリッド内スクロールを合わせる
+    if (input.closest('#bulkGrid')) {
+      scrollBulkGridWrapToInput(input);
+    }
+
+    // その後にページ全体のスクロールも補正
+    requestAnimationFrame(() => {
+      scrollWindowToInput(input);
+    });
+  }
+
+  function showKeypad(input) {
+    if (!input) return;
 
     clearActiveState();
 
@@ -344,6 +416,11 @@ function installBulkCustomKeypad() {
 
     keypad.hidden = false;
 
+    // テンキー表示後に、対象入力欄が
+    // 固定ヘッダと固定テンキーに隠れない位置まで追従スクロール
+    requestAnimationFrame(() => {
+      ensureCustomKeypadTargetVisible(activeInput);
+    });
   }
 
   function hideKeypad() {
@@ -437,7 +514,20 @@ function installBulkCustomKeypad() {
 
   function focusTargetInput(next) {
     if (!next) return;
+
+    try {
+      next.focus({ preventScroll: true });
+    } catch (_) {
+      try {
+        next.focus();
+      } catch (_) {}
+    }
+
     showKeypad(next);
+
+    try {
+      next.blur();
+    } catch (_) {}
   }
 
   function focusNextTarget(current) {
@@ -447,7 +537,7 @@ function installBulkCustomKeypad() {
 
     const next = all[idx + 1];
     if (next) {
-      showKeypad(next);
+      focusTargetInput(next);
     } else {
       hideKeypad();
     }
@@ -1895,7 +1985,6 @@ function collectApp2State() {
     }
   };
 
-  // 1) id付きフォーム項目
   document.querySelectorAll('#app2 input[id], #app2 select[id], #app2 textarea[id]').forEach(el => {
     const id = el.id;
     if (!id) return;
@@ -1907,7 +1996,6 @@ function collectApp2State() {
     }
   });
 
-  // 2) 個別ボトルフォーム
   document.querySelectorAll('#bottleFormsContainer .bottle-form').forEach(form => {
     const detail = (typeof getSelectedDetail === 'function') ? (getSelectedDetail(form) || '') : '';
     const split  = form.querySelector('.splitCount')?.value || '';
@@ -1924,12 +2012,10 @@ function collectApp2State() {
     });
   });
 
-  // 3) 履歴HTML
   state.historyHtml = document.getElementById('app2-historySection')?.innerHTML || '';
 
-  // 4) 一括入力グリッド
-  if (typeof collectBulkGridStateForSync === 'function') {
-    state.bulkGrid = collectBulkGridStateForSync();
+  if (typeof window.collectBulkGridStateForSync === 'function') {
+    state.bulkGrid = window.collectBulkGridStateForSync();
   }
 
   return state;
@@ -1955,7 +2041,6 @@ async function applyApp2State(state) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  // 1) id付きフィールド復元
   Object.entries(fields).forEach(([id, v]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1967,7 +2052,6 @@ async function applyApp2State(state) {
     }
   });
 
-  // 2) 個別ボトルフォーム復元
   const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
 
   forms.forEach(f => {
@@ -2009,18 +2093,15 @@ async function applyApp2State(state) {
     setVal(f.querySelector('.bottleAmount'), src.amount || '', 'input');
   });
 
-  // 3) 履歴復元
   const historySection = document.getElementById('app2-historySection');
   if (historySection && typeof historyHtml === 'string') {
     historySection.innerHTML = historyHtml;
   }
 
-  // 4) 一括入力グリッド復元
-  if (typeof applyBulkGridStateFromSync === 'function') {
-    await applyBulkGridStateFromSync(bulkGrid);
+  if (typeof window.applyBulkGridStateFromSync === 'function') {
+    await window.applyBulkGridStateFromSync(bulkGrid);
   }
 
-  // 5) 補助処理
   if (typeof refreshBottleDropdownsFromHistory === 'function') {
     refreshBottleDropdownsFromHistory();
   }

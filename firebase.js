@@ -79,18 +79,21 @@ async function saveAllApps(key = monthKey()){
 }
 
 /* 他端末からの更新を受け取り反映（自端末の直後の書き込みはスキップ） */
-function subscribeRemote(key = monthKey()){
-  return onSnapshot(docRefFor(key), snap=>{
-    if(!snap.exists()) return;
+function subscribeRemote(key = monthKey()) {
+  return onSnapshot(docRefFor(key), async snap => {
+    if (!snap.exists()) return;
+
     const data = snap.data();
-    if(data?.lastAuthor === CLIENT_ID) return;
+    if (data?.lastAuthor === CLIENT_ID) return;
 
     if (typeof window.applyApp1State === "function") {
       window.applyApp1State(data.app1 || {});
     }
+
     if (typeof window.applyApp2State === "function") {
-      window.applyApp2State(data.app2 || {});
+      await window.applyApp2State(data.app2 || {});
     }
+
     if (typeof window.applyApp3State === "function") {
       window.applyApp3State(data.app3 || {});
     }
@@ -164,10 +167,8 @@ function attachAutosave() {
       const t = e.target;
       if (!(t instanceof HTMLElement)) return;
 
-      // APP1 / APP2 / APP3 の入力だけを対象
       if (!t.closest('#app1, #app2, #app3')) return;
 
-      // 自作テンキー入力中でも保存する
       scheduleAutosave();
     }, { capture: true });
   });
