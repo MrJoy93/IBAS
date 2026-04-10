@@ -240,33 +240,26 @@ function installBulkCustomKeypad() {
   // ===== 端末判定 =====
   // PCでは無効
   // タッチ主体端末（iPhone / iPad / Android / Surfaceタブレット系）でのみ有効
-function isCustomKeypadDevice() {
-  const ua = navigator.userAgent || '';
+  function isCustomKeypadDevice() {
+    const ua = navigator.userAgent || '';
+    const isIOS =
+      /iPhone|iPad|iPod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // iPadOS が MacIntel として見える対策
-  const isIPadOS =
-    navigator.platform === 'MacIntel' &&
-    navigator.maxTouchPoints > 1;
+    const isAndroid = /Android/i.test(ua);
 
-  const isIPhone = /iPhone/i.test(ua);
-  const isIPad   = /iPad/i.test(ua) || isIPadOS;
-  const isIPod   = /iPod/i.test(ua);
-  const isIOS    = isIPhone || isIPad || isIPod;
+    const hasTouch =
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0);
 
-  const isAndroid = /Android/i.test(ua);
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const desktopWidth = window.matchMedia('(min-width: 1024px)').matches;
 
-  // Windows / Mac / Linux / DevTools エミュレーション系では無効
-  const isWindows = /Windows/i.test(ua);
-  const isMac     = /Macintosh|Mac OS X/i.test(ua) && !isIPadOS;
-  const isLinux   = /Linux/i.test(ua) && !isAndroid;
+    // 「PC幅かつマウス主体」は無効
+    if (desktopWidth && !coarsePointer) return false;
 
-  if (isWindows || isMac || isLinux) {
-    return false;
+    return isIOS || isAndroid || (hasTouch && coarsePointer);
   }
-
-  // 実機モバイルだけ有効
-  return isIOS || isAndroid;
-}
 
   const isMobileLike = isCustomKeypadDevice();
 
@@ -308,22 +301,19 @@ function isCustomKeypadDevice() {
    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-function applyReadonlyToCustomKeypadTargets() {
-  const inputs = document.querySelectorAll(
-    '#bulkGrid input.bulk-custom-keypad-target, ' +
-    '#app1 input.bulk-custom-keypad-target, ' +
-    '#app3 input.bulk-custom-keypad-target'
-  );
+  function applyReadonlyToCustomKeypadTargets() {
+    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
 
-  inputs.forEach(input => {
-    if (input.disabled) return;
-    input.readOnly = true;
-    input.setAttribute('inputmode', 'none');
-    input.setAttribute('autocomplete', 'off');
-    input.setAttribute('autocapitalize', 'off');
-    input.setAttribute('spellcheck', 'false');
-  });
-}
+
+    inputs.forEach(input => {
+      if (input.disabled) return;
+      input.readOnly = true;
+      input.setAttribute('inputmode', 'none');
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+    });
+  }
 
   function getLabel(input) {
     return input.getAttribute('placeholder')
@@ -425,7 +415,6 @@ function applyReadonlyToCustomKeypadTargets() {
     }
 
     keypad.hidden = false;
-    keypad.style.display = 'block';
 
     // テンキー表示後に、対象入力欄が
     // 固定ヘッダと固定テンキーに隠れない位置まで追従スクロール
@@ -434,13 +423,12 @@ function applyReadonlyToCustomKeypadTargets() {
     });
   }
 
-function hideKeypad() {
+  function hideKeypad() {
   clearActiveState();
   activeInput = null;
   keypad.hidden = true;
-  keypad.style.display = 'none';
   window.isCustomKeypadInput = false;
-}
+  }
 
   function setRawValue(input, raw) {
     input.value = raw;
@@ -733,7 +721,7 @@ function hideKeypad() {
 
   applyReadonlyToCustomKeypadTargets();
 
-document.addEventListener('pointerdown', (e) => {
+  document.addEventListener('touchstart', (e) => {
   const target = e.target;
 
   if (isTarget(target)) {
@@ -742,14 +730,15 @@ document.addEventListener('pointerdown', (e) => {
     return;
   }
 
-  if (keypad && keypad.contains(target)) {
+  if (keypad.contains(target)) {
     return;
   }
 
   hideKeypad();
-}, {
-  capture: true
-});
+  }, {
+  capture: true,
+  passive: false
+  });
 
   document.addEventListener('focusin', (e) => {
     const target = e.target;
@@ -765,60 +754,59 @@ document.addEventListener('pointerdown', (e) => {
     } catch (_) {}
   });
 
-keypad.addEventListener('pointerdown', (e) => {
-  const btn = e.target.closest('button');
-  if (!btn || !activeInput) return;
+  keypad.addEventListener('touchstart', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || !activeInput) return;
 
-  e.preventDefault();
+    const key = btn.dataset.key;
+    const action = btn.dataset.action;
 
-  const key = btn.dataset.key;
-  const action = btn.dataset.action;
 
-  if (key != null) {
-    appendText(activeInput, key);
-    return;
+    if (key != null) {
+      appendText(activeInput, key);
+      return;
+    }
+
+    if (action === 'backspace') {
+      backspace(activeInput);
+      return;
+    }
+
+    if (action === 'clear') {
+      clearValue(activeInput);
+      return;
+    }
+
+    if (action === 'minus') {
+      toggleMinus(activeInput);
+      return;
+    }
+
+    if (action === 'moveUp') {
+      moveVertical(activeInput, 'up');
+      return;
+    }
+
+    if (action === 'moveDown') {
+      moveVertical(activeInput, 'down');
+      return;
+    }
+
+    if (action === 'moveLeft') {
+      moveHorizontal(activeInput, 'left');
+      return;
+    }
+
+    if (action === 'moveRight') {
+      moveHorizontal(activeInput, 'right');
+      return;
+    }
+
+    if (action === 'done') {
+  window.isCustomKeypadInput = false;
+  focusNextTarget(activeInput);
   }
-
-  if (action === 'backspace') {
-    backspace(activeInput);
-    return;
-  }
-
-  if (action === 'clear') {
-    clearValue(activeInput);
-    return;
-  }
-
-  if (action === 'minus') {
-    toggleMinus(activeInput);
-    return;
-  }
-
-  if (action === 'moveUp') {
-    moveVertical(activeInput, 'up');
-    return;
-  }
-
-  if (action === 'moveDown') {
-    moveVertical(activeInput, 'down');
-    return;
-  }
-
-  if (action === 'moveLeft') {
-    moveHorizontal(activeInput, 'left');
-    return;
-  }
-
-  if (action === 'moveRight') {
-    moveHorizontal(activeInput, 'right');
-    return;
-  }
-
-  if (action === 'done') {
-    window.isCustomKeypadInput = false;
-    focusNextTarget(activeInput);
-  }
-});
+  });
 
   document.addEventListener('keydown', (e) => {
     if (!activeInput) return;
