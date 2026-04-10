@@ -2158,61 +2158,6 @@ function collectBulkGridStateForSync() {
   return { rows };
 }
 
-function applyBulkGridStateFromSync(state) {
-  const { grid, sel } = getBulkDom();
-  if (!grid || !state || !Array.isArray(state.rows)) return;
-
-  const rowCount = state.rows.length || parseInt(sel?.value || '10', 10) || 10;
-
-  if (sel) {
-    sel.value = String(rowCount);
-  }
-
-  if (typeof buildGrid === 'function') {
-    buildGrid(rowCount);
-  }
-
-  const mainRows = [...grid.querySelectorAll('.bulk-mainrow')];
-
-  state.rows.forEach((row, index) => {
-    const tr = mainRows[index];
-    if (!tr) return;
-
-    const nameEl = tr.querySelector('.bulk-name');
-    const expEl  = tr.querySelector('.bulk-exp');
-    const sendEl = tr.querySelector('.bulk-send');
-
-    if (nameEl) nameEl.value = row.name || '';
-    if (expEl)  expEl.checked = !!row.exp;
-    if (sendEl) sendEl.value = row.send || '';
-
-    if (row.nums && typeof row.nums === 'object') {
-      tr.querySelectorAll('[data-k]').forEach(el => {
-        const k = el.dataset.k;
-        if (!k || !(k in row.nums)) return;
-
-        if (el.type === 'checkbox') {
-          el.checked = !!row.nums[k];
-        } else {
-          el.value = row.nums[k] || '';
-        }
-      });
-    }
-
-    if (Array.isArray(row.bottles) && row.bottles.length) {
-      row.bottles.forEach(b => {
-        if (typeof addBottleRowToBulk === 'function') {
-          addBottleRowToBulk(tr, b);
-        }
-      });
-    }
-  });
-
-  if (typeof updateBulkFilledState === 'function') {
-    updateBulkFilledState(grid);
-  }
-}
-
 // ★ ここを必ず追加
 window.collectBulkGridStateForSync = collectBulkGridStateForSync;
 window.applyBulkGridStateFromSync = applyBulkGridStateFromSync;
