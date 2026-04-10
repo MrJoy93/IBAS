@@ -10,18 +10,20 @@ let isApplyingRemote = false;
 
 /*** ←ここをコンソールの値で置き換え ***/
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  apiKey: "AIzaSyAvTWoZRREx4ywOsXjNLJs3Bb06Ul_K8EE",
+  authDomain: "ibasdbeta.firebaseapp.com",
   projectId: "ibasdbeta",
   storageBucket: "ibasdbeta.firebasestorage.app",
   messagingSenderId: "317393843615",
-  appId: "1:317393843615:web:xxxxxxxxxxxxxxxx",
-  measurementId: "G-XXXXXXXXXX"
+  appId: "1:317393843615:web:a88b926baf5b1f283c39aa",
+  measurementId: "G-TBDKMD0WQ0"
 };
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-enableIndexedDbPersistence(db).catch(()=>{ /* 複数タブ時などは無視でOK */ });
+enableIndexedDbPersistence(db).catch((err) => {
+  console.warn("[Firebase] IndexedDB persistence failed:", err?.code, err);
+});
 
 /*** Firestore パス設計 ***/
 const COLLECTION = "IBAS";
@@ -68,17 +70,33 @@ async function loadAllApps(key = monthKey()){
 async function saveAllApps(key = monthKey()){
   _showSaving();
 
-  const payload = {
-    app1: (typeof window.collectApp1State === "function") ? window.collectApp1State() : {},
-    app2: (typeof window.collectApp2State === "function") ? window.collectApp2State() : {},
-    app3: (typeof window.collectApp3State === "function") ? window.collectApp3State() : {},
-    updatedAt: serverTimestamp(),
-    lastAuthor: CLIENT_ID
-  };
+  try {
+    const payload = {
+      app1: (typeof window.collectApp1State === "function") ? window.collectApp1State() : {},
+      app2: (typeof window.collectApp2State === "function") ? window.collectApp2State() : {},
+      app3: (typeof window.collectApp3State === "function") ? window.collectApp3State() : {},
+      updatedAt: serverTimestamp(),
+      lastAuthor: CLIENT_ID
+    };
 
-  await setDoc(docRefFor(key), payload, { merge:true });
-  _saved();
+    await setDoc(docRefFor(key), payload, { merge:true });
+    _saved();
+  } catch (err) {
+    console.error("[Firebase saveAllApps] 保存失敗:", err);
+
+    ensureIndicator();
+    const el = document.getElementById("syncIndicator");
+    if (el) {
+      el.style.display = "block";
+      el.textContent = "保存失敗";
+      setTimeout(() => {
+        el.style.display = "none";
+      }, 2000);
+    }
+  }
 }
+
+
 
 /* 他端末からの更新を受け取り反映（自端末の直後の書き込みはスキップ） */
 function subscribeRemote(key = monthKey()) {
@@ -113,10 +131,11 @@ function subscribeRemote(key = monthKey()) {
 /*** ==== オートセーブ（デバウンス） ==== ***/
 let _saveTimer = null;
 function scheduleAutosave(){
-  if(isApplyingRemote) return;
+  if (isApplyingRemote) return;
+  if (window._isApplyingBulkGridSync) return;
 
-  if(_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(()=> saveAllApps(monthKey()), 800);
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => saveAllApps(monthKey()), 800);
 }
 
 // ===== 同期ヘルパ =====

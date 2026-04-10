@@ -2025,6 +2025,17 @@ window.applyApp1State   = applyApp1State;
 // 4-6. calculate / confirmAndCalculate
 // 4-7. APP2 ナビゲーション・十字キー
 
+function getBulkDom(){
+  return {
+    panel: document.getElementById('bulkPanel'),
+    toggle: document.getElementById('toggleBulkInput'),
+    sel: document.getElementById('bulkRows'),
+    clearBt: document.getElementById('bulkClear'),
+    regBt: document.getElementById('bulkRegister'),
+    grid: document.getElementById('bulkGrid')
+  };
+}
+
 // ===== app2 履歴のローカル状態 =====
 let app2History = [];
 
