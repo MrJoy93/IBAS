@@ -1623,44 +1623,66 @@ function resetSearch() {
 
 function addRow() {
   const table = document.getElementById("formRows");
+  if (!table) return;
 
   // ① 現在の伝票番号の最大値を取得
   const cells = table.querySelectorAll('.rowNumber');
   let maxNo = 0;
+
   cells.forEach(cell => {
     const raw = (cell.textContent || '').trim();
     const v = parseInt(raw, 10);
     if (!Number.isNaN(v) && v > maxNo) maxNo = v;
   });
+
   const nextNo = maxNo + 1;
 
   // ② 最大値+1 で行を生成
   const newRow = createEmptyRow(nextNo);
   table.appendChild(newRow);
 
-  // 以降は元の処理そのまま
+  // ③ 見た目・スクロール
   requestAnimationFrame(() => newRow.classList.add('slide-in'));
-  newRow.addEventListener('animationend', () => newRow.classList.remove('slide-in'));
+  newRow.addEventListener('animationend', () => {
+    newRow.classList.remove('slide-in');
+  }, { once: true });
 
   const rect = newRow.getBoundingClientRect();
   const offset = 155;
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  window.scrollTo({ top: rect.top + scrollTop - offset, behavior: 'smooth' });
 
+  window.scrollTo({
+    top: rect.top + scrollTop - offset,
+    behavior: 'smooth'
+  });
+
+  // ④ 既存処理
   attachCommaFormatApp1and3();
+  renumberRows();
   saveForm();
 
-  // 追加行にも自作テンキー用 readonly / inputmode=none を反映
-if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
-  window.applyReadonlyToCustomKeypadTargets();
-}
+  if (typeof updateTotals === 'function') {
+    updateTotals();
+  }
 
-  // renumberRows();
+  // 追加行にも自作テンキー用 readonly / inputmode=none を反映
+  if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+    window.applyReadonlyToCustomKeypadTargets();
+  }
+
+  // ⑤ Firebase にも即反映
+  if (typeof window.saveAllApps === 'function') {
+    Promise.resolve(window.saveAllApps()).catch(err => {
+      console.error('[APP1 addRow sync]', err);
+    });
+  }
 }
 
 function deleteRow(button) {
   const row = button.closest('tr');
   const formRows = document.getElementById('formRows');
+
+  if (!row || !formRows) return;
 
   if (formRows.rows.length <= 1) {
     alert("これ以上削除できません");
@@ -1673,17 +1695,34 @@ function deleteRow(button) {
 
     // アニメーション終了後にDOMから削除
     row.addEventListener('animationend', function onAnimEnd() {
-      row.removeEventListener('animationend', onAnimEnd); // 多重登録防止
-      formRows.removeChild(row);
+      row.removeEventListener('animationend', onAnimEnd);
+
+      if (row.parentNode === formRows) {
+        formRows.removeChild(row);
+      }
+
       renumberRows();
-      updateTotals();
+
+      if (typeof updateTotals === 'function') {
+        updateTotals();
+      }
+
       saveForm();
-    });
+
+      // Firebase にも即反映
+      if (typeof window.saveAllApps === 'function') {
+        Promise.resolve(window.saveAllApps()).catch(err => {
+          console.error('[APP1 deleteRow sync]', err);
+        });
+      }
+    }, { once: true });
   }
 }
 
 function sortRowsByNumber() {
   const tbody = document.getElementById("formRows");
+  if (!tbody) return;
+
   const rows = Array.from(tbody.querySelectorAll("tr"));
 
   // 並び替え基準取得（数字として比較）
@@ -1694,23 +1733,32 @@ function sortRowsByNumber() {
     const isNaA = Number.isNaN(aVal);
     const isNaB = Number.isNaN(bVal);
 
-    if (isNaA && isNaB) return 0; // 両方不明→そのまま
-    if (isNaA) return 1; // 数字じゃない行は後ろ
+    if (isNaA && isNaB) return 0;
+    if (isNaA) return 1;
     if (isNaB) return -1;
 
-    return aVal - bVal; // 数値昇順
+    return aVal - bVal;
   });
 
   // tbodyへ再配置
   rows.forEach(row => tbody.appendChild(row));
 
-  // 保存（戻るボタンでも復元される仕様）
+  renumberRows();
   saveForm();
 
-  // 視覚フィードバック
-  flashSorted();
-}
+  if (typeof updateTotals === 'function') {
+    updateTotals();
+  }
 
+  flashSorted();
+
+  // Firebase にも即反映
+  if (typeof window.saveAllApps === 'function') {
+    Promise.resolve(window.saveAllApps()).catch(err => {
+      console.error('[APP1 sortRowsByNumber sync]', err);
+    });
+  }
+}
 function renumberRows() {
   const table = document.getElementById("formRows");
   const cells = table.querySelectorAll(".rowNumber");
@@ -4818,14 +4866,42 @@ async function applyBulkGridStateFromSync(state) {
         });
       }
 
+      // 追加ボトル行を復元
       if (Array.isArray(row.bottles) && row.bottles.length) {
         row.bottles.forEach(b => {
-          if (typeof addBottleRowToBulk === 'function') {
-            try {
-              addBottleRowToBulk(tr, b);
-            } catch (err) {
-              console.error('[APP2 bulkGrid] addBottleRowToBulk failed:', err, b);
+          try {
+            if (typeof addBottleSubrow !== 'function') return;
+
+            const sub = addBottleSubrow(tr);
+            if (!sub) return;
+
+            const detailSelect = sub.querySelector('.bottleDetails');
+            const splitEl = sub.querySelector('.splitCount');
+            const qtyEl = sub.querySelector('.bottleQuantity');
+            const amountEl = sub.querySelector('.bottleAmount');
+
+            const detail = b.detail ?? b.details ?? '';
+            const split = b.split ?? b.splitCount ?? '';
+            const qty = b.qty ?? b.quantity ?? b.bottleQuantity ?? '';
+            const amount = b.amount ?? b.bottleAmount ?? '';
+
+            if (detailSelect) {
+              if (typeof setBottleDetailValue === 'function') {
+                setBottleDetailValue(detailSelect, detail);
+              } else {
+                detailSelect.value = detail;
+              }
             }
+
+            if (splitEl) splitEl.value = split || '';
+            if (qtyEl) qtyEl.value = qty || '';
+            if (amountEl) amountEl.value = amount || '';
+
+            if (typeof updateBottleAmountForRow === 'function') {
+              updateBottleAmountForRow(sub);
+            }
+          } catch (err) {
+            console.error('[APP2 bulkGrid] bottle restore failed:', err, b);
           }
         });
       }
@@ -5051,7 +5127,7 @@ function restoreBulkGridState(forcedRowCount = null) {
     const rows = mains.map(m => {
       const nums = {};
 
-      nums.f = !!m.querySelector('[data-k="f"]')?.checked;
+      nums['2k'] = !!m.querySelector('[data-k="2k"]')?.checked;
       nums.f2 = parseInt(m.querySelector('[data-k="f2"]')?.value || '0', 10) || 0;
 
       [
@@ -5106,7 +5182,7 @@ function restoreBulkGridState(forcedRowCount = null) {
       setChecked('experienceAndRental', r.exp);
       setValue('sendoffAmount', r.send);
 
-      setChecked('f', !!r.nums.f);
+      setChecked('f', !!(r.nums['2k'] ?? r.nums.f));
       setValue('f2', r.nums.f2 || '');
 
       [
@@ -5156,140 +5232,181 @@ function restoreBulkGridState(forcedRowCount = null) {
   }
 
   // === 初期化 ==============================================================
-  document.addEventListener('DOMContentLoaded', () => {
-    const { panel, toggle, sel, clearBt, regBt, grid } = getBulkDom();
-    if (!panel || !grid) return;
+document.addEventListener('DOMContentLoaded', () => {
+  const { panel, toggle, sel, clearBt, regBt, grid } = getBulkDom();
+  if (!panel || !grid) return;
 
-    // 常時表示
-    panel.hidden = false;
-    document.body.classList.add('bulk-wide');
-    savePanelState(true);
+  // 常時表示
+  panel.hidden = false;
+  document.body.classList.add('bulk-wide');
+  savePanelState(true);
 
-    // 行数決定
-    const initialRows = parseInt(sel?.value || '40', 10) || 40;
+  // 行数決定
+  const initialRows = parseInt(sel?.value || '40', 10) || 40;
 
-    // 保存データがあれば復元、なければ新規生成
-    if (localStorage.getItem(GRID_KEY)) {
-      restoreBulkGridState();
-    } else {
-      buildGrid(initialRows);
-    }
-
-    // 旧トグルが残っていても、常時表示運用なので隠すだけにする
-    if (toggle) {
-      toggle.style.display = 'none';
-    }
-
-    clearBt?.addEventListener('click', () => {
-      document.querySelectorAll('.bulk-num, .bulk-name, .bulk-send, .splitCount, .bottleQuantity, .bottleAmount')
-        .forEach(e => { e.value = ''; });
-
-      document.querySelectorAll('.bulk-exp, .bulk-2k')
-        .forEach(e => { e.checked = false; });
-
-      document.querySelectorAll('.btl-subrow')
-        .forEach(e => e.remove());
-
-      document.querySelectorAll('.bulk-mainrow .btl-minus')
-        .forEach(btn => { btn.disabled = true; });
-
-      localStorage.removeItem(GRID_KEY);
-      buildGrid(parseInt(sel?.value || '40', 10) || 40);
-    });
-
-    regBt?.addEventListener('click', bulkRegister);
-    sel?.addEventListener('change', () => {
-  const n = parseInt(sel.value || '40', 10) || 40;
-  saveBulkGridState();
-  restoreBulkGridState(n);
-});
-
-    grid.addEventListener('click', e => {
-      let main = e.target.closest('tr.bulk-mainrow');
-
-      if (!main) {
-        const sub = e.target.closest('tr.btl-subrow');
-        if (sub) {
-          let prev = sub.previousElementSibling;
-          while (prev && !prev.classList.contains('bulk-mainrow')) {
-            prev = prev.previousElementSibling;
-          }
-          main = prev;
-        }
-      }
-
-      if (!main) return;
-
-      if (e.target.closest('.btl-plus')) {
-        addBottleSubrow(main);
-
-        if (typeof buildBottleHistoryMap === 'function') {
-          buildBottleHistoryMap();
-        }
-        if (typeof refreshBottleDropdownsFromHistory === 'function') {
-          refreshBottleDropdownsFromHistory();
-        }
-        return;
-      }
-
-      if (e.target.closest('.btl-minus')) {
-        const sub = e.target.closest('tr.btl-subrow');
-
-        let mainTr = e.target.closest('tr.bulk-mainrow');
-        if (!mainTr && sub) {
-          let prev = sub.previousElementSibling;
-          while (prev && !prev.classList.contains('bulk-mainrow')) {
-            prev = prev.previousElementSibling;
-          }
-          mainTr = prev;
-        }
-
-        if (mainTr) {
-          removeBottleSubrow(mainTr, sub);
-        }
-        return;
-      }
-    });
-
-grid.addEventListener('input', e => {
-  if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
-  if (window._isApplyingBulkGridSync) return;
-
-  scheduleSaveBulkGridState(120);
-
-  if (typeof window.saveAllApps === 'function') {
-    clearTimeout(window._bulkGridSyncTimer);
-    window._bulkGridSyncTimer = setTimeout(() => {
-      Promise.resolve(window.saveAllApps()).catch(err => {
-        console.error('[bulkGrid input sync]', err);
-      });
-    }, 400);
+  // 保存データがあれば復元、なければ新規生成
+  if (localStorage.getItem(GRID_KEY)) {
+    restoreBulkGridState();
+  } else {
+    buildGrid(initialRows);
   }
-});
 
-grid.addEventListener('change', e => {
-  if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
-  if (window._isApplyingBulkGridSync) return;
-
-  scheduleSaveBulkGridState(0);
-
-  // ← これが必要
-  if (typeof window.saveAllApps === 'function') {
-    clearTimeout(window._bulkGridSyncTimer);
-    window._bulkGridSyncTimer = setTimeout(() => {
-      Promise.resolve(window.saveAllApps()).catch(err => {
-        console.error('[bulkGrid change sync]', err);
-      });
-    }, 50);
+  // 旧トグルが残っていても、常時表示運用なので隠すだけにする
+  if (toggle) {
+    toggle.style.display = 'none';
   }
-});
 
-    window.addEventListener('resize', () => {
-      if (typeof applyApp2MobileView === 'function') {
-        applyApp2MobileView();
-      }
-    });
+  clearBt?.addEventListener('click', () => {
+    document.querySelectorAll('.bulk-num, .bulk-name, .bulk-send, .splitCount, .bottleQuantity, .bottleAmount')
+      .forEach(e => { e.value = ''; });
+
+    document.querySelectorAll('.bulk-exp, .bulk-2k')
+      .forEach(e => { e.checked = false; });
+
+    document.querySelectorAll('.btl-subrow')
+      .forEach(e => e.remove());
+
+    document.querySelectorAll('.bulk-mainrow .btl-minus')
+      .forEach(btn => { btn.disabled = true; });
+
+    localStorage.removeItem(GRID_KEY);
+    buildGrid(parseInt(sel?.value || '40', 10) || 40);
   });
+
+  regBt?.addEventListener('click', bulkRegister);
+
+  sel?.addEventListener('change', () => {
+    const n = parseInt(sel.value || '40', 10) || 40;
+    saveBulkGridState();
+    restoreBulkGridState(n);
+  });
+
+  grid.addEventListener('click', e => {
+    let main = e.target.closest('tr.bulk-mainrow');
+
+    if (!main) {
+      const sub = e.target.closest('tr.btl-subrow');
+      if (sub) {
+        let prev = sub.previousElementSibling;
+        while (prev && !prev.classList.contains('bulk-mainrow')) {
+          prev = prev.previousElementSibling;
+        }
+        main = prev;
+      }
+    }
+
+    if (!main) return;
+
+    if (e.target.closest('.btl-plus')) {
+      const added = addBottleSubrow(main);
+
+      if (typeof buildBottleHistoryMap === 'function') {
+        buildBottleHistoryMap();
+      }
+      if (typeof refreshBottleDropdownsFromHistory === 'function') {
+        refreshBottleDropdownsFromHistory();
+      }
+
+      // 追加した瞬間にローカル保存
+      if (typeof saveBulkGridState === 'function') {
+        saveBulkGridState();
+      }
+
+      // Firebase にも即反映
+      if (typeof window.saveAllApps === 'function' && !window._isApplyingBulkGridSync) {
+        clearTimeout(window._bulkGridSyncTimer);
+        window._bulkGridSyncTimer = setTimeout(() => {
+          Promise.resolve(window.saveAllApps()).catch(err => {
+            console.error('[bulkGrid plus sync]', err);
+          });
+        }, 50);
+      }
+
+      // 追加直後に入力しやすいよう最初の項目へフォーカス
+      const detailSelect = added?.querySelector('.bottleDetails');
+      if (detailSelect) {
+        requestAnimationFrame(() => {
+          try {
+            detailSelect.focus();
+          } catch (_) {}
+        });
+      }
+
+      return;
+    }
+
+    if (e.target.closest('.btl-minus')) {
+      const sub = e.target.closest('tr.btl-subrow');
+
+      let mainTr = e.target.closest('tr.bulk-mainrow');
+      if (!mainTr && sub) {
+        let prev = sub.previousElementSibling;
+        while (prev && !prev.classList.contains('bulk-mainrow')) {
+          prev = prev.previousElementSibling;
+        }
+        mainTr = prev;
+      }
+
+      if (mainTr) {
+        removeBottleSubrow(mainTr, sub);
+
+        // 削除した瞬間にローカル保存
+        if (typeof saveBulkGridState === 'function') {
+          saveBulkGridState();
+        }
+
+        // Firebase にも即反映
+        if (typeof window.saveAllApps === 'function' && !window._isApplyingBulkGridSync) {
+          clearTimeout(window._bulkGridSyncTimer);
+          window._bulkGridSyncTimer = setTimeout(() => {
+            Promise.resolve(window.saveAllApps()).catch(err => {
+              console.error('[bulkGrid minus sync]', err);
+            });
+          }, 50);
+        }
+      }
+      return;
+    }
+  });
+
+  grid.addEventListener('input', e => {
+    if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
+    if (window._isApplyingBulkGridSync) return;
+
+    scheduleSaveBulkGridState(120);
+
+    if (typeof window.saveAllApps === 'function') {
+      clearTimeout(window._bulkGridSyncTimer);
+      window._bulkGridSyncTimer = setTimeout(() => {
+        Promise.resolve(window.saveAllApps()).catch(err => {
+          console.error('[bulkGrid input sync]', err);
+        });
+      }, 400);
+    }
+  });
+
+  grid.addEventListener('change', e => {
+    if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
+    if (window._isApplyingBulkGridSync) return;
+
+    scheduleSaveBulkGridState(0);
+
+    if (typeof window.saveAllApps === 'function') {
+      clearTimeout(window._bulkGridSyncTimer);
+      window._bulkGridSyncTimer = setTimeout(() => {
+        Promise.resolve(window.saveAllApps()).catch(err => {
+          console.error('[bulkGrid change sync]', err);
+        });
+      }, 50);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (typeof applyApp2MobileView === 'function') {
+      applyApp2MobileView();
+    }
+  });
+});
 
 })();
 
