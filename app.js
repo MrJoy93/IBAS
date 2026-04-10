@@ -4927,7 +4927,6 @@ function restoreBulkGridState(forcedRowCount = null) {
   const raw = localStorage.getItem(GRID_KEY);
   const data = JSON.parse(raw || '[]');
 
-  // forcedRowCount があればそれを最優先
   const rowCount =
     Number.isInteger(forcedRowCount) && forcedRowCount > 0
       ? forcedRowCount
@@ -4958,7 +4957,13 @@ function restoreBulkGridState(forcedRowCount = null) {
       kmap[el.dataset.k] = el;
     });
 
-    const nums = r.nums || {};
+    const nums = { ...(r.nums || {}) };
+
+    // 旧データ互換
+    if (!('2k' in nums) && ('f' in nums)) {
+      nums['2k'] = nums['f'];
+    }
+
     for (const k in nums) {
       const el = kmap[k];
       if (!el) continue;
@@ -5011,11 +5016,10 @@ function restoreBulkGridState(forcedRowCount = null) {
   }
 
   try {
-  lastBulkGridStateJson = localStorage.getItem(GRID_KEY) || '';
-} catch (_) {
-  lastBulkGridStateJson = '';
-}
-
+    lastBulkGridStateJson = localStorage.getItem(GRID_KEY) || '';
+  } catch (_) {
+    lastBulkGridStateJson = '';
+  }
 }
 
   // === メイン行→ボトル選択記憶 =============================================
