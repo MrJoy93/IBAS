@@ -2036,6 +2036,8 @@ function getBulkDom(){
   };
 }
 
+window.getBulkDom = getBulkDom;
+
 // ===== app2 履歴のローカル状態 =====
 let app2History = [];
 
