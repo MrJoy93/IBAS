@@ -2166,78 +2166,51 @@ async function applyApp2State(state) {
   const root = document.getElementById('app2');
   if (!root || !state) return;
 
-  // -----------------------------
-  // 反映中フラグ
-  // -----------------------------
+  const {
+    fields = {},
+    bottles = [],
+    historyHTML = '',
+    bulkGrid = { rows: [] }
+  } = state || {};
+
+  // -----------------------------------
+  // リモート反映中は autosave を止める
+  // -----------------------------------
   window._isApplyingBulkGridSync = true;
 
   try {
-    // 保存側とのキー差異を吸収
-    const fields =
-      state.fields && typeof state.fields === 'object'
-        ? state.fields
-        : {};
-
-    const bottles =
-      Array.isArray(state.bottleForms) ? state.bottleForms :
-      Array.isArray(state.bottles) ? state.bottles :
-      [];
-
-    const historyHTML =
-      typeof state.historyHtml === 'string' ? state.historyHtml :
-      typeof state.historyHTML === 'string' ? state.historyHTML :
-      '';
-
-    const bulkGrid =
-      state.bulkGrid && typeof state.bulkGrid === 'object'
-        ? state.bulkGrid
-        : null;
-
     // -----------------------------
-    // 1) 通常フィールド復元
+    // 1) 通常入力欄の復元
     // -----------------------------
-    Object.entries(fields).forEach(([id, val]) => {
-      const el = root.querySelector('#' + CSS.escape(id));
-      if (!el) return;
+    if (fields && typeof fields === 'object') {
+      Object.entries(fields).forEach(([id, val]) => {
+        const el = root.querySelector('#' + CSS.escape(id));
+        if (!el) return;
 
-      if (el.type === 'checkbox') {
-        el.checked = !!val;
-      } else {
-        el.value = val ?? '';
-      }
-    });
+        if (el.type === 'checkbox') {
+          el.checked = !!val;
+        } else {
+          el.value = val ?? '';
+        }
+      });
+    }
 
     // -----------------------------
     // 2) ボトルフォーム復元
     // -----------------------------
-    const container = root.querySelector('#bottleFormsContainer');
-    if (container) {
-      container.innerHTML = '';
+    const bottleContainer = root.querySelector('#bottleFormsContainer');
+    if (bottleContainer && Array.isArray(bottles)) {
+      BOTTLE_REFRESHING = true;
+      bottleContainer.innerHTML = '';
 
-      bottles.forEach(b => {
-        let formEl = null;
+      bottles.forEach((b) => {
+        if (typeof window.addBottleForm !== 'function') return;
 
-        if (typeof window.addBottleForm === 'function') {
-          formEl = window.addBottleForm();
-        } else {
-          formEl = document.createElement('div');
-          formEl.className = 'bottle-form';
-          formEl.innerHTML = `
-            <div class="left-group">
-              <button type="button" class="delete-btn" onclick="this.closest('.bottle-form')?.remove()">×</button>
-              <select class="bottleDetails"><option value=""></option></select>
-            </div>
-            <input class="splitCount" type="text"/>
-            <input class="bottleQuantity" type="text"/>
-            <input class="bottleAmount" type="text"/>
-          `;
-          container.appendChild(formEl);
-        }
-
+        const formEl = window.addBottleForm();
         if (!formEl) return;
 
         const detail =
-          b.detail ?? b.details ?? b.bottleDetails ?? '';
+          b.details ?? b.detail ?? '';
 
         const split =
           b.split ?? b.splitCount ?? '';
@@ -2267,37 +2240,50 @@ async function applyApp2State(state) {
       if (typeof window.refreshBottleDropdownsFromHistory === 'function') {
         window.refreshBottleDropdownsFromHistory();
       }
+
+      BOTTLE_REFRESHING = false;
     }
 
     // -----------------------------
-    // 3) 履歴HTML反映
+    // 3) 履歴本体を先に復元
+    //    これが空のままだと iPad 側保存で
+    //    履歴なし上書きが起きる
     // -----------------------------
-    if (typeof historyHTML === 'string') {
-      const historyRoot = document.getElementById('historyList');
-      if (historyRoot && historyRoot.innerHTML !== historyHTML) {
-        historyRoot.innerHTML = historyHTML;
+    const historyRoot = document.getElementById('historyList');
+    if (historyRoot) {
+      const nextHTML = (typeof historyHTML === 'string') ? historyHTML : '';
 
-        try {
-          localStorage.setItem('historyList', historyHTML);
-        } catch (_) {}
-
-        if (typeof window.renumberHistory === 'function') {
-          window.renumberHistory();
-        }
-        if (typeof window.refreshBottleDropdownsFromHistory === 'function') {
-          window.refreshBottleDropdownsFromHistory();
-        }
-        if (typeof window.updateSummary === 'function') {
-          window.updateSummary();
-        }
-        if (typeof window.createHistoryIndex === 'function') {
-          window.createHistoryIndex();
-        }
+      if (historyRoot.innerHTML !== nextHTML) {
+        historyRoot.innerHTML = nextHTML;
       }
+
+      try {
+        localStorage.setItem('historyList', nextHTML);
+      } catch (_) {}
     }
 
+    // 履歴依存UIを履歴本体から再構築
+    if (typeof window.renumberHistory === 'function') {
+      window.renumberHistory();
+    }
+
+    if (typeof window.refreshBottleDropdownsFromHistory === 'function') {
+      window.refreshBottleDropdownsFromHistory();
+    }
+
+    if (typeof window.updateSummary === 'function') {
+      window.updateSummary();
+    }
+
+    if (typeof window.createHistoryIndex === 'function') {
+      window.createHistoryIndex();
+    }
+
+    // historyList の DOM 反映完了を1フレーム待つ
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
     // -----------------------------
-    // 4) bulkGrid反映
+    // 4) 一括入力グリッド反映
     // -----------------------------
     if (bulkGrid && typeof window.applyBulkGridStateFromSync === 'function') {
       await window.applyBulkGridStateFromSync(bulkGrid);
@@ -2316,15 +2302,29 @@ async function applyApp2State(state) {
       if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
         window.applyReadonlyToBulkGridCustomKeypad();
       }
+
+      if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+        window.applyReadonlyToCustomKeypadTargets();
+      }
     }
 
     // -----------------------------
     // 5) 最終再計算
     // -----------------------------
+    if (typeof window.updateSummary === 'function') {
+      window.updateSummary();
+    }
+
+    if (typeof window.createHistoryIndex === 'function') {
+      window.createHistoryIndex();
+    }
+
     if (typeof window.scheduleApp3Update === 'function') {
       window.scheduleApp3Update('applyApp2State');
     }
 
+  } catch (err) {
+    console.error('[APP2 sync] applyApp2State failed:', err);
   } finally {
     await new Promise(resolve => requestAnimationFrame(resolve));
     window._isApplyingBulkGridSync = false;
@@ -3668,14 +3668,17 @@ function moveHistoryItem(button, direction) {
     parentList.insertBefore(targetItem, listItem);
   }
 
-  // ↓ 移動後の要素に強制スクロール（DOM反映後に実行）
   requestAnimationFrame(() => {
     listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
-  renumberHistory(); // ← 連番再振り
+  renumberHistory();
   localStorage.setItem('historyList', parentList.innerHTML);
   updateSummary();
+
+  if (typeof window.createHistoryIndex === 'function') {
+    window.createHistoryIndex();
+  }
 }
 
 function deleteSelectedHistory() {
@@ -3705,17 +3708,23 @@ function deleteSelectedHistory() {
     }
   });
 
-  // 削除後の保存
   localStorage.setItem('historyList', historyList.innerHTML);
   updateSummary();
-    // 履歴を削除したので、ボトル候補を更新
   refreshBottleDropdownsFromHistory();
 
-  // 削除結果の表示
+  if (typeof window.createHistoryIndex === 'function') {
+    window.createHistoryIndex();
+  }
+
   if (deletedNames.length > 0) {
     const msg = deletedNames.map(name => `${name} の履歴は削除されました。`).join('\n');
     alert(msg);
   }
+
+  if (typeof window.createHistoryIndex === 'function') {
+  window.createHistoryIndex();
+}
+
 }
 
 function toggleDetails(button) {
