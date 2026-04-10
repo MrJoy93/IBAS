@@ -81,25 +81,32 @@ async function saveAllApps(key = monthKey()){
 }
 
 /* 他端末からの更新を受け取り反映（自端末の直後の書き込みはスキップ） */
-function subscribeRemote(key = monthKey()){
-  return onSnapshot(docRefFor(key), snap=>{
-    if(!snap.exists()) return;
+function subscribeRemote(key = monthKey()) {
+  return onSnapshot(docRefFor(key), async snap => {
+    if (!snap.exists()) return;
+
     const data = snap.data();
-    if(data?.lastAuthor === CLIENT_ID) return;
+    if (data?.lastAuthor === CLIENT_ID) return;
 
     isApplyingRemote = true;
 
-    if (typeof window.applyApp1State === "function") {
-      window.applyApp1State(data.app1 || {});
-    }
-    if (typeof window.applyApp2State === "function") {
-      window.applyApp2State(data.app2 || {});
-    }
-    if (typeof window.applyApp3State === "function") {
-      window.applyApp3State(data.app3 || {});
-    }
+    try {
+      if (typeof window.applyApp1State === "function") {
+        await window.applyApp1State(data.app1 || {});
+      }
 
-    isApplyingRemote = false;
+      if (typeof window.applyApp2State === "function") {
+        await window.applyApp2State(data.app2 || {});
+      }
+
+      if (typeof window.applyApp3State === "function") {
+        await window.applyApp3State(data.app3 || {});
+      }
+    } finally {
+      requestAnimationFrame(() => {
+        isApplyingRemote = false;
+      });
+    }
   });
 }
 
@@ -166,12 +173,19 @@ wrapAndSync("resetSearch",         { immediate:false });
   });
 })();
 
-function attachAutosave(){
-  ['input','change'].forEach(evt=>{
+function attachAutosave() {
+  ['input', 'change'].forEach(evt => {
     document.body.addEventListener(evt, (e) => {
-      if (window.isCustomKeypadInput) return;
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+
+      if (!t.closest('#app1, #app2, #app3')) return;
+
+      if (isApplyingRemote) return;
+      if (window._isApplyingBulkGridSync) return;
+
       scheduleAutosave();
-    }, { capture:true });
+    }, { capture: true });
   });
 }
 
