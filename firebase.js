@@ -50,18 +50,57 @@ function _showSaving(){ ensureIndicator(); const el=document.getElementById("syn
 function _saved(){ const el=document.getElementById("syncIndicator"); if(!el) return; el.textContent="保存済み"; setTimeout(()=>{el.style.display="none"}, 900); }
 
 /*** ==== 読み込み・保存・購読 ==== ***/
+/*** ==== 読み込み・保存・購読 ==== ***/
 async function loadAllApps(key = monthKey()){
   const snap = await getDoc(docRefFor(key));
   const data = snap.exists() ? snap.data() : {};
 
   if (typeof window.applyApp1State === "function") {
-    window.applyApp1State(data.app1);
+    await window.applyApp1State(data.app1);
   }
   if (typeof window.applyApp2State === "function") {
-    window.applyApp2State(data.app2);
+    await window.applyApp2State(data.app2);
   }
   if (typeof window.applyApp3State === "function") {
-    window.applyApp3State(data.app3);
+    await window.applyApp3State(data.app3);
+  }
+}
+
+async function saveAllApps(key = monthKey()){
+  // 一括入力グリッド反映中は保存しない
+  if (window._isApplyingBulkGridSync) {
+    return false;
+  }
+
+  _showSaving();
+
+  try {
+    const payload = {
+      app1: (typeof window.collectApp1State === "function") ? window.collectApp1State() : {},
+      app2: (typeof window.collectApp2State === "function") ? window.collectApp2State() : {},
+      app3: (typeof window.collectApp3State === "function") ? window.collectApp3State() : {},
+      updatedAt: serverTimestamp(),
+      lastAuthor: CLIENT_ID
+    };
+
+    await setDoc(docRefFor(key), payload, { merge: true });
+
+    _saved();
+    return true;
+  } catch (err) {
+    console.error("[SYNC] saveAllApps failed:", err);
+
+    ensureIndicator();
+    const el = document.getElementById("syncIndicator");
+    if (el) {
+      el.style.display = "block";
+      el.textContent = "保存失敗";
+      setTimeout(() => {
+        el.style.display = "none";
+      }, 2000);
+    }
+
+    return false;
   }
 }
 
@@ -82,41 +121,56 @@ async function saveAllApps(key = monthKey()){
 
 /* 他端末からの更新を受け取り反映（自端末の直後の書き込みはスキップ） */
 function subscribeRemote(key = monthKey()) {
-  return onSnapshot(docRefFor(key), async snap => {
-    if (!snap.exists()) return;
+  return onSnapshot(
+    docRefFor(key),
+    async snap => {
+      if (!snap.exists()) return;
 
-    const data = snap.data();
-    if (data?.lastAuthor === CLIENT_ID) return;
+      const data = snap.data();
+      if (data?.lastAuthor === CLIENT_ID) return;
 
-    isApplyingRemote = true;
+      isApplyingRemote = true;
 
-    try {
-      if (typeof window.applyApp1State === "function") {
-        await window.applyApp1State(data.app1 || {});
+      try {
+        if (typeof window.applyApp1State === "function") {
+          await window.applyApp1State(data.app1 || {});
+        }
+
+        if (typeof window.applyApp2State === "function") {
+          await window.applyApp2State(data.app2 || {});
+        }
+
+        if (typeof window.applyApp3State === "function") {
+          await window.applyApp3State(data.app3 || {});
+        }
+      } catch (err) {
+        console.error("[SYNC] subscribeRemote apply failed:", err);
+      } finally {
+        requestAnimationFrame(() => {
+          isApplyingRemote = false;
+        });
       }
-
-      if (typeof window.applyApp2State === "function") {
-        await window.applyApp2State(data.app2 || {});
-      }
-
-      if (typeof window.applyApp3State === "function") {
-        await window.applyApp3State(data.app3 || {});
-      }
-    } finally {
-      requestAnimationFrame(() => {
-        isApplyingRemote = false;
-      });
+    },
+    err => {
+      console.error("[SYNC] onSnapshot error:", err);
     }
-  });
+  );
 }
 
 /*** ==== オートセーブ（デバウンス） ==== ***/
 let _saveTimer = null;
 function scheduleAutosave(){
-  if(isApplyingRemote) return;
+  if (isApplyingRemote) return;
+  if (window._isApplyingBulkGridSync) return;
 
-  if(_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(()=> saveAllApps(monthKey()), 800);
+  if (_saveTimer) clearTimeout(_saveTimer);
+
+  _saveTimer = setTimeout(async () => {
+    if (isApplyingRemote) return;
+    if (window._isApplyingBulkGridSync) return;
+
+    await saveAllApps(monthKey());
+  }, 800);
 }
 
 // ===== 同期ヘルパ =====
