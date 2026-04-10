@@ -240,26 +240,28 @@ function installBulkCustomKeypad() {
   // ===== 端末判定 =====
   // PCでは無効
   // タッチ主体端末（iPhone / iPad / Android / Surfaceタブレット系）でのみ有効
-  function isCustomKeypadDevice() {
-    const ua = navigator.userAgent || '';
-    const isIOS =
-      /iPhone|iPad|iPod/i.test(ua) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function isCustomKeypadDevice() {
+  const ua = navigator.userAgent || '';
 
-    const isAndroid = /Android/i.test(ua);
+  const isIPadOS =
+    navigator.platform === 'MacIntel' &&
+    navigator.maxTouchPoints > 1;
 
-    const hasTouch =
-      ('ontouchstart' in window) ||
-      (navigator.maxTouchPoints > 0);
+  const isIOS =
+    /iPhone|iPad|iPod/i.test(ua) || isIPadOS;
 
-    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
-    const desktopWidth = window.matchMedia('(min-width: 1024px)').matches;
+  const isAndroid = /Android/i.test(ua);
 
-    // 「PC幅かつマウス主体」は無効
-    if (desktopWidth && !coarsePointer) return false;
+  const hasTouch =
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0);
 
-    return isIOS || isAndroid || (hasTouch && coarsePointer);
-  }
+  // iPad / iPhone / Android は最優先で有効
+  if (isIOS || isAndroid) return true;
+
+  // それ以外は「タッチ端末なら有効」
+  return hasTouch;
+}
 
   const isMobileLike = isCustomKeypadDevice();
 
@@ -415,6 +417,7 @@ function installBulkCustomKeypad() {
     }
 
     keypad.hidden = false;
+    keypad.style.display = 'block';
 
     // テンキー表示後に、対象入力欄が
     // 固定ヘッダと固定テンキーに隠れない位置まで追従スクロール
@@ -423,12 +426,13 @@ function installBulkCustomKeypad() {
     });
   }
 
-  function hideKeypad() {
+function hideKeypad() {
   clearActiveState();
   activeInput = null;
   keypad.hidden = true;
+  keypad.style.display = 'none';
   window.isCustomKeypadInput = false;
-  }
+}
 
   function setRawValue(input, raw) {
     input.value = raw;
@@ -721,7 +725,7 @@ function installBulkCustomKeypad() {
 
   applyReadonlyToCustomKeypadTargets();
 
-  document.addEventListener('touchstart', (e) => {
+document.addEventListener('pointerdown', (e) => {
   const target = e.target;
 
   if (isTarget(target)) {
@@ -730,15 +734,14 @@ function installBulkCustomKeypad() {
     return;
   }
 
-  if (keypad.contains(target)) {
+  if (keypad && keypad.contains(target)) {
     return;
   }
 
   hideKeypad();
-  }, {
-  capture: true,
-  passive: false
-  });
+}, {
+  capture: true
+});
 
   document.addEventListener('focusin', (e) => {
     const target = e.target;
@@ -754,59 +757,60 @@ function installBulkCustomKeypad() {
     } catch (_) {}
   });
 
-  keypad.addEventListener('touchstart', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn || !activeInput) return;
+keypad.addEventListener('pointerdown', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn || !activeInput) return;
 
-    const key = btn.dataset.key;
-    const action = btn.dataset.action;
+  e.preventDefault();
 
+  const key = btn.dataset.key;
+  const action = btn.dataset.action;
 
-    if (key != null) {
-      appendText(activeInput, key);
-      return;
-    }
-
-    if (action === 'backspace') {
-      backspace(activeInput);
-      return;
-    }
-
-    if (action === 'clear') {
-      clearValue(activeInput);
-      return;
-    }
-
-    if (action === 'minus') {
-      toggleMinus(activeInput);
-      return;
-    }
-
-    if (action === 'moveUp') {
-      moveVertical(activeInput, 'up');
-      return;
-    }
-
-    if (action === 'moveDown') {
-      moveVertical(activeInput, 'down');
-      return;
-    }
-
-    if (action === 'moveLeft') {
-      moveHorizontal(activeInput, 'left');
-      return;
-    }
-
-    if (action === 'moveRight') {
-      moveHorizontal(activeInput, 'right');
-      return;
-    }
-
-    if (action === 'done') {
-  window.isCustomKeypadInput = false;
-  focusNextTarget(activeInput);
+  if (key != null) {
+    appendText(activeInput, key);
+    return;
   }
-  });
+
+  if (action === 'backspace') {
+    backspace(activeInput);
+    return;
+  }
+
+  if (action === 'clear') {
+    clearValue(activeInput);
+    return;
+  }
+
+  if (action === 'minus') {
+    toggleMinus(activeInput);
+    return;
+  }
+
+  if (action === 'moveUp') {
+    moveVertical(activeInput, 'up');
+    return;
+  }
+
+  if (action === 'moveDown') {
+    moveVertical(activeInput, 'down');
+    return;
+  }
+
+  if (action === 'moveLeft') {
+    moveHorizontal(activeInput, 'left');
+    return;
+  }
+
+  if (action === 'moveRight') {
+    moveHorizontal(activeInput, 'right');
+    return;
+  }
+
+  if (action === 'done') {
+    window.isCustomKeypadInput = false;
+    focusNextTarget(activeInput);
+  }
+});
 
   document.addEventListener('keydown', (e) => {
     if (!activeInput) return;
