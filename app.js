@@ -4697,7 +4697,7 @@ function buildGrid(n) {
       'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
     ].forEach(k => {
       if (k === 'f') {
-        html += `<td style="text-align:center;"><input type="checkbox" data-k="f" class="bulk-2k"></td>`;
+        html += `<td style="text-align:center;"><input type="checkbox" data-k="2k" class="bulk-2k"></td>`;
         return;
       }
 
@@ -4796,12 +4796,24 @@ async function applyBulkGridStateFromSync(state) {
       if (row.nums && typeof row.nums === 'object') {
         tr.querySelectorAll('[data-k]').forEach(el => {
           const k = el.dataset.k;
-          if (!k || !(k in row.nums)) return;
+          if (!k) return;
+
+          let value;
+
+          // 旧データ互換：2k は昔の f キーも読む
+          if (k === '2k') {
+            if ('2k' in row.nums) value = row.nums['2k'];
+            else if ('f' in row.nums) value = row.nums['f'];
+            else return;
+          } else {
+            if (!(k in row.nums)) return;
+            value = row.nums[k];
+          }
 
           if (el.type === 'checkbox') {
-            el.checked = !!row.nums[k];
+            el.checked = !!value;
           } else {
-            el.value = row.nums[k] || '';
+            el.value = value || '';
           }
         });
       }
