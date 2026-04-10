@@ -2158,9 +2158,7 @@ function collectBulkGridStateForSync() {
   return { rows };
 }
 
-// ★ ここを必ず追加
 window.collectBulkGridStateForSync = collectBulkGridStateForSync;
-window.applyBulkGridStateFromSync = applyBulkGridStateFromSync;
 
 async function applyApp2State(state) {
   const root = document.getElementById('app2');
@@ -4835,6 +4833,10 @@ async function applyBulkGridStateFromSync(state) {
       window.applyReadonlyToBulkGridCustomKeypad();
     }
 
+    if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+      window.applyReadonlyToCustomKeypadTargets();
+    }
+
   } catch (err) {
     console.error('[APP2 bulkGrid] apply failed:', err, state);
   } finally {
@@ -4842,6 +4844,8 @@ async function applyBulkGridStateFromSync(state) {
     window._isApplyingBulkGridSync = false;
   }
 }
+
+window.applyBulkGridStateFromSync = applyBulkGridStateFromSync;
 
 // === 保存 ================================================================
 let bulkSaveTimer = 0;
