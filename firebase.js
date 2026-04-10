@@ -158,12 +158,18 @@ wrapAndSync("resetSearch",         { immediate:false });
   });
 })();
 
-function attachAutosave(){
-  ['input','change'].forEach(evt=>{
+function attachAutosave() {
+  ['input', 'change'].forEach(evt => {
     document.body.addEventListener(evt, (e) => {
-      if (window.isCustomKeypadInput) return;
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+
+      // APP1 / APP2 / APP3 の入力だけを対象
+      if (!t.closest('#app1, #app2, #app3')) return;
+
+      // 自作テンキー入力中でも保存する
       scheduleAutosave();
-    }, { capture:true });
+    }, { capture: true });
   });
 }
 

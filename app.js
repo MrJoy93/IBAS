@@ -5,6 +5,7 @@
 // let ...
 // window.xxx = ...
 
+
 let _scrolling = false;
 
 let rowNumber = 2;
@@ -15,6 +16,8 @@ let catchbackDetails = {};
 let _raf = 0;
 
 window.totalStoreCovered = 0;
+
+window._bulkGridSyncTimer = null;
 
 /************************************************************
  * 1. 共通ユーティリティ
@@ -1881,88 +1884,157 @@ let BOTTLE_PICKER_STATE = {
 let BOTTLE_HISTORY = {};
 
 /* app2（報酬計算）：id を持つ input/select/textarea を丸ごと保存/復元＋ボトル明細 */
-function collectApp2State(){
-  const root = document.getElementById('app2');
-  if(!root) return {};
+function collectApp2State() {
+  const state = {
+    fields: {},
+    bottleForms: [],
+    historyHtml: '',
+    bulkGrid: {
+      rowsCount: 40,
+      rows: []
+    }
+  };
 
-  const fields = {};
-  root.querySelectorAll('input[id], select[id], textarea[id]').forEach(el=>{
-    fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
+  // 1) id付きフォーム項目
+  document.querySelectorAll('#app2 input[id], #app2 select[id], #app2 textarea[id]').forEach(el => {
+    const id = el.id;
+    if (!id) return;
+
+    if (el.type === 'checkbox') {
+      state.fields[id] = !!el.checked;
+    } else {
+      state.fields[id] = el.value ?? '';
+    }
   });
 
-  // 既存: ボトル明細
-const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
-  details: getSelectedDetail(form) || "",
-  split:   form.querySelector('.splitCount')?.value ?? "",
-  qty:     form.querySelector('.bottleQuantity')?.value ?? "",
-  amount:  form.querySelector('.bottleAmount')?.value ?? ""
-}));
+  // 2) 個別ボトルフォーム
+  document.querySelectorAll('#bottleFormsContainer .bottle-form').forEach(form => {
+    const detail = (typeof getSelectedDetail === 'function') ? (getSelectedDetail(form) || '') : '';
+    const split  = form.querySelector('.splitCount')?.value || '';
+    const qty    = form.querySelector('.bottleQuantity')?.value || '';
+    const amount = form.querySelector('.bottleAmount')?.value || '';
 
-  // ★追加: 履歴（HTMLそのまま）
-  const historyRoot = document.getElementById('historyList');
-  const historyHTML = historyRoot ? historyRoot.innerHTML : "";
+    if (!detail && !split && !qty && !amount) return;
 
-  return { fields, bottles, historyHTML };
+    state.bottleForms.push({
+      detail,
+      split,
+      qty,
+      amount
+    });
+  });
+
+  // 3) 履歴HTML
+  state.historyHtml = document.getElementById('app2-historySection')?.innerHTML || '';
+
+  // 4) 一括入力グリッド
+  if (typeof collectBulkGridStateForSync === 'function') {
+    state.bulkGrid = collectBulkGridStateForSync();
+  }
+
+  return state;
 }
 
-function applyApp2State(state){
-  const root = document.getElementById('app2');
-  if(!root || !state) return;
+async function applyApp2State(state) {
+  if (!state || typeof state !== 'object') return;
 
-  if(state.fields){
-    Object.entries(state.fields).forEach(([id, val])=>{
-      const el = root.querySelector('#'+CSS.escape(id));
-      if(!el) return;
-      if(el.type === 'checkbox'){ el.checked = !!val; }
-      else { el.value = val ?? ""; }
-    });
-  }
+  const fields = state.fields || {};
+  const bottleForms = Array.isArray(state.bottleForms) ? state.bottleForms : [];
+  const historyHtml = state.historyHtml || '';
+  const bulkGrid = state.bulkGrid || { rowsCount: 40, rows: [] };
 
-  if(Array.isArray(state.bottles)){
-    const container = root.querySelector('#bottleFormsContainer');
-    if(container){
-      container.innerHTML = "";
-      state.bottles.forEach(b=>{
-        // 既存の追加関数があればそれを使う
-        if(typeof window.addBottleForm === "function"){
-          const el = window.addBottleForm();
-          const sel = el?.querySelector('.bottleDetails');
-          if (sel) setBottleDetailValue(sel, b.details ?? "");
-          (el?.querySelector('.splitCount')||{}).value    = b.split ?? "";
-          (el?.querySelector('.bottleQuantity')||{}).value= b.qty ?? "";
-          (el?.querySelector('.bottleAmount')||{}).value  = b.amount ?? "";
-        }else{
-          // フォールバック生成（既存実装に合わせる）
-          const row = document.createElement('div');
-          row.className = 'bottle-form';
-          row.innerHTML = `
-            <div class="left-group">
-              <button type="button" class="delete-btn" onclick="this.closest('.bottle-form')?.remove()">×</button>
-              <select class="bottleDetails"><option value=""></option></select>
-            </div>
-            <input class="splitCount" type="text"/>
-            <input class="bottleQuantity" type="text"/>
-            <input class="bottleAmount" type="text"/>`;
-          container.appendChild(row);
-          setBottleDetailValue(row.querySelector('.bottleDetails'), b.details ?? "");
-          row.querySelector('.splitCount').value    = b.split ?? "";
-          row.querySelector('.bottleQuantity').value= b.qty ?? "";
-          row.querySelector('.bottleAmount').value  = b.amount ?? "";
-        }
-      });
+  const setVal = (el, v, eventType = 'input') => {
+    if (!el) return;
+    el.value = v ?? '';
+    el.dispatchEvent(new Event(eventType, { bubbles: true }));
+  };
+
+  const setChecked = (el, checked) => {
+    if (!el) return;
+    el.checked = !!checked;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  // 1) id付きフィールド復元
+  Object.entries(fields).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    if (el.type === 'checkbox') {
+      setChecked(el, !!v);
+    } else {
+      setVal(el, v, 'input');
+    }
+  });
+
+  // 2) 個別ボトルフォーム復元
+  const forms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
+
+  forms.forEach(f => {
+    const sel = f.querySelector('.bottleDetails');
+    if (sel) {
+      sel.value = '';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    setVal(f.querySelector('.splitCount'), '', 'input');
+    setVal(f.querySelector('.bottleQuantity'), '', 'input');
+    setVal(f.querySelector('.bottleAmount'), '', 'input');
+  });
+
+  while (document.querySelectorAll('#bottleFormsContainer .bottle-form').length < bottleForms.length) {
+    if (typeof addBottleForm === 'function') {
+      addBottleForm();
+    } else {
+      break;
     }
   }
 
-  // ★追加: 履歴HTMLの反映＋派生処理
-  if (typeof state.historyHTML === "string") {
-    const historyRoot = document.getElementById('historyList');
-    if (historyRoot && historyRoot.innerHTML !== state.historyHTML) {
-      historyRoot.innerHTML = state.historyHTML;
-      try { localStorage.setItem('historyList', state.historyHTML); } catch(e){}
-      if (typeof window.renumberHistory === "function") renumberHistory();
-      if (typeof window.refreshBottleDropdownsFromHistory === "function") refreshBottleDropdownsFromHistory();
-      if (typeof window.updateSummary === "function") updateSummary();
+  const targetForms = Array.from(document.querySelectorAll('#bottleFormsContainer .bottle-form'));
+  bottleForms.forEach((src, i) => {
+    const f = targetForms[i];
+    if (!f) return;
+
+    const sel = f.querySelector('.bottleDetails');
+    if (sel && typeof setBottleDetailValue === 'function') {
+      setBottleDetailValue(sel, src.detail || '');
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (sel) {
+      sel.value = src.detail || '';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
     }
+
+    setVal(f.querySelector('.splitCount'), src.split || '', 'input');
+    setVal(f.querySelector('.bottleQuantity'), src.qty || '', 'input');
+    setVal(f.querySelector('.bottleAmount'), src.amount || '', 'input');
+  });
+
+  // 3) 履歴復元
+  const historySection = document.getElementById('app2-historySection');
+  if (historySection && typeof historyHtml === 'string') {
+    historySection.innerHTML = historyHtml;
+  }
+
+  // 4) 一括入力グリッド復元
+  if (typeof applyBulkGridStateFromSync === 'function') {
+    await applyBulkGridStateFromSync(bulkGrid);
+  }
+
+  // 5) 補助処理
+  if (typeof refreshBottleDropdownsFromHistory === 'function') {
+    refreshBottleDropdownsFromHistory();
+  }
+
+  if (typeof createHistoryIndex === 'function') {
+    createHistoryIndex();
+  }
+
+  if (typeof updateBulkFilledState === 'function') {
+    updateBulkFilledState(document.getElementById('bulkGrid'));
+  }
+
+  if (typeof window.scheduleApp3Update === 'function') {
+    window.scheduleApp3Update('applyApp2State');
   }
 }
 
@@ -3945,6 +4017,208 @@ function slimHistoryUI(){
   const PANEL_KEY = 'app2_bulkPanelVisible';
   const GRID_KEY  = 'app2_bulkGridData';
 
+  // ==========================================================
+// Firebase同期用：APP2 一括入力グリッドの状態収集
+// ==========================================================
+function collectBulkGridStateForSync() {
+  const { grid, sel } = getBulkDom();
+  if (!grid) {
+    return {
+      rowsCount: parseInt(sel?.value || '40', 10) || 40,
+      rows: []
+    };
+  }
+
+  const mains = Array.from(grid.querySelectorAll('tbody tr.bulk-mainrow'));
+
+  const rows = mains.map((tr, index) => {
+    const row = {
+      index,
+      name: tr.querySelector('.bulk-name')?.value || '',
+      exp: !!tr.querySelector('.bulk-exp')?.checked,
+      send: tr.querySelector('.bulk-send')?.value || '',
+      leave: !!tr.querySelector('.bulk-leave')?.checked,
+      nums: {},
+      bottles: []
+    };
+
+    tr.querySelectorAll('[data-k]').forEach(el => {
+      const k = el.dataset.k;
+      if (!k) return;
+
+      if (el.type === 'checkbox') {
+        row.nums[k] = !!el.checked;
+      } else {
+        row.nums[k] = el.value || '';
+      }
+    });
+
+    let n = tr.nextElementSibling;
+    while (n && n.classList.contains('btl-subrow')) {
+      row.bottles.push({
+        detail: (typeof getSelectedDetail === 'function') ? (getSelectedDetail(n) || '') : '',
+        split: n.querySelector('.splitCount')?.value || '',
+        qty: n.querySelector('.bottleQuantity')?.value || '',
+        amount: n.querySelector('.bottleAmount')?.value || ''
+      });
+      n = n.nextElementSibling;
+    }
+
+    return row;
+  });
+
+  return {
+    rowsCount: parseInt(sel?.value || String(rows.length || 40), 10) || 40,
+    rows
+  };
+}
+
+// ==========================================================
+// Firebase同期用：APP2 一括入力グリッドの状態復元
+// ==========================================================
+async function applyBulkGridStateFromSync(state) {
+  const { grid, sel } = getBulkDom();
+  if (!grid) return;
+
+  const rows = Array.isArray(state?.rows) ? state.rows : [];
+  const rowsCount =
+    parseInt(state?.rowsCount || sel?.value || String(rows.length || 40), 10) ||
+    Math.max(rows.length, 40);
+
+  if (sel) {
+    const hasOption = Array.from(sel.options).some(opt => String(opt.value || opt.textContent) === String(rowsCount));
+    if (!hasOption) {
+      const opt = document.createElement('option');
+      opt.value = String(rowsCount);
+      opt.textContent = String(rowsCount);
+      sel.appendChild(opt);
+    }
+    sel.value = String(rowsCount);
+  }
+
+  if (typeof buildGrid === 'function') {
+    buildGrid(rowsCount);
+  }
+
+  const mains = Array.from(grid.querySelectorAll('tbody tr.bulk-mainrow'));
+
+  const setVal = (el, v, eventType = 'input') => {
+    if (!el) return;
+    el.value = v ?? '';
+    el.dispatchEvent(new Event(eventType, { bubbles: true }));
+  };
+
+  const setChecked = (el, checked) => {
+    if (!el) return;
+    el.checked = !!checked;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const clearSubrows = (mainRow) => {
+    let n = mainRow?.nextElementSibling;
+    while (n && n.classList.contains('btl-subrow')) {
+      const next = n.nextElementSibling;
+      n.remove();
+      n = next;
+    }
+
+    const minus = mainRow?.querySelector('.btl-minus');
+    if (minus) minus.disabled = true;
+    if (mainRow) mainRow.dataset.bottleCount = '0';
+  };
+
+  for (let i = 0; i < mains.length; i++) {
+    const tr = mains[i];
+    const src = rows[i];
+
+    const nameEl = tr.querySelector('.bulk-name');
+    const expEl = tr.querySelector('.bulk-exp');
+    const sendEl = tr.querySelector('.bulk-send');
+    const leaveEl = tr.querySelector('.bulk-leave');
+
+    if (nameEl) setVal(nameEl, '', 'input');
+    if (expEl) setChecked(expEl, false);
+    if (sendEl) setVal(sendEl, '', 'input');
+    if (leaveEl) setChecked(leaveEl, false);
+
+    tr.querySelectorAll('[data-k]').forEach(el => {
+      if (el.type === 'checkbox') {
+        el.checked = false;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+
+    clearSubrows(tr);
+
+    if (!src) continue;
+
+    setVal(nameEl, src.name || '', 'input');
+    setChecked(expEl, !!src.exp);
+    setVal(sendEl, src.send || '', 'input');
+    setChecked(leaveEl, !!src.leave);
+
+    Object.entries(src.nums || {}).forEach(([k, v]) => {
+      const el = tr.querySelector(`[data-k="${CSS.escape(k)}"]`);
+      if (!el) return;
+
+      if (el.type === 'checkbox') {
+        setChecked(el, !!v);
+      } else {
+        setVal(el, v || '', 'input');
+      }
+    });
+
+    const bottles = Array.isArray(src.bottles) ? src.bottles : [];
+    for (const b of bottles) {
+      if (!b) continue;
+
+      const sub = (typeof addAndGetSubrow === 'function')
+        ? addAndGetSubrow(tr)
+        : (typeof addBottleSubrow === 'function' ? addBottleSubrow(tr) : null);
+
+      if (!sub) continue;
+
+      const selEl = sub.querySelector('.bottleDetails');
+      if (selEl && typeof setBottleDetailValue === 'function') {
+        setBottleDetailValue(selEl, b.detail || '');
+        selEl.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (selEl) {
+        selEl.value = b.detail || '';
+        selEl.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      setVal(sub.querySelector('.splitCount'), b.split || '', 'input');
+      setVal(sub.querySelector('.bottleQuantity'), b.qty || '', 'input');
+      setVal(sub.querySelector('.bottleAmount'), b.amount || '', 'input');
+
+      if (typeof updateBottleAmountForRow === 'function') {
+        updateBottleAmountForRow(sub);
+      }
+    }
+  }
+
+  if (typeof updateBulkFilledState === 'function') {
+    updateBulkFilledState(grid);
+  }
+
+  if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+    window.applyReadonlyToBulkGridCustomKeypad();
+  }
+
+  try {
+    if (typeof saveBulkGridState === 'function') {
+      saveBulkGridState();
+    }
+  } catch (_) {}
+
+  if (typeof window.scheduleApp3Update === 'function') {
+    window.scheduleApp3Update('applyBulkGridStateFromSync');
+  }
+}
+
   // === DOM取得 =============================================================
   function getBulkDom() {
     return {
@@ -4760,15 +5034,39 @@ function restoreBulkGridState(forcedRowCount = null) {
       }
     });
 
+の2つを丸ごと置き換えて
+
 grid.addEventListener('input', e => {
-  if (e.target.closest('.bulk-mainrow, .btl-subrow')) {
-    scheduleSaveBulkGridState(120);
+  if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
+
+  // 既存 localStorage 保存
+  scheduleSaveBulkGridState(120);
+
+  // Firebase同期
+  if (typeof window.saveAllApps === 'function') {
+    clearTimeout(window._bulkGridSyncTimer);
+    window._bulkGridSyncTimer = setTimeout(() => {
+      Promise.resolve(window.saveAllApps()).catch(err => {
+        console.error('[bulkGrid input sync]', err);
+      });
+    }, 400);
   }
 });
 
 grid.addEventListener('change', e => {
-  if (e.target.closest('.bulk-mainrow, .btl-subrow')) {
-    scheduleSaveBulkGridState(0);
+  if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
+
+  // 既存 localStorage 保存
+  scheduleSaveBulkGridState(0);
+
+  // Firebase即同期
+  if (typeof window.saveAllApps === 'function') {
+    clearTimeout(window._bulkGridSyncTimer);
+    window._bulkGridSyncTimer = setTimeout(() => {
+      Promise.resolve(window.saveAllApps()).catch(err => {
+        console.error('[bulkGrid change sync]', err);
+      });
+    }, 50);
   }
 });
 
