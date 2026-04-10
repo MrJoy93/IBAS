@@ -243,24 +243,29 @@ function installBulkCustomKeypad() {
 function isCustomKeypadDevice() {
   const ua = navigator.userAgent || '';
 
+  // iPadOS が MacIntel として見える対策
   const isIPadOS =
     navigator.platform === 'MacIntel' &&
     navigator.maxTouchPoints > 1;
 
-  const isIOS =
-    /iPhone|iPad|iPod/i.test(ua) || isIPadOS;
+  const isIPhone = /iPhone/i.test(ua);
+  const isIPad   = /iPad/i.test(ua) || isIPadOS;
+  const isIPod   = /iPod/i.test(ua);
+  const isIOS    = isIPhone || isIPad || isIPod;
 
   const isAndroid = /Android/i.test(ua);
 
-  const hasTouch =
-    ('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0);
+  // Windows / Mac / Linux / DevTools エミュレーション系では無効
+  const isWindows = /Windows/i.test(ua);
+  const isMac     = /Macintosh|Mac OS X/i.test(ua) && !isIPadOS;
+  const isLinux   = /Linux/i.test(ua) && !isAndroid;
 
-  // iPad / iPhone / Android は最優先で有効
-  if (isIOS || isAndroid) return true;
+  if (isWindows || isMac || isLinux) {
+    return false;
+  }
 
-  // それ以外は「タッチ端末なら有効」
-  return hasTouch;
+  // 実機モバイルだけ有効
+  return isIOS || isAndroid;
 }
 
   const isMobileLike = isCustomKeypadDevice();
@@ -303,19 +308,22 @@ function isCustomKeypadDevice() {
    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  function applyReadonlyToCustomKeypadTargets() {
-    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
+function applyReadonlyToCustomKeypadTargets() {
+  const inputs = document.querySelectorAll(
+    '#bulkGrid input.bulk-custom-keypad-target, ' +
+    '#app1 input.bulk-custom-keypad-target, ' +
+    '#app3 input.bulk-custom-keypad-target'
+  );
 
-
-    inputs.forEach(input => {
-      if (input.disabled) return;
-      input.readOnly = true;
-      input.setAttribute('inputmode', 'none');
-      input.setAttribute('autocomplete', 'off');
-      input.setAttribute('autocapitalize', 'off');
-      input.setAttribute('spellcheck', 'false');
-    });
-  }
+  inputs.forEach(input => {
+    if (input.disabled) return;
+    input.readOnly = true;
+    input.setAttribute('inputmode', 'none');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+  });
+}
 
   function getLabel(input) {
     return input.getAttribute('placeholder')
