@@ -2074,31 +2074,50 @@ function collectApp2State(){
     fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value ?? "");
   });
 
-  // 既存: ボトル明細
-const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
-  details: getSelectedDetail(form) || "",
-  split:   form.querySelector('.splitCount')?.value ?? "",
-  qty:     form.querySelector('.bottleQuantity')?.value ?? "",
-  amount:  form.querySelector('.bottleAmount')?.value ?? ""
-}));
+  const bottles = [...root.querySelectorAll('#bottleFormsContainer .bottle-form')].map(form => ({
+    details: getSelectedDetail(form) || "",
+    split:   form.querySelector('.splitCount')?.value ?? "",
+    qty:     form.querySelector('.bottleQuantity')?.value ?? "",
+    amount:  form.querySelector('.bottleAmount')?.value ?? ""
+  }));
 
-  // ★追加: 履歴（HTMLそのまま）
   const historyRoot = document.getElementById('historyList');
   const historyHTML = historyRoot ? historyRoot.innerHTML : "";
 
+  let bulkGridState = { rows: [] };
+
+  try {
+    if (typeof window.collectBulkGridStateForSync === 'function') {
+      bulkGridState = window.collectBulkGridStateForSync();
+    }
+  } catch (err) {
+    console.error('[APP2 bulkGrid] collect failed:', err);
+  }
+
   return {
-  fields,
-  bottles,
-  historyHTML,
-  bulkGrid: (typeof window.collectBulkGridStateForSync === 'function')
-    ? window.collectBulkGridStateForSync()
-    : { rows: [] }
-};
+    fields,
+    bottles,
+    historyHTML,
+    bulkGrid: bulkGridState
+  };
 }
 
 function collectBulkGridStateForSync() {
-  const { grid } = getBulkDom();
-  if (!grid) return { rows: [] };
+  const getter =
+    (typeof window.getBulkDom === 'function')
+      ? window.getBulkDom
+      : (typeof getBulkDom === 'function' ? getBulkDom : null);
+
+  if (!getter) {
+    console.warn('[APP2 bulkGrid] getBulkDom missing');
+    return { rows: [] };
+  }
+
+  const { grid } = getter();
+  if (!grid) {
+    console.warn('[APP2 bulkGrid] bulkGrid not found');
+    return { rows: [] };
+  }
 
   const mains = [...grid.querySelectorAll('.bulk-mainrow')];
 
@@ -4774,131 +4793,80 @@ function buildGrid(n) {
 }
 
 async function applyBulkGridStateFromSync(state) {
-  const { grid, sel } = getBulkDom();
-  if (!grid) return;
+  const getter =
+    (typeof window.getBulkDom === 'function')
+      ? window.getBulkDom
+      : (typeof getBulkDom === 'function' ? getBulkDom : null);
+
+  if (!getter) {
+    console.warn('[APP2 bulkGrid] getBulkDom missing');
+    return;
+  }
+
+  const { grid, sel } = getter();
+  if (!grid) {
+    console.warn('[APP2 bulkGrid] bulkGrid not found');
+    return;
+  }
+
+  if (!state || !Array.isArray(state.rows)) {
+    console.warn('[APP2 bulkGrid] invalid state', state);
+    return;
+  }
 
   window._isApplyingBulkGridSync = true;
 
   try {
-    const rows = Array.isArray(state?.rows) ? state.rows : [];
-    const rowsCount =
-      parseInt(state?.rowsCount || sel?.value || String(rows.length || 40), 10) ||
-      Math.max(rows.length, 40);
+    const rowCount = state.rows.length || parseInt(sel?.value || '10', 10) || 10;
 
-    // 行数セレクト同期
     if (sel) {
-      const hasOption = Array.from(sel.options).some(
-        opt => String(opt.value || opt.textContent) === String(rowsCount)
-      );
-      if (!hasOption) {
-        const opt = document.createElement('option');
-        opt.value = String(rowsCount);
-        opt.textContent = String(rowsCount);
-        sel.appendChild(opt);
-      }
-      sel.value = String(rowsCount);
+      sel.value = String(rowCount);
     }
 
-    // グリッドを完全再構築
     if (typeof buildGrid === 'function') {
-      buildGrid(rowsCount);
+      buildGrid(rowCount);
     }
 
-    const mains = Array.from(grid.querySelectorAll('tbody tr.bulk-mainrow'));
+    const mainRows = [...grid.querySelectorAll('.bulk-mainrow')];
 
-    const setValSilently = (el, v) => {
-      if (!el) return;
-      el.value = v ?? '';
-    };
+    state.rows.forEach((row, index) => {
+      const tr = mainRows[index];
+      if (!tr) return;
 
-    const setCheckedSilently = (el, checked) => {
-      if (!el) return;
-      el.checked = !!checked;
-    };
+      const nameEl = tr.querySelector('.bulk-name');
+      const expEl  = tr.querySelector('.bulk-exp');
+      const sendEl = tr.querySelector('.bulk-send');
 
-    const clearSubrows = (mainRow) => {
-      let n = mainRow?.nextElementSibling;
-      while (n && n.classList.contains('btl-subrow')) {
-        const next = n.nextElementSibling;
-        n.remove();
-        n = next;
+      if (nameEl) nameEl.value = row.name || '';
+      if (expEl)  expEl.checked = !!row.exp;
+      if (sendEl) sendEl.value = row.send || '';
+
+      if (row.nums && typeof row.nums === 'object') {
+        tr.querySelectorAll('[data-k]').forEach(el => {
+          const k = el.dataset.k;
+          if (!k || !(k in row.nums)) return;
+
+          if (el.type === 'checkbox') {
+            el.checked = !!row.nums[k];
+          } else {
+            el.value = row.nums[k] || '';
+          }
+        });
       }
 
-      const minusBtn = mainRow?.querySelector('.btl-minus');
-      if (minusBtn) minusBtn.disabled = true;
-      if (mainRow) mainRow.dataset.bottleCount = '0';
-    };
-
-    for (let i = 0; i < mains.length; i++) {
-      const tr = mains[i];
-      const src = rows[i];
-
-      const nameEl  = tr.querySelector('.bulk-name');
-      const expEl   = tr.querySelector('.bulk-exp');
-      const sendEl  = tr.querySelector('.bulk-send');
-      const leaveEl = tr.querySelector('.bulk-leave');
-
-      setValSilently(nameEl, '');
-      setCheckedSilently(expEl, false);
-      setValSilently(sendEl, '');
-      setCheckedSilently(leaveEl, false);
-
-      tr.querySelectorAll('[data-k]').forEach(el => {
-        if (el.type === 'checkbox') {
-          el.checked = false;
-        } else {
-          el.value = '';
-        }
-      });
-
-      clearSubrows(tr);
-
-      if (!src) continue;
-
-      setValSilently(nameEl, src.name || '');
-      setCheckedSilently(expEl, !!src.exp);
-      setValSilently(sendEl, src.send || '');
-      setCheckedSilently(leaveEl, !!src.leave);
-
-      Object.entries(src.nums || {}).forEach(([k, v]) => {
-        const el = tr.querySelector(`[data-k="${CSS.escape(k)}"]`);
-        if (!el) return;
-
-        if (el.type === 'checkbox') {
-          setCheckedSilently(el, !!v);
-        } else {
-          setValSilently(el, v || '');
-        }
-      });
-
-      const bottles = Array.isArray(src.bottles) ? src.bottles : [];
-      for (const b of bottles) {
-        if (!b) continue;
-
-        const sub = (typeof addAndGetSubrow === 'function')
-          ? addAndGetSubrow(tr)
-          : (typeof addBottleSubrow === 'function' ? addBottleSubrow(tr) : null);
-
-        if (!sub) continue;
-
-        const selEl = sub.querySelector('.bottleDetails');
-        if (selEl && typeof setBottleDetailValue === 'function') {
-          setBottleDetailValue(selEl, b.detail || '');
-        } else if (selEl) {
-          selEl.value = b.detail || '';
-        }
-
-        setValSilently(sub.querySelector('.splitCount'), b.split || '');
-        setValSilently(sub.querySelector('.bottleQuantity'), b.qty || '');
-        setValSilently(sub.querySelector('.bottleAmount'), b.amount || '');
-
-        if (typeof updateBottleAmountForRow === 'function') {
-          updateBottleAmountForRow(sub);
-        }
+      if (Array.isArray(row.bottles) && row.bottles.length) {
+        row.bottles.forEach(b => {
+          if (typeof addBottleRowToBulk === 'function') {
+            try {
+              addBottleRowToBulk(tr, b);
+            } catch (err) {
+              console.error('[APP2 bulkGrid] addBottleRowToBulk failed:', err, b);
+            }
+          }
+        });
       }
-    }
+    });
 
-    // DOM反映後に表示系をまとめて再適用
     await new Promise(resolve => requestAnimationFrame(resolve));
 
     if (typeof updateBulkFilledState === 'function') {
@@ -4913,32 +4881,8 @@ async function applyBulkGridStateFromSync(state) {
       window.applyReadonlyToBulkGridCustomKeypad();
     }
 
-    // leave状態があるなら再適用
-    if (window._bulkLeave && typeof window._bulkLeave.applyRowLeaveState === 'function') {
-      mains.forEach(tr => {
-        const leaveCb = tr.querySelector('.bulk-leave');
-        window._bulkLeave.applyRowLeaveState(tr, !!leaveCb?.checked);
-      });
-    }
-
-    // 見た目更新用に最後だけイベント発火
-    grid.querySelectorAll('tbody tr.bulk-mainrow').forEach(tr => {
-      tr.querySelectorAll('input, select').forEach(el => {
-        const evtType = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
-        el.dispatchEvent(new Event(evtType, { bubbles: true }));
-      });
-    });
-
-    try {
-      if (typeof saveBulkGridState === 'function') {
-        saveBulkGridState();
-      }
-    } catch (_) {}
-
-    if (typeof window.scheduleApp3Update === 'function') {
-      window.scheduleApp3Update('applyBulkGridStateFromSync');
-    }
-
+  } catch (err) {
+    console.error('[APP2 bulkGrid] apply failed:', err, state);
   } finally {
     await new Promise(resolve => requestAnimationFrame(resolve));
     window._isApplyingBulkGridSync = false;
