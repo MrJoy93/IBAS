@@ -4569,99 +4569,111 @@ function requestImmediateFirebaseSyncSafe(reason = '') {
     }
   }
 
-  function addBottleSubrow(mainTr) {
-    const { grid } = getBulkDom();
-    if (!grid || !mainTr) return null;
+function addBottleSubrow(mainTr) {
+  const { grid } = getBulkDom();
+  if (!grid || !mainTr) return null;
 
-    const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
-    const hasLeaveCol = cols >= 24;
+  const cols = grid?.tHead?.rows?.[0]?.cells?.length || 0;
+  const hasLeaveCol = cols >= 24;
 
-    const realCols = hasLeaveCol ? 5 : 4;
-    const padCount = Math.max(0, cols - realCols);
+  const realCols = hasLeaveCol ? 5 : 4;
+  const padCount = Math.max(0, cols - realCols);
 
-    const tr = document.createElement('tr');
-    tr.className = 'btl-subrow';
+  const tr = document.createElement('tr');
+  tr.className = 'btl-subrow';
 
-    let html = '';
+  let html = '';
 
-    for (let i = 0; i < padCount; i++) {
-      html += '<td class="btl-pad"></td>';
-    }
-
-    html += `
-      <td class="btl-cell btl-detail-cell btl-group-start">
-        <div class="btl-field-wrap btl-detail-wrap">
-          <button type="button" class="bottle-hierarchy-btn" aria-label="ボトル選択">選択</button>
-          <select class="bottleDetails">
-            ${getBottleOptionsHTML()}
-          </select>
-        </div>
-      </td>
-
-      <td class="btl-cell btl-split-cell">
-        <input
-          type="text"
-          class="splitCount bulk-custom-keypad-target"
-          inputmode="numeric"
-          placeholder="割"
-        >
-      </td>
-
-      <td class="btl-cell btl-qty-cell">
-        <input
-          type="text"
-          class="bottleQuantity bulk-custom-keypad-target"
-          inputmode="numeric"
-          placeholder="数"
-        >
-      </td>
-
-      <td class="btl-cell btl-amount-cell${hasLeaveCol ? '' : ' btl-group-end'}">
-        <input
-          type="text"
-          class="bottleAmount bulk-custom-keypad-target"
-          inputmode="numeric"
-          placeholder="金額"
-        >
-      </td>
-    `;
-
-    if (hasLeaveCol) {
-      html += `<td class="btl-cell btl-leave-ghost-cell btl-group-end"></td>`;
-    }
-
-    tr.innerHTML = html;
-
-    const subs = getBottleSubrows(mainTr);
-    const insertAfter = subs.length ? subs[subs.length - 1] : mainTr;
-    insertAfter.parentNode.insertBefore(tr, insertAfter.nextSibling);
-
-    if (typeof refreshBottleDropdownsFromHistory === 'function') {
-      refreshBottleDropdownsFromHistory();
-    }
-
-    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
-      window.applyReadonlyToBulkGridCustomKeypad();
-    }
-
-    const splitEl = tr.querySelector('.splitCount');
-    const qtyEl = tr.querySelector('.bottleQuantity');
-    const amountEl = tr.querySelector('.bottleAmount');
-
-    if (splitEl && !splitEl.value) splitEl.value = '';
-    if (qtyEl && !qtyEl.value) qtyEl.value = '';
-    if (amountEl && !amountEl.value) amountEl.value = '';
-
-    const minusBtn = mainTr.querySelector('.btl-minus');
-    if (minusBtn) {
-      const subsNow = getBottleSubrows(mainTr);
-      minusBtn.disabled = subsNow.length <= 0;
-    }
-
-    mainTr.dataset.bottleCount = String(getBottleSubrows(mainTr).length);
-
-    return tr;
+  for (let i = 0; i < padCount; i++) {
+    html += '<td class="btl-pad"></td>';
   }
+
+  html += `
+    <td class="btl-cell btl-detail-cell btl-group-start">
+      <div class="btl-field-wrap btl-detail-wrap">
+        <button type="button" class="bottle-hierarchy-btn" aria-label="ボトル選択">選択</button>
+        <select class="bottleDetails">
+          <option value=""></option>
+          ${getBottleOptionsHTML()}
+        </select>
+      </div>
+    </td>
+
+    <td class="btl-cell btl-split-cell">
+      <input
+        type="text"
+        class="splitCount bulk-custom-keypad-target"
+        inputmode="numeric"
+        placeholder="割"
+      >
+    </td>
+
+    <td class="btl-cell btl-qty-cell">
+      <input
+        type="text"
+        class="bottleQuantity bulk-custom-keypad-target"
+        inputmode="numeric"
+        placeholder="数量"
+      >
+    </td>
+
+    <td class="btl-cell btl-amount-cell">
+      <input
+        type="text"
+        class="bottleAmount bulk-custom-keypad-target"
+        inputmode="numeric"
+        placeholder="金額"
+      >
+    </td>
+
+    ${hasLeaveCol ? '<td class="btl-pad"></td>' : ''}
+  `;
+
+  tr.innerHTML = html;
+
+  let anchor = mainTr;
+  while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('btl-subrow')) {
+    anchor = anchor.nextElementSibling;
+  }
+  anchor.insertAdjacentElement('afterend', tr);
+
+  // 追加直後は必ず「未選択」
+  const detailSelect = tr.querySelector('.bottleDetails');
+  if (detailSelect) {
+    detailSelect.value = '';
+    detailSelect.selectedIndex = 0;
+  }
+
+  const splitInput = tr.querySelector('.splitCount');
+  const qtyInput   = tr.querySelector('.bottleQuantity');
+  const amtInput   = tr.querySelector('.bottleAmount');
+
+  if (splitInput) splitInput.value = '';
+  if (qtyInput)   qtyInput.value = '';
+  if (amtInput)   amtInput.value = '';
+
+  const minusBtn = mainTr.querySelector('.btl-minus');
+  if (minusBtn) {
+    minusBtn.disabled = false;
+  }
+
+  const count = getBottleSubrows(mainTr).length;
+  mainTr.dataset.bottleCount = String(count);
+
+  if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+    window.applyReadonlyToCustomKeypadTargets();
+  }
+
+  if (typeof saveBulkGridState === 'function') {
+    saveBulkGridState();
+  }
+
+  if (typeof window.scheduleApp3Update === 'function') {
+    window.scheduleApp3Update('addBottleSubrow');
+  }
+
+  return tr;
+}
 
   // === グリッド構築 =========================================================
   function buildGrid(n) {
@@ -5678,10 +5690,30 @@ function applyApp2MobileView() {
 
 function addAndGetSubrow(mainRow){
   if (typeof addBottleSubrow === 'function') addBottleSubrow(mainRow);
+
   if (typeof getBottleSubrows === 'function') {
     const subs = getBottleSubrows(mainRow);
-    return subs[subs.length - 1] || null;
+    const row = subs[subs.length - 1] || null;
+
+    if (row) {
+      const sel = row.querySelector('.bottleDetails');
+      if (sel) {
+        sel.value = '';
+        sel.selectedIndex = 0;
+      }
+
+      const split = row.querySelector('.splitCount');
+      const qty   = row.querySelector('.bottleQuantity');
+      const amt   = row.querySelector('.bottleAmount');
+
+      if (split) split.value = '';
+      if (qty)   qty.value   = '';
+      if (amt)   amt.value   = '';
+    }
+
+    return row;
   }
+
   return null;
 }
 
