@@ -7,6 +7,25 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let isApplyingRemote = false;
+let suppressSyncUntil = 0;
+
+// ============================================================
+// 同期ガード
+// ============================================================
+function suppressSync(ms = 1200) {
+  suppressSyncUntil = Math.max(suppressSyncUntil, Date.now() + ms);
+}
+
+function canSyncNow() {
+  if (isApplyingRemote) return false;
+  if (window._isApplyingBulkGridSync) return false;
+  if (window._suppressSyncObservers) return false;
+  if (Date.now() < suppressSyncUntil) return false;
+  return true;
+}
+
+window.canSyncNow = canSyncNow;
+window.suppressSync = suppressSync;
 
 /*** ←ここをコンソールの値で置き換え ***/
 const firebaseConfig = {
@@ -53,21 +72,31 @@ function _saved(){ const el=document.getElementById("syncIndicator"); if(!el) re
 
 /*** ==== 読み込み・保存・購読 ==== ***/
 async function loadAllApps(key = monthKey()){
+  suppressSync(1500);
+
   const snap = await getDoc(docRefFor(key));
   const data = snap.exists() ? snap.data() : {};
 
-  if (typeof window.applyApp1State === "function") {
-    window.applyApp1State(data.app1);
-  }
-  if (typeof window.applyApp2State === "function") {
-    window.applyApp2State(data.app2);
-  }
-  if (typeof window.applyApp3State === "function") {
-    window.applyApp3State(data.app3);
+  try {
+    if (typeof window.applyApp1State === "function") {
+      await window.applyApp1State(data.app1);
+    }
+    if (typeof window.applyApp2State === "function") {
+      await window.applyApp2State(data.app2);
+    }
+    if (typeof window.applyApp3State === "function") {
+      await window.applyApp3State(data.app3);
+    }
+  } finally {
+    suppressSync(1500);
   }
 }
 
 async function saveAllApps(key = monthKey()){
+  if (!canSyncNow()) {
+    return;
+  }
+
   _showSaving();
 
   try {
@@ -107,6 +136,7 @@ function subscribeRemote(key = monthKey()) {
     if (data?.lastAuthor === CLIENT_ID) return;
 
     isApplyingRemote = true;
+    suppressSync(2000);
 
     try {
       if (typeof window.applyApp1State === "function") {
@@ -123,6 +153,7 @@ function subscribeRemote(key = monthKey()) {
     } finally {
       requestAnimationFrame(() => {
         isApplyingRemote = false;
+        suppressSync(2000);
       });
     }
   });
@@ -130,28 +161,55 @@ function subscribeRemote(key = monthKey()) {
 
 /*** ==== オートセーブ（デバウンス） ==== ***/
 let _saveTimer = null;
+
 function scheduleAutosave(){
-  if (isApplyingRemote) return;
-  if (window._isApplyingBulkGridSync) return;
+  if (!canSyncNow()) return;
 
   if (_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => saveAllApps(monthKey()), 800);
+
+  _saveTimer = setTimeout(() => {
+    if (!canSyncNow()) return;
+    saveAllApps(monthKey());
+  }, 800);
 }
 
 // ===== 同期ヘルパ =====
-function saveNow(reason=""){ 
-  try{ console.debug("[SYNC] now:", reason); }catch(_){}
+function saveNow(reason=""){
+  if (!canSyncNow()) {
+    return Promise.resolve();
+  }
+
+  try {
+    console.debug("[SYNC] now:", reason);
+  } catch (_) {}
+
   return saveAllApps(monthKey());
 }
 
 // 関数をラップして「実行後」に同期するユーティリティ
 function wrapAndSync(name, {immediate=false} = {}){
   const fn = window[name];
-  if(typeof fn !== "function") return;
+  if (typeof fn !== "function") return;
+
   window[name] = async function(...args){
     const ret = fn.apply(this, args);
-    try { if (ret && typeof ret.then === "function") await ret; } catch(e){}
-    if (immediate) { await saveNow(name); } else { scheduleAutosave(); }
+
+    try {
+      if (ret && typeof ret.then === "function") {
+        await ret;
+      }
+    } catch (e) {}
+
+    if (!canSyncNow()) {
+      return ret;
+    }
+
+    if (immediate) {
+      await saveNow(name);
+    } else {
+      scheduleAutosave();
+    }
+
     return ret;
   };
 }
@@ -178,10 +236,27 @@ wrapAndSync("resetSearch",         { immediate:false });
 
   const observer = new MutationObserver(() => {
     clearTimeout(debounceTimer);
-    // 100ms デバウンスで両方の処理を安全に呼ぶ
+
     debounceTimer = setTimeout(() => {
+      if (window._suppressSyncObservers) {
+        if (typeof createHistoryIndex === 'function') {
+          createHistoryIndex();
+        }
+        return;
+      }
+
+      if (!canSyncNow()) {
+        if (typeof createHistoryIndex === 'function') {
+          createHistoryIndex();
+        }
+        return;
+      }
+
       scheduleAutosave();
-      createHistoryIndex();
+
+      if (typeof createHistoryIndex === 'function') {
+        createHistoryIndex();
+      }
     }, 100);
   });
 
@@ -200,8 +275,7 @@ function attachAutosave() {
 
       if (!t.closest('#app1, #app2, #app3')) return;
 
-      if (isApplyingRemote) return;
-      if (window._isApplyingBulkGridSync) return;
+      if (!canSyncNow()) return;
 
       scheduleAutosave();
     }, { capture: true });
@@ -226,62 +300,4 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   await loadAllApps(monthKey());  // ①ページを開いたら即読み込み
   attachAutosave();               // ②入力のたびに自動保存（800msデバウンス）
   subscribeRemote(monthKey());    // ③他端末の更新を即時反映
-});
-
-// Firebase へ履歴を保存（saveRemote があればそれを使う）
-async function persistApp2History(){
-  // ① 既存の saveRemote(appId, stateObj) がある場合
-  if (typeof saveRemote === 'function'){
-    await saveRemote('app2', { history: app2History });
-    return;
-  }
-  // ② ない場合のフォールバック（useFirebase を使う前提）
-  if (typeof useFirebase === 'function'){
-    const fb = await useFirebase();
-    if(!fb) return;
-    const { db, doc, setDoc, serverTimestamp } = fb;
-    await setDoc(
-      doc(db, 'apps', 'app2'),              // ← コレクション/ドキュメントは環境に合わせて
-      { history: app2History, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-  }
-}
-
-// リアルタイム購読（他端末の更新を即反映）
-async function startApp2Realtime(){
-  if (typeof useFirebase !== 'function') return;
-  const fb = await useFirebase();
-  if(!fb) return;
-  const { db, doc, onSnapshot } = fb;
-  const ref = doc(db, 'apps', 'app2');      // ← 保存先に合わせて同じ参照にする
-  onSnapshot(ref, (snap) => {
-    const data = snap.data();
-    if (!data || !Array.isArray(data.history)) return;
-    // 自分の直後保存で重複しにくいよう簡単な等価チェック
-    const jsonLocal  = JSON.stringify(app2History);
-    const jsonRemote = JSON.stringify(data.history);
-    if (jsonLocal !== jsonRemote){
-      app2History = data.history;
-      renderApp2History();
-    }
-  });
-}
-
-// 初期ロード（ページ表示時に一度だけ取り込み）
-async function loadApp2HistoryOnce(){
-  if (typeof useFirebase !== 'function') return renderApp2History();
-  const fb = await useFirebase();
-  if(!fb) return renderApp2History();
-  const { db, doc, getDoc } = fb;
-  const ref = doc(db, 'apps', 'app2');      // ← 保存先に合わせる
-  const snap = await getDoc(ref);
-  const data = snap.exists() ? snap.data() : null;
-  app2History = Array.isArray(data?.history) ? data.history : [];
-  renderApp2History();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadApp2HistoryOnce();  // 一度だけ読み込む
-  startApp2Realtime();    // 以後はリアルタイム反映
 });
