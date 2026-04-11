@@ -2195,6 +2195,10 @@ window.applyApp1State   = applyApp1State;
 
 window.getBulkDom = getBulkDom;
 
+function installCheckboxColumn() {
+  // buildGrid() でチェック列を直接生成するため不要
+}
+
 // ===== app2 履歴のローカル状態 =====
 let app2History = [];
 
@@ -3879,27 +3883,9 @@ function toggleDetails(button) {
 }
 
 function calculateBack() {
-  const values = {
-    f: 1500,
-    f2: 2000,
-    jounai: 1000,
-    honshiri: 0,
-    douhan: 1500,
-    eda: 500,
-    help: -1500,
-    set40: 5500,
-    set20: 3500,
-    vip: 2000,
-    a: 500,
-    b: 1000,
-    c: 1500,
-    d: 2000,
-    e: 2500
-  };
-
   const inputs = {
-    f: document.getElementById("f"),
-    f2: document.getElementById("f2"),
+    f: document.getElementById("f"),               // 2kチェック
+    f2: document.getElementById("f2"),             // F数量
     jounai: document.getElementById("jounai"),
     honshiri: document.getElementById("honshiri"),
     douhan: document.getElementById("douhan"),
@@ -3915,23 +3901,94 @@ function calculateBack() {
     e: document.getElementById("e")
   };
 
+  const values = {
+    jounai: 1000,
+    honshiri: 0,
+    douhan: 1500,
+    eda: 500,
+    help: -1500,
+    set40: 5500,
+    set20: 3500,
+    vip: 2000,
+    a: 500,
+    b: 1000,
+    c: 1500,
+    d: 2000,
+    e: 2500
+  };
+
+  const labels = {
+    f: "F",
+    jounai: "場内",
+    honshiri: "本指",
+    douhan: "同伴",
+    eda: "枝",
+    help: "HELP",
+    set40: "SET40",
+    set20: "SET20",
+    vip: "VIP",
+    a: "A",
+    b: "B",
+    c: "C",
+    d: "D",
+    e: "E"
+  };
+
+  const getNum = (el) => {
+    return parseInt(String(el?.value || "0").replace(/,/g, ""), 10) || 0;
+  };
+
   let total = 0;
-  let detailLines = [];
+  const detailLines = [];
 
-  Object.keys(values).forEach(key => {
-    const count = parseInt(inputs[key]?.value || 0);
-    if (count > 0) {
-      const unitPrice = values[key];
-      const itemTotal = count * unitPrice;
-      total += itemTotal;
+  // =========================================================
+  // Fだけ特別処理
+  // f  = チェックボックス（OFF:1500 / ON:2000）
+  // f2 = 数量
+  // =========================================================
+  const fCount = getNum(inputs.f2);
+  if (fCount > 0) {
+    const fUnit = inputs.f?.checked ? 2000 : 1500;
+    const fTotal = fCount * fUnit;
 
-      const sign = unitPrice < 0 ? "-" : "";
-      detailLines.push(`${key.toUpperCase()} ×${count}（¥${Math.abs(unitPrice).toLocaleString()}）= ${sign}¥${Math.abs(itemTotal).toLocaleString()}`);
+    total += fTotal;
+    detailLines.push(`${labels.f} × ${fCount}（¥${fUnit.toLocaleString()}）= ¥${fTotal.toLocaleString()}`);
+  }
+
+  // =========================================================
+  // その他の固定単価項目
+  // =========================================================
+  Object.keys(values).forEach((key) => {
+    const count = getNum(inputs[key]);
+    if (count <= 0) return;
+
+    const unitPrice = values[key];
+    const itemTotal = count * unitPrice;
+
+    total += itemTotal;
+
+    const absUnit = Math.abs(unitPrice).toLocaleString();
+    const absTotal = Math.abs(itemTotal).toLocaleString();
+
+    if (unitPrice < 0) {
+      detailLines.push(`${labels[key]} × ${count}（-¥${absUnit}）= -¥${absTotal}`);
+    } else {
+      detailLines.push(`${labels[key]} × ${count}（¥${absUnit}）= ¥${absTotal}`);
     }
   });
 
-  document.getElementById("total").textContent = "¥" + total.toLocaleString();
-  document.getElementById("detail").value = detailLines.join("\n");
+  const totalEl = document.getElementById("backTotal");
+  const detailEl = document.getElementById("backDetails");
+
+  if (totalEl) {
+    totalEl.textContent = `¥${total.toLocaleString()}`;
+  }
+
+  if (detailEl) {
+    detailEl.value = detailLines.join("\n");
+  }
+
+  return total;
 }
 
 function restoreCheckboxes() {
@@ -4712,16 +4769,64 @@ function addBottleSubrow(mainTr) {
       vw <= 1300;
 
     const widths = isCompactLandscapeApp2
-      ? [
-          '2.4%','6.0%','3.0%','6.0%',
-          '3.0%','4%','4%','4%','4%','4%','4%','4%','4%','4%','4%','4%','4%','4%','4%',
-          '12.6%','3.2%','3.2%','5.0%','2.4%'
-        ]
-      : [
-          '2.2%','8.0%','3.2%','5.0%',
-          '3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%','3.2%',
-          '13.6%','3.0%','3.0%','10.0%','3.0%'
-        ];
+  ? [
+      '2.4%', // #
+      '2.4%', // 選択
+      '5.6%', // 氏名
+      '3.0%', // 体/貸
+      '6.0%', // 送迎
+
+      '3.0%', // 2k
+      '4.0%', // F
+      '4.0%', // 場内
+      '4.0%', // 本指
+      '4.0%', // 同伴
+      '4.0%', // 枝
+      '4.0%', // HE
+      '4.0%', // 40
+      '4.0%', // 20
+      '4.0%', // VIP
+      '4.0%', // A
+      '4.0%', // B
+      '4.0%', // C
+      '4.0%', // D
+      '4.0%', // E
+
+      '11.0%', // 品名
+      '3.2%',  // 割
+      '3.2%',  // 数量
+      '5.0%',  // 金額
+      '2.4%'   // 退
+    ]
+  : [
+      '2.2%', // #
+      '2.2%', // 選択
+      '6.8%', // 氏名
+      '3.2%', // 体/貸
+      '5.0%', // 送迎
+
+      '3.2%', // 2k
+      '3.2%', // F
+      '3.2%', // 場内
+      '3.2%', // 本指
+      '3.2%', // 同伴
+      '3.2%', // 枝
+      '3.2%', // HE
+      '3.2%', // 40
+      '3.2%', // 20
+      '3.2%', // VIP
+      '3.2%', // A
+      '3.2%', // B
+      '3.2%', // C
+      '3.2%', // D
+      '3.2%', // E
+
+      '12.0%', // 品名
+      '3.0%',  // 割
+      '3.0%',  // 数量
+      '8.8%',  // 金額
+      '3.0%'   // 退
+    ];
 
     const cg = document.createElement('colgroup');
     widths.forEach(w => {
@@ -4734,9 +4839,15 @@ function addBottleSubrow(mainTr) {
     thead.innerHTML = '';
     const trh = document.createElement('tr');
 
-    const thNo = document.createElement('th');
-    thNo.textContent = '#';
-    trh.appendChild(thNo);
+const thNo = document.createElement('th');
+thNo.textContent = '#';
+trh.appendChild(thNo);
+
+// ★追加：選択チェック列
+const thSel = document.createElement('th');
+thSel.className = 'bulk-check-head';
+thSel.innerHTML = `<input type="checkbox" id="bulkCheckAll">`;
+trh.appendChild(thSel);
 
     COLS.forEach(c => {
       const th = document.createElement('th');
@@ -4778,6 +4889,9 @@ function addBottleSubrow(mainTr) {
 
       let html = `
         <td>${i}</td>
+        <td class="bulk-check-cell">
+        <input type="checkbox" class="bulk-check">
+        </td>
         <td><input class="bulk-name" placeholder="氏名"></td>
         <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
         <td><input class="bulk-send bulk-custom-keypad-target" inputmode="numeric" placeholder="送迎"></td>
@@ -5725,43 +5839,12 @@ function updateRowCheckState(mainRow){
   const empty = isBulkRowEmpty(mainRow);
   const isLeave = mainRow.classList.contains('is-leave');
 
-  // 退勤行は常に選択不可
   if (isLeave) {
     cb.disabled = true;
     cb.checked = false;
-    mainRow.classList.remove('bulk-empty'); // 見た目用なら任意
+    mainRow.classList.remove('bulk-empty');
     return;
   }
-
-  document.addEventListener('change', e => {
-  if (e.target && e.target.id === 'bulkCheckAll') {
-    const on = !!e.target.checked;
-
-    document.querySelectorAll('#bulkGrid tr.bulk-mainrow').forEach(tr => {
-      const cb = tr.querySelector('.bulk-check');
-      if (!cb) return;
-
-      const isLeave = tr.classList.contains('is-leave');
-      if (cb.disabled || isLeave) return;
-
-      cb.checked = on;
-    });
-  }
-});
-
-document.addEventListener('click', e => {
-  if (e.target && e.target.id === 'bulkToggleChecks') {
-    document.querySelectorAll('#bulkGrid tr.bulk-mainrow').forEach(tr => {
-      const cb = tr.querySelector('.bulk-check');
-      if (!cb) return;
-
-      const isLeave = tr.classList.contains('is-leave');
-      if (cb.disabled || isLeave) return;
-
-      cb.checked = !cb.checked;
-    });
-  }
-});
 
   cb.disabled = empty;
   if (empty) cb.checked = false;
@@ -8185,101 +8268,74 @@ function renderApp2History(){
 }
 
 // 一括入力グリッド：選択→まとめて出力
+// 一括入力グリッド：選択→まとめて出力
 (function(){
   const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
-  const WAIT_BETWEEN_PRINT_MS = 500;   // 1件出力→次までの待機（必要なら調整）
+  const WAIT_BETWEEN_PRINT_MS = 500;
 
-// 1) ツールバー確認（HTML固定化したので自動生成しない）
-function ensureToolbar(){
-  const hasPrintBtn = !!document.getElementById('bulkPrintSelected');
-  const hasToggleBtn = !!document.getElementById('bulkToggleChecks');
+  function ensureToolbar(){
+    const hasPrintBtn = !!document.getElementById('bulkPrintSelected');
+    const hasToggleBtn = !!document.getElementById('bulkToggleChecks');
 
-  if (!hasPrintBtn) {
-    console.warn('[bulk] #bulkPrintSelected が見つかりません');
+    if (!hasPrintBtn) console.warn('[bulk] #bulkPrintSelected が見つかりません');
+    if (!hasToggleBtn) console.warn('[bulk] #bulkToggleChecks が見つかりません');
   }
-  if (!hasToggleBtn) {
-    console.warn('[bulk] #bulkToggleChecks が見つかりません');
-  }
-}
 
-  // 2) #列をチェックボックス化（見出し=全選択、各行=個別選択）
   function installCheckboxColumn(){
-    const grid = document.getElementById('bulkGrid');
-    if (!grid) return;
-
-    // ヘッダ
-    const th0 = grid.tHead?.rows?.[0]?.cells?.[0];
-    if (th0 && !th0.querySelector('input[type="checkbox"]')) {
-      th0.style.width = '3em';
-      th0.innerHTML = `<input type="checkbox" id="bulkCheckAll" aria-label="全選択">`;
-    }
-
-    // 各メイン行
-    const rows = grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [];
-    rows.forEach((tr, i) => {
-      const td0 = tr.cells?.[0];
-      if (!td0) return;
-      if (!td0.querySelector('input[type="checkbox"]')) {
-        td0.innerHTML = `<input type="checkbox" class="bulk-check" aria-label="行${i+1}を選択">`;
-      }
-      // ← 追加：生成直後に活性/選択状態を更新
-      updateRowCheckState(tr);
-    });
+    // buildGrid() 側でチェック列を生成する方式に変更済み
   }
 
-  // 3) グリッドの内容を通常フォームへ流し込む（既存IDへセット）
   function pushBulkRowToNormalForm(mainRow){
     if (!mainRow) return;
 
-    // 氏名
     const name = mainRow.querySelector('.bulk-name')?.value ?? '';
     const nameEl = document.getElementById('castName');
-    if (nameEl) { nameEl.value = name; nameEl.dispatchEvent(new Event('input', {bubbles:true})); }
+    if (nameEl) {
+      nameEl.value = name;
+      nameEl.dispatchEvent(new Event('input', { bubbles:true }));
+    }
 
-    // 体験/貸出
     const exp = !!mainRow.querySelector('.bulk-exp')?.checked;
     const expEl = document.getElementById('experienceAndRental');
-    if (expEl) { expEl.checked = exp; }  // ★ change擬似発火は不要
+    if (expEl) {
+      expEl.checked = exp;
+    }
 
-    // 送迎
     const send = mainRow.querySelector('.bulk-send')?.value ?? '';
     const sendEl = document.getElementById('sendoffAmount');
-    if (sendEl) { sendEl.value = send; sendEl.dispatchEvent(new Event('input', {bubbles:true})); }
+    if (sendEl) {
+      sendEl.value = send;
+      sendEl.dispatchEvent(new Event('input', { bubbles:true }));
+    }
 
-    // 数値系（F, F2, …）
     QUANT_IDS.forEach(id => {
-  const src = mainRow.querySelector(`[data-k="${id}"]`);
-  const dst = document.getElementById(id);
-  if (!src || !dst) return;
+      const dst = document.getElementById(id);
+      if (!dst) return;
 
-  // ★ 2k（f）はチェックボックスなので checked を転送
-  if (id === 'f') {
-    dst.checked = !!src.checked;
-    return;
-  }
+      if (id === 'f') {
+        const src = mainRow.querySelector('[data-k="2k"]');
+        dst.checked = !!src?.checked;
+        return;
+      }
 
-  // ★ 数値は "0" を入れない（空扱い）
-  const v = (src.value ?? '').toString().trim();
-  dst.value = (v === '0') ? '' : v;
-});
+      const src = mainRow.querySelector(`[data-k="${id}"]`);
+      if (!src) return;
 
+      const v = (src.value ?? '').toString().trim();
+      dst.value = (v === '0') ? '' : v;
+    });
 
-    // ボトルサブ行 → 通常フォームへ再構成
-    // 既存のフォーム側コンテナを前提（ない場合はスキップ）
     const container = document.getElementById('bottleFormsContainer');
     if (container) {
-      // 既存クリア
       container.querySelectorAll('.bottle-form').forEach(el => el.remove());
 
-      // 一括サブ行を走査
       let anchor = mainRow.nextElementSibling;
       while (anchor && anchor.classList.contains('btl-subrow')) {
-        const detail = getSelectedDetail(anchor) || '';
+        const detail = (typeof getSelectedDetail === 'function') ? (getSelectedDetail(anchor) || '') : '';
         const split  = anchor.querySelector('.splitCount')?.value ?? '';
         const qty    = anchor.querySelector('.bottleQuantity')?.value ?? '';
         const amt    = anchor.querySelector('.bottleAmount')?.value ?? '';
 
-        // 既存の新規追加API/関数があればそれを使う（なければ素直にDOM生成）
         const form = document.createElement('div');
         form.className = 'bottle-form';
         form.innerHTML = `
@@ -8298,124 +8354,135 @@ function ensureToolbar(){
         const aEl = form.querySelector('.bottleAmount');
 
         if (sel) {
-          setBottleDetailValue(sel, detail);
+          if (typeof setBottleDetailValue === 'function') {
+            setBottleDetailValue(sel, detail);
+          } else {
+            sel.value = detail;
+          }
           sel.dispatchEvent(new Event('change', { bubbles:true }));
         }
-        if (sEl) { sEl.value = split;  sEl.dispatchEvent(new Event('input', { bubbles:true })); }
-        if (qEl) { qEl.value = qty;    qEl.dispatchEvent(new Event('input', { bubbles:true })); }
-        if (aEl) { aEl.value = amt;    aEl.dispatchEvent(new Event('input', { bubbles:true })); }
+        if (sEl) {
+          sEl.value = split;
+          sEl.dispatchEvent(new Event('input', { bubbles:true }));
+        }
+        if (qEl) {
+          qEl.value = qty;
+          qEl.dispatchEvent(new Event('input', { bubbles:true }));
+        }
+        if (aEl) {
+          aEl.value = amt;
+          aEl.dispatchEvent(new Event('input', { bubbles:true }));
+        }
 
         anchor = anchor.nextElementSibling;
       }
     }
   }
 
-  // 4) まとめて出力（選択行を順に通常フォームへ流し→既存の出力ボタンをClick）
+  async function printSelectedRows() {
+    const grid = document.getElementById('bulkGrid');
+    if (!grid) return alert('一括入力テーブルが見つかりません。');
 
-async function printSelectedRows() {
-  const grid = document.getElementById('bulkGrid');
-  if (!grid) return alert('一括入力テーブルが見つかりません。');
+    const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
+      .filter(tr => {
+        const on = tr.querySelector('.bulk-check')?.checked;
+        return on && !isBulkRowEmpty(tr);
+      });
 
-  const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
-    .filter(tr => {
-      const on = tr.querySelector('.bulk-check')?.checked;
-      return on && !isBulkRowEmpty(tr);
-    });
+    if (!selected.length) return alert('出力する行をチェックしてください。');
 
-  if (!selected.length) return alert('出力する行をチェックしてください。');
+    for (const row of selected) {
+      pushBulkRowToNormalForm(row);
 
-  const WAIT_BETWEEN_PRINT_MS = 400; // ウィンドウ閉後の安全マージン
-
-  for (const row of selected) {
-    // 1) グリッド → 通常フォームへ反映
-    pushBulkRowToNormalForm(row);
-
-    // 2) 印刷ウィンドウを開く（preparePrintApp2 → openPrintApp2がwindow.openを返すように改修済み前提）
-    let win = null;
-    try {
-      if (typeof window.preparePrintApp2 === 'function') {
-        // preparePrintApp2が内部でopenPrintApp2を呼び出しwindowを返すよう改修済みとする
-        win = await window.preparePrintApp2();
+      let win = null;
+      try {
+        if (typeof window.preparePrintApp2 === 'function') {
+          win = await window.preparePrintApp2();
+        }
+      } catch (e) {
+        console.error('印刷呼び出しエラー:', e);
       }
-    } catch (e) {
-      console.error('印刷呼び出しエラー:', e);
+
+      await waitForWindowClose(win);
+      await new Promise(r => setTimeout(r, WAIT_BETWEEN_PRINT_MS));
     }
-
-    // 3) ウィンドウが閉じるまで待つ
-    await waitForWindowClose(win);
-
-    // 4) 少し間を空けて次へ
-    await new Promise(r => setTimeout(r, WAIT_BETWEEN_PRINT_MS));
   }
-}
 
-/**
- * 印刷ウィンドウが閉じられるまで待つPromise
- */
-function waitForWindowClose(win) {
-  return new Promise(resolve => {
-    if (!win || win.closed) return resolve();
-    const timer = setInterval(() => {
-      if (win.closed) {
-        clearInterval(timer);
-        resolve();
-      }
-    }, 300);
-  });
-}
+  function waitForWindowClose(win) {
+    return new Promise(resolve => {
+      if (!win || win.closed) return resolve();
 
+      const timer = setInterval(() => {
+        if (win.closed) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 300);
+    });
+  }
 
-  // 5) イベント束ね
   function bindEvents(){
-    // 全選択
     document.addEventListener('change', e => {
       if (e.target && e.target.id === 'bulkCheckAll') {
         const on = !!e.target.checked;
-        document.querySelectorAll('#bulkGrid .bulk-check').forEach(cb => {
-        if (!cb.disabled) cb.checked = on;  // 空行(=disabled)は触らない
+
+        document.querySelectorAll('#bulkGrid tr.bulk-mainrow').forEach(tr => {
+          const cb = tr.querySelector('.bulk-check');
+          if (!cb) return;
+
+          const isLeave = tr.classList.contains('is-leave');
+          if (cb.disabled || isLeave) return;
+
+          cb.checked = on;
         });
       }
     });
-    // 反転
+
     document.addEventListener('click', e => {
       if (e.target && e.target.id === 'bulkToggleChecks') {
-        document.querySelectorAll('#bulkGrid .bulk-check').forEach(cb => { cb.checked = !cb.checked; });
+        document.querySelectorAll('#bulkGrid tr.bulk-mainrow').forEach(tr => {
+          const cb = tr.querySelector('.bulk-check');
+          if (!cb) return;
+
+          const isLeave = tr.classList.contains('is-leave');
+          if (cb.disabled || isLeave) return;
+
+          cb.checked = !cb.checked;
+        });
       }
     });
-    // 選択出力
+
     document.addEventListener('click', e => {
       if (e.target && e.target.id === 'bulkPrintSelected') {
         printSelectedRows();
       }
     });
 
-    // グリッドが再構築されたらチェック列を再注入（行数変更・再描画に対応）
-    const mo = new MutationObserver(() => installCheckboxColumn());
     const tbody = document.querySelector('#bulkGrid tbody');
-    if (tbody) mo.observe(tbody, { childList: true, subtree: false });
+    if (tbody) {
+      const mo = new MutationObserver(() => installCheckboxColumn());
+      mo.observe(tbody, { childList: true, subtree: false });
+    }
 
-    // tbody内の入力変化で、その行の状態を更新
-document.addEventListener('input',  (e) => {
-  if (!e.target || !e.target.closest('#bulkGrid')) return;
-  const row = e.target.closest('tr.bulk-mainrow') || e.target.closest('tr')?.previousElementSibling;
-  if (row && row.classList.contains('bulk-mainrow')) updateRowCheckState(row);
-});
-document.addEventListener('change', (e) => {
-  if (!e.target || !e.target.closest('#bulkGrid')) return;
-  const row = e.target.closest('tr.bulk-mainrow') || e.target.closest('tr')?.previousElementSibling;
-  if (row && row.classList.contains('bulk-mainrow')) updateRowCheckState(row);
-});
+    document.addEventListener('input', (e) => {
+      if (!e.target || !e.target.closest('#bulkGrid')) return;
+      const row = e.target.closest('tr.bulk-mainrow') || e.target.closest('tr')?.previousElementSibling;
+      if (row && row.classList.contains('bulk-mainrow')) updateRowCheckState(row);
+    });
 
+    document.addEventListener('change', (e) => {
+      if (!e.target || !e.target.closest('#bulkGrid')) return;
+      const row = e.target.closest('tr.bulk-mainrow') || e.target.closest('tr')?.previousElementSibling;
+      if (row && row.classList.contains('bulk-mainrow')) updateRowCheckState(row);
+    });
   }
 
-  // 初期化
   function init(){
     ensureToolbar();
     installCheckboxColumn();
     bindEvents();
   }
 
-  // DOMReady後に一度実行、既にグリッドがある/後から生成の両方に対応
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
