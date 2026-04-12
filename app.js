@@ -264,7 +264,6 @@ function installBulkCustomKeypad() {
 
   const isMobileLike = isCustomKeypadDevice();
 
-
   // PC時はテンキー完全無効化
   if (!isMobileLike || !keypad) {
     document.querySelectorAll('input.bulk-custom-keypad-target').forEach(input => {
@@ -281,16 +280,17 @@ function installBulkCustomKeypad() {
   }
 
   let activeInput = null;
+  let replaceOnNextInput = false;
   window.isCustomKeypadInput = false;
 
-function isTarget(el) {
-  return el instanceof HTMLInputElement
-    && el.classList.contains('bulk-custom-keypad-target')
-    && !el.disabled
-    && !el.hidden
-    && el.type !== 'hidden'
-    && el.offsetParent !== null;
-}
+  function isTarget(el) {
+    return el instanceof HTMLInputElement
+      && el.classList.contains('bulk-custom-keypad-target')
+      && !el.disabled
+      && !el.hidden
+      && el.type !== 'hidden'
+      && el.offsetParent !== null;
+  }
 
   function stripCommas(v) {
     return String(v ?? '').replace(/,/g, '');
@@ -301,23 +301,24 @@ function isTarget(el) {
   }
 
   function dispatchInput(input) {
-   input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-function applyReadonlyToCustomKeypadTargets() {
-  const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
+  function applyReadonlyToCustomKeypadTargets() {
+    const inputs = document.querySelectorAll('input.bulk-custom-keypad-target');
 
-  inputs.forEach(input => {
-    if (input.disabled) return;
-    if (input.type === 'hidden') return;
+    inputs.forEach(input => {
+      if (input.disabled) return;
+      if (input.type === 'hidden') return;
 
-    input.readOnly = true;
-    input.setAttribute('inputmode', 'none');
-    input.setAttribute('autocomplete', 'off');
-    input.setAttribute('autocapitalize', 'off');
-    input.setAttribute('spellcheck', 'false');
-  });
-}
+      input.readOnly = true;
+      input.setAttribute('inputmode', 'none');
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+    });
+  }
+
   function getLabel(input) {
     return input.getAttribute('placeholder')
       || input.dataset.k
@@ -332,7 +333,7 @@ function applyReadonlyToCustomKeypadTargets() {
       .forEach(el => el.classList.remove('bulk-custom-keypad-active'));
   }
 
-    function getKeypadSafeTop() {
+  function getKeypadSafeTop() {
     const tabsH = _pxVar('--tabs-h', 56);
     const subH = _currentSubnavH();
     return Math.round(tabsH + subH + 12);
@@ -355,7 +356,7 @@ function applyReadonlyToCustomKeypadTargets() {
     if (!wrap) return;
 
     const inputRect = input.getBoundingClientRect();
-    const wrapRect  = wrap.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
 
     const safeTop = Math.max(wrapRect.top, getKeypadSafeTop());
     const safeBottom = Math.min(wrapRect.bottom, getKeypadSafeBottom());
@@ -413,24 +414,26 @@ function applyReadonlyToCustomKeypadTargets() {
     activeInput = input;
     activeInput.classList.add('bulk-custom-keypad-active');
 
+    // フォーカス移動直後は次の1打を上書き扱い
+    replaceOnNextInput = true;
+
     if (keypadTitle) {
       keypadTitle.textContent = `入力中: ${getLabel(input)}`;
     }
 
     keypad.hidden = false;
 
-    // テンキー表示後に、対象入力欄が
-    // 固定ヘッダと固定テンキーに隠れない位置まで追従スクロール
     requestAnimationFrame(() => {
       ensureCustomKeypadTargetVisible(activeInput);
     });
   }
 
   function hideKeypad() {
-  clearActiveState();
-  activeInput = null;
-  keypad.hidden = true;
-  window.isCustomKeypadInput = false;
+    clearActiveState();
+    activeInput = null;
+    replaceOnNextInput = false;
+    keypad.hidden = true;
+    window.isCustomKeypadInput = false;
   }
 
   function setRawValue(input, raw) {
@@ -439,55 +442,78 @@ function applyReadonlyToCustomKeypadTargets() {
   }
 
   function appendText(input, text) {
-  if (!input) return;
+    if (!input) return;
 
-  window.isCustomKeypadInput = true;
+    window.isCustomKeypadInput = true;
 
-  let raw = normalizeNumericString(input.value);
+    let raw = normalizeNumericString(input.value);
 
-  if (text === '00' || text === '000') {
-    if (raw === '' || raw === '-') {
-      raw = raw === '-' ? '-0' : '0';
+    // フォーカス移動直後の最初の入力は上書き
+    if (replaceOnNextInput) {
+      raw = '';
+      replaceOnNextInput = false;
     }
+
+    if (text === '00' || text === '000') {
+      if (raw === '' || raw === '-') {
+        raw = raw === '-' ? '-0' : '0';
+      }
+      raw += text;
+      setRawValue(input, raw);
+      return;
+    }
+
     raw += text;
+
+    if (!/^-?\d*$/.test(raw)) return;
+
     setRawValue(input, raw);
-    return;
-  }
-
-  raw += text;
-
-  if (!/^-?\d*$/.test(raw)) return;
-
-  setRawValue(input, raw);
   }
 
   function backspace(input) {
-   if (!input) return;
-  window.isCustomKeypadInput = true;
-  const raw = normalizeNumericString(input.value).slice(0, -1);
-   setRawValue(input, raw);
+    if (!input) return;
+
+    window.isCustomKeypadInput = true;
+
+    // 移動直後の最初のバックスペースは全消し
+    if (replaceOnNextInput) {
+      replaceOnNextInput = false;
+      setRawValue(input, '');
+      return;
+    }
+
+    const raw = normalizeNumericString(input.value).slice(0, -1);
+    setRawValue(input, raw);
   }
 
   function clearValue(input) {
-   if (!input) return;
-  window.isCustomKeypadInput = true;
-   setRawValue(input, '');
+    if (!input) return;
+    window.isCustomKeypadInput = true;
+    replaceOnNextInput = false;
+    setRawValue(input, '');
   }
 
   function toggleMinus(input) {
     if (!input) return;
 
-  window.isCustomKeypadInput = true;
+    window.isCustomKeypadInput = true;
 
-  let raw = normalizeNumericString(input.value);
+    let raw = normalizeNumericString(input.value);
 
-  if (raw.startsWith('-')) {
-    raw = raw.slice(1);
-  } else {
-    raw = '-' + raw;
-  }
+    // フォーカス移動直後なら新規でマイナス入力開始
+    if (replaceOnNextInput) {
+      replaceOnNextInput = false;
+      setRawValue(input, '-');
+      return;
+    }
 
-  setRawValue(input, raw);
+    if (raw.startsWith('-')) {
+      raw = raw.slice(1);
+    } else {
+      raw = '-' + raw;
+    }
+
+    setRawValue(input, raw);
   }
 
   function getTargetScope(input) {
@@ -515,27 +541,27 @@ function applyReadonlyToCustomKeypadTargets() {
       .filter(el => !el.disabled && el.type !== 'hidden' && el.offsetParent !== null);
   }
 
-function focusTargetInput(next) {
-  if (!next) return;
+  function focusTargetInput(next) {
+    if (!next) return;
 
-  try {
-    next.focus({ preventScroll: true });
-  } catch (_) {
     try {
-      next.focus();
+      next.focus({ preventScroll: true });
+    } catch (_) {
+      try {
+        next.focus();
+      } catch (_) {}
+    }
+
+    showKeypad(next);
+
+    requestAnimationFrame(() => {
+      ensureCustomKeypadTargetVisible(next);
+    });
+
+    try {
+      next.blur();
     } catch (_) {}
   }
-
-  showKeypad(next);
-
-  requestAnimationFrame(() => {
-    ensureCustomKeypadTargetVisible(next);
-  });
-
-  try {
-    next.blur();
-  } catch (_) {}
-}
 
   function focusNextTarget(current) {
     const all = getScopedTargets(current);
@@ -729,29 +755,28 @@ function focusTargetInput(next) {
   applyReadonlyToCustomKeypadTargets();
 
   document.addEventListener('touchstart', (e) => {
-  const target = e.target;
+    const target = e.target;
 
-  if (isTarget(target)) {
-    e.preventDefault();
-    showKeypad(target);
-    return;
-  }
+    if (isTarget(target)) {
+      e.preventDefault();
+      showKeypad(target);
+      return;
+    }
 
-  if (keypad.contains(target)) {
-    return;
-  }
+    if (keypad.contains(target)) {
+      return;
+    }
 
-  hideKeypad();
+    hideKeypad();
   }, {
-  capture: true,
-  passive: false
+    capture: true,
+    passive: false
   });
 
   document.addEventListener('focusin', (e) => {
     const target = e.target;
 
     if (!isTarget(target)) return;
-
 
     target.readOnly = true;
     showKeypad(target);
@@ -767,7 +792,6 @@ function focusTargetInput(next) {
 
     const key = btn.dataset.key;
     const action = btn.dataset.action;
-
 
     if (key != null) {
       appendText(activeInput, key);
@@ -810,9 +834,9 @@ function focusTargetInput(next) {
     }
 
     if (action === 'done') {
-  window.isCustomKeypadInput = false;
-  focusNextTarget(activeInput);
-  }
+      window.isCustomKeypadInput = false;
+      focusNextTarget(activeInput);
+    }
   });
 
   document.addEventListener('keydown', (e) => {
