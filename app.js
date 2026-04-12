@@ -1002,7 +1002,7 @@ function apply(targetId) {
     t.setAttribute('role', 'tab');
   });
 
-  // ここを追加：サブナビをJSで強制切替
+  // サブナビをJSで強制切替
   const navMap = {
     app1: document.getElementById('app1-nav'),
     app2: document.getElementById('app2-nav'),
@@ -1011,6 +1011,7 @@ function apply(targetId) {
 
   Object.entries(navMap).forEach(([id, nav]) => {
     if (!nav) return;
+
     if (id === targetId) {
       nav.style.setProperty('display', 'flex', 'important');
       nav.hidden = false;
@@ -1023,7 +1024,9 @@ function apply(targetId) {
   });
 
   document.body.setAttribute('data-active-app', targetId);
-  try { localStorage.setItem('selectedTab', targetId); } catch (e) {}
+  try {
+    localStorage.setItem('selectedTab', targetId);
+  } catch (e) {}
 
   // そのAPPの以前の位置へ復帰
   restoreY(targetId);
@@ -4500,7 +4503,7 @@ function requestImmediateFirebaseSyncSafe(reason = '') {
   // === カラム定義 ============================================================
   const COLS = [
     { key: 'name', type: 'text',  header: '氏名', cls: 'bulk-name' },
-    { key: 'exp',  type: 'check', header: '体/貸', cls: 'bulk-exp' },
+    { key: 'exp',  type: 'check', header: '体貸', cls: 'bulk-exp' },
     { key: 'send', type: 'num',   header: '送迎', cls: 'bulk-send' },
     { key: 'f',    type: 'check', header: '2k' },
     { key: 'f2',   type: 'num',   header: 'F'  },
@@ -4732,222 +4735,270 @@ function addBottleSubrow(mainTr) {
   return tr;
 }
 
-  // === グリッド構築 =========================================================
-  function buildGrid(n) {
-    const { grid } = getBulkDom();
-    if (!grid) return;
+function forceBulkGridColumnWidths(widths) {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid || !Array.isArray(widths)) return;
 
-    const thead = grid.querySelector('thead');
-    const tbody = grid.querySelector('tbody');
-    if (!thead || !tbody) return;
+  grid.style.tableLayout = 'fixed';
+  grid.style.width = '100%';
+  grid.style.borderCollapse = 'collapse';
 
-    grid.querySelectorAll('colgroup').forEach(el => el.remove());
+  // colgroup 作り直し
+  let cg = grid.querySelector('colgroup');
+  if (cg) cg.remove();
 
-    grid.querySelectorAll('thead th, tbody td, tbody tr').forEach(el => {
-      el.style.display = '';
-    });
+  cg = document.createElement('colgroup');
 
-    grid.style.tableLayout = '';
-    grid.style.width = '';
-    grid.style.borderCollapse = '';
+  widths.forEach(w => {
+    const col = document.createElement('col');
+    col.style.width = w;
+    cg.appendChild(col);
+  });
 
-    const wrap = grid.closest('.bulk-grid-wrap');
-    if (wrap) wrap.style.overflowX = '';
+  grid.insertBefore(cg, grid.firstChild);
 
-    const isIPadLike =
-      /iPad/i.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    const vw = Math.min(window.innerWidth, window.outerWidth || window.innerWidth);
-    const vh = Math.min(window.innerHeight, window.outerHeight || window.innerHeight);
-
-    const isLandscape = vw > vh;
-
-    const isCompactLandscapeApp2 =
-      isIPadLike &&
-      isLandscape &&
-      vw <= 1300;
-
-    const widths = isCompactLandscapeApp2
-  ? [
-      '2.4%', // #
-      '2.4%', // 選択
-      '5.6%', // 氏名
-      '3.0%', // 体/貸
-      '6.0%', // 送迎
-
-      '3.0%', // 2k
-      '4.0%', // F
-      '4.0%', // 場内
-      '4.0%', // 本指
-      '4.0%', // 同伴
-      '4.0%', // 枝
-      '4.0%', // HE
-      '4.0%', // 40
-      '4.0%', // 20
-      '4.0%', // VIP
-      '4.0%', // A
-      '4.0%', // B
-      '4.0%', // C
-      '4.0%', // D
-      '4.0%', // E
-
-      '11.0%', // 品名
-      '3.2%',  // 割
-      '3.2%',  // 数量
-      '5.0%',  // 金額
-      '2.4%'   // 退
-    ]
-  : [
-      '2.2%', // #
-      '2.2%', // 選択
-      '6.8%', // 氏名
-      '3.2%', // 体/貸
-      '5.0%', // 送迎
-
-      '3.2%', // 2k
-      '3.2%', // F
-      '3.2%', // 場内
-      '3.2%', // 本指
-      '3.2%', // 同伴
-      '3.2%', // 枝
-      '3.2%', // HE
-      '3.2%', // 40
-      '3.2%', // 20
-      '3.2%', // VIP
-      '3.2%', // A
-      '3.2%', // B
-      '3.2%', // C
-      '3.2%', // D
-      '3.2%', // E
-
-      '12.0%', // 品名
-      '3.0%',  // 割
-      '3.0%',  // 数量
-      '8.8%',  // 金額
-      '3.0%'   // 退
-    ];
-
-    const cg = document.createElement('colgroup');
-    widths.forEach(w => {
-      const c = document.createElement('col');
-      c.style.width = w;
-      cg.appendChild(c);
-    });
-    grid.insertBefore(cg, grid.firstChild);
-
-    thead.innerHTML = '';
-    const trh = document.createElement('tr');
-
-const thNo = document.createElement('th');
-thNo.textContent = '#';
-trh.appendChild(thNo);
-
-// ★追加：選択チェック列
-const thSel = document.createElement('th');
-thSel.className = 'bulk-check-head';
-thSel.innerHTML = `<input type="checkbox" id="bulkCheckAll">`;
-trh.appendChild(thSel);
-
-    COLS.forEach(c => {
-      const th = document.createElement('th');
-      th.textContent = c.header;
-      trh.appendChild(th);
-    });
-
-    if (!COLS.some(c => c && c.header === '退')) {
-      const thLeave = document.createElement('th');
-      thLeave.textContent = '退';
-      thLeave.className = 'bulk-leave-head';
-      trh.appendChild(thLeave);
-    }
-
-    thead.appendChild(trh);
-
-    tbody.innerHTML = '';
-
-    const placeholders = {
-      f2: 'F',
-      jounai: '場内',
-      honshiri: '本指',
-      douhan: '同伴',
-      eda: '枝',
-      help: 'HE',
-      set40: '40',
-      set20: '20',
-      vip: 'VIP',
-      a: 'A',
-      b: 'B',
-      c: 'C',
-      d: 'D',
-      e: 'E'
-    };
-
-    for (let i = 1; i <= n; i++) {
-      const tr = document.createElement('tr');
-      tr.className = 'bulk-mainrow';
-
-      let html = `
-        <td>${i}</td>
-        <td class="bulk-check-cell">
-        <input type="checkbox" class="bulk-check">
-        </td>
-        <td><input class="bulk-name" placeholder="氏名"></td>
-        <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
-        <td><input class="bulk-send bulk-custom-keypad-target" inputmode="numeric" placeholder="送迎"></td>
-      `;
-
-      [
-        'f', 'f2', 'jounai', 'honshiri', 'douhan', 'eda', 'help',
-        'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
-      ].forEach(k => {
-        if (k === 'f') {
-          html += `<td style="text-align:center;"><input type="checkbox" data-k="2k" class="bulk-2k"></td>`;
-          return;
-        }
-
-        const ph = placeholders[k] || '';
-        html += `
-          <td>
-            <input
-              data-k="${k}"
-              class="bulk-num bulk-custom-keypad-target"
-              inputmode="numeric"
-              placeholder="${ph}"
-            >
-          </td>
-        `;
-      });
-
-      html += `
-        <td class="btl-anchor">
-          <div class="btl-toolbar">
-            <button type="button" class="btl-plus mini-btn">＋</button>
-            <button type="button" class="btl-minus mini-btn" disabled>－</button>
-          </div>
-        </td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td class="bulk-leave-cell">
-          <input type="checkbox" class="bulk-leave">
-        </td>
-      `;
-
-      tr.innerHTML = html;
-      tbody.appendChild(tr);
-    }
-
-    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
-      window.applyReadonlyToBulkGridCustomKeypad();
-    }
-
-    requestAnimationFrame(() => {
-      if (typeof applyApp2MobileView === 'function') {
-        applyApp2MobileView();
-      }
+  // thead
+  const headRow = grid.tHead?.rows?.[0];
+  if (headRow) {
+    [...headRow.cells].forEach((cell, i) => {
+      const w = widths[i] || '';
+      cell.style.width = w;
+      cell.style.minWidth = w;
+      cell.style.maxWidth = w;
     });
   }
+
+  // tbody
+  [...grid.tBodies[0].rows].forEach(tr => {
+    [...tr.cells].forEach((cell, i) => {
+      const w = widths[i] || '';
+      cell.style.width = w;
+      cell.style.minWidth = w;
+      cell.style.maxWidth = w;
+    });
+  });
+}
+
+  // === グリッド構築 =========================================================
+function buildGrid(n) {
+  const { grid } = getBulkDom();
+  if (!grid) return;
+
+  const thead = grid.querySelector('thead');
+  const tbody = grid.querySelector('tbody');
+  if (!thead || !tbody) return;
+
+  grid.querySelectorAll('colgroup').forEach(el => el.remove());
+
+  grid.querySelectorAll('thead th, tbody td, tbody tr').forEach(el => {
+    el.style.display = '';
+    el.style.width = '';
+    el.style.minWidth = '';
+    el.style.maxWidth = '';
+  });
+
+  grid.style.tableLayout = 'fixed';
+  grid.style.width = '100%';
+  grid.style.borderCollapse = 'collapse';
+
+  const wrap = grid.closest('.bulk-grid-wrap');
+  if (wrap) wrap.style.overflowX = '';
+
+  const vw = Math.min(window.innerWidth, window.outerWidth || window.innerWidth);
+  const vh = Math.min(window.innerHeight, window.outerHeight || window.innerHeight);
+
+  const isLandscape = vw > vh;
+  const hasTouchLike =
+    (navigator.maxTouchPoints > 0) ||
+    window.matchMedia('(pointer: coarse)').matches;
+
+  // iPad mini 実機・DevToolsエミュレーション両対応
+  const isCompactLandscapeApp2 =
+    hasTouchLike &&
+    isLandscape &&
+    vw <= 1300;
+
+  const widths = isCompactLandscapeApp2
+    ? [
+        '3.0%',  // #
+        '2.0%',  // 選択
+        '5.5%',  // 氏名
+        '2.8%',  // 体/貸
+        '5.5%',  // 送迎
+
+        '2.5%',  // 2k
+        '3.8%',  // F
+        '3.0%',  // 場内
+        '3.0%',  // 本指
+        '3.0%',  // 同伴
+        '3.0%',  // 枝
+        '2.5%',  // HE
+        '3.0%',  // 40
+        '3.0%',  // 20
+        '3.0%',  // VIP
+        '2.5%',  // A
+        '2.5%',  // B
+        '3.8%',  // C
+        '3.8%',  // D
+        '3.8%',  // E
+
+        '16.4%', // 品名
+        '3.0%',  // 割
+        '3.0%',  // 数量
+        '7.6%',  // 金額
+        '2.0%'   // 退
+      ]
+    : [
+        '2.2%',  // #
+        '2.2%',  // 選択
+        '6.8%',  // 氏名
+        '3.2%',  // 体/貸
+        '5.0%',  // 送迎
+
+        '3.2%',  // 2k
+        '3.2%',  // F
+        '3.2%',  // 場内
+        '3.2%',  // 本指
+        '3.2%',  // 同伴
+        '3.2%',  // 枝
+        '3.2%',  // HE
+        '3.2%',  // 40
+        '3.2%',  // 20
+        '3.2%',  // VIP
+        '3.2%',  // A
+        '3.2%',  // B
+        '3.2%',  // C
+        '3.2%',  // D
+        '3.2%',  // E
+
+        '12.0%', // 品名
+        '3.0%',  // 割
+        '3.0%',  // 数量
+        '8.8%',  // 金額
+        '3.0%'   // 退
+      ];
+
+  thead.innerHTML = '';
+  const trh = document.createElement('tr');
+
+  const thNo = document.createElement('th');
+  thNo.textContent = '#';
+  trh.appendChild(thNo);
+
+  const thSel = document.createElement('th');
+  thSel.className = 'bulk-check-head';
+  thSel.innerHTML = `<input type="checkbox" id="bulkCheckAll">`;
+  trh.appendChild(thSel);
+
+  COLS.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.header;
+    trh.appendChild(th);
+  });
+
+  if (!COLS.some(c => c && c.header === '退')) {
+    const thLeave = document.createElement('th');
+    thLeave.textContent = '退';
+    thLeave.className = 'bulk-leave-head';
+    trh.appendChild(thLeave);
+  }
+
+  thead.appendChild(trh);
+  tbody.innerHTML = '';
+
+  const placeholders = {
+    f2: 'F',
+    jounai: '場内',
+    honshiri: '本指',
+    douhan: '同伴',
+    eda: '枝',
+    help: 'HE',
+    set40: '40',
+    set20: '20',
+    vip: 'VIP',
+    a: 'A',
+    b: 'B',
+    c: 'C',
+    d: 'D',
+    e: 'E'
+  };
+
+  for (let i = 1; i <= n; i++) {
+    const tr = document.createElement('tr');
+    tr.className = 'bulk-mainrow';
+    tr.dataset.bottleCount = '0';
+
+    let html = `
+      <td>${i}</td>
+      <td class="bulk-check-cell">
+        <input type="checkbox" class="bulk-check">
+      </td>
+      <td><input class="bulk-name" placeholder="氏名"></td>
+      <td style="text-align:center;"><input type="checkbox" class="bulk-exp"></td>
+      <td><input class="bulk-send bulk-custom-keypad-target" inputmode="numeric" placeholder="送迎"></td>
+    `;
+
+    [
+      'f', 'f2', 'jounai', 'honshiri', 'douhan', 'eda', 'help',
+      'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
+    ].forEach(k => {
+      if (k === 'f') {
+        html += `<td style="text-align:center;"><input type="checkbox" data-k="2k" class="bulk-2k"></td>`;
+        return;
+      }
+
+      const ph = placeholders[k] || '';
+      html += `
+        <td>
+          <input
+            data-k="${k}"
+            class="bulk-num bulk-custom-keypad-target"
+            inputmode="numeric"
+            placeholder="${ph}"
+          >
+        </td>
+      `;
+    });
+
+    html += `
+      <td class="btl-anchor">
+        <div class="btl-toolbar">
+          <button type="button" class="btl-plus mini-btn" aria-label="ボトル追加">＋</button>
+          <button type="button" class="btl-minus mini-btn" aria-label="ボトル削除" disabled>－</button>
+        </div>
+      </td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td class="bulk-leave-cell">
+        <input type="checkbox" class="bulk-leave">
+      </td>
+    `;
+
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+
+  if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+    window.applyReadonlyToBulkGridCustomKeypad();
+  }
+
+  if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+    window.applyReadonlyToCustomKeypadTargets();
+  }
+
+  window._lastBulkGridWidths = widths.slice();
+
+  requestAnimationFrame(() => {
+    if (typeof applyApp2MobileView === 'function') {
+      applyApp2MobileView();
+    }
+
+    forceBulkGridColumnWidths(widths);
+  });
+}
+
+  
 
   async function applyBulkGridStateFromSync(state) {
     const getter =
@@ -5385,156 +5436,172 @@ trh.appendChild(thSel);
   }
 
   // === 初期化 ==============================================================
-  document.addEventListener('DOMContentLoaded', () => {
-    const { panel, toggle, sel, clearBt, regBt, grid } = getBulkDom();
-    if (!panel || !grid) return;
+document.addEventListener('DOMContentLoaded', () => {
+  const { panel, toggle, sel, clearBt, regBt, grid } = getBulkDom();
+  if (!panel || !grid) return;
 
-    panel.hidden = false;
-    document.body.classList.add('bulk-wide');
-    savePanelState(true);
+  panel.hidden = false;
+  document.body.classList.add('bulk-wide');
+  savePanelState(true);
 
-    const initialRows = parseInt(sel?.value || '40', 10) || 40;
+  const initialRows = parseInt(sel?.value || '40', 10) || 40;
 
-    if (localStorage.getItem(GRID_KEY)) {
-      restoreBulkGridState();
-    } else {
-      buildGrid(initialRows);
-    }
+  if (localStorage.getItem(GRID_KEY)) {
+    restoreBulkGridState();
+  } else {
+    buildGrid(initialRows);
+  }
 
-    if (toggle) {
-      toggle.style.display = 'none';
-    }
+  // 行数変更
+  sel?.addEventListener('change', () => {
+    const n = parseInt(sel.value || '40', 10) || 40;
 
-    clearBt?.addEventListener('click', () => {
-      document.querySelectorAll('.bulk-num, .bulk-name, .bulk-send, .splitCount, .bottleQuantity, .bottleAmount')
-        .forEach(e => { e.value = ''; });
+    saveBulkGridState();
 
-      document.querySelectorAll('.bulk-exp, .bulk-2k')
-        .forEach(e => { e.checked = false; });
-
-      document.querySelectorAll('.btl-subrow')
-        .forEach(e => e.remove());
-
-      document.querySelectorAll('.bulk-mainrow .btl-minus')
-        .forEach(btn => { btn.disabled = true; });
-
-      localStorage.removeItem(GRID_KEY);
-      buildGrid(parseInt(sel?.value || '40', 10) || 40);
-    });
-
-    regBt?.addEventListener('click', bulkRegister);
-
-    sel?.addEventListener('change', () => {
-      const n = parseInt(sel.value || '40', 10) || 40;
-      saveBulkGridState();
+    if (typeof restoreBulkGridState === 'function') {
       restoreBulkGridState(n);
-    });
+    } else if (typeof buildGrid === 'function') {
+      buildGrid(n);
+    }
 
-    grid.addEventListener('click', e => {
-      let main = e.target.closest('tr.bulk-mainrow');
+    if (typeof updateBulkFilledState === 'function') {
+      updateBulkFilledState(grid);
+    }
 
-      if (!main) {
-        const sub = e.target.closest('tr.btl-subrow');
-        if (sub) {
-          let prev = sub.previousElementSibling;
-          while (prev && !prev.classList.contains('bulk-mainrow')) {
-            prev = prev.previousElementSibling;
-          }
-          main = prev;
-        }
-      }
+    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+      window.applyReadonlyToBulkGridCustomKeypad();
+    }
 
-      if (!main) return;
+    if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+      window.applyReadonlyToCustomKeypadTargets();
+    }
 
-      if (e.target.closest('.btl-plus')) {
-        const added = addBottleSubrow(main);
-
-        if (typeof buildBottleHistoryMap === 'function') {
-          buildBottleHistoryMap();
-        }
-        if (typeof refreshBottleDropdownsFromHistory === 'function') {
-          refreshBottleDropdownsFromHistory();
-        }
-
-        if (typeof saveBulkGridState === 'function') {
-          saveBulkGridState();
-        }
-
-        clearTimeout(window._bulkGridSyncTimer);
-        window._bulkGridSyncTimer = setTimeout(() => {
-          requestImmediateFirebaseSyncSafe('bulkGrid plus sync');
-        }, 50);
-
-        const detailSelect = added?.querySelector('.bottleDetails');
-        if (detailSelect) {
-          requestAnimationFrame(() => {
-            try {
-              detailSelect.focus();
-            } catch (_) {}
-          });
-        }
-
-        return;
-      }
-
-      if (e.target.closest('.btl-minus')) {
-        const sub = e.target.closest('tr.btl-subrow');
-
-        let mainTr = e.target.closest('tr.bulk-mainrow');
-        if (!mainTr && sub) {
-          let prev = sub.previousElementSibling;
-          while (prev && !prev.classList.contains('bulk-mainrow')) {
-            prev = prev.previousElementSibling;
-          }
-          mainTr = prev;
-        }
-
-        if (mainTr) {
-          removeBottleSubrow(mainTr, sub);
-
-          if (typeof saveBulkGridState === 'function') {
-            saveBulkGridState();
-          }
-
-          clearTimeout(window._bulkGridSyncTimer);
-          window._bulkGridSyncTimer = setTimeout(() => {
-            requestImmediateFirebaseSyncSafe('bulkGrid minus sync');
-          }, 50);
-        }
-        return;
-      }
-    });
-
-    grid.addEventListener('input', e => {
-      if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
-      if (window._isApplyingBulkGridSync) return;
-
-      scheduleSaveBulkGridState(120);
-
-      clearTimeout(window._bulkGridSyncTimer);
-      window._bulkGridSyncTimer = setTimeout(() => {
-        requestImmediateFirebaseSyncSafe('bulkGrid input sync');
-      }, 400);
-    });
-
-    grid.addEventListener('change', e => {
-      if (!e.target.closest('.bulk-mainrow, .btl-subrow')) return;
-      if (window._isApplyingBulkGridSync) return;
-
-      scheduleSaveBulkGridState(0);
-
-      clearTimeout(window._bulkGridSyncTimer);
-      window._bulkGridSyncTimer = setTimeout(() => {
-        requestImmediateFirebaseSyncSafe('bulkGrid change sync');
-      }, 50);
-    });
-
-    window.addEventListener('resize', () => {
-      if (typeof applyApp2MobileView === 'function') {
-        applyApp2MobileView();
-      }
-    });
+    if (typeof applyApp2MobileView === 'function') {
+      applyApp2MobileView();
+    }
   });
+
+  // 一括登録
+  regBt?.addEventListener('click', () => {
+    bulkRegister();
+  });
+
+  // クリア
+  clearBt?.addEventListener('click', () => {
+    const n = parseInt(sel?.value || '40', 10) || 40;
+
+    if (!confirm('一括入力グリッドをクリアしますか？')) return;
+
+    localStorage.removeItem(GRID_KEY);
+    lastBulkGridStateJson = '';
+    buildGrid(n);
+
+    if (typeof updateBulkFilledState === 'function') {
+      updateBulkFilledState(grid);
+    }
+
+    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+      window.applyReadonlyToBulkGridCustomKeypad();
+    }
+
+    if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+      window.applyReadonlyToCustomKeypadTargets();
+    }
+
+    if (typeof applyApp2MobileView === 'function') {
+      applyApp2MobileView();
+    }
+
+    saveBulkGridState();
+  });
+
+  // 全選択
+  grid.addEventListener('change', (e) => {
+    const checkAll = e.target.closest('#bulkCheckAll');
+    if (!checkAll) return;
+
+    grid.querySelectorAll('.bulk-check').forEach(ch => {
+      ch.checked = !!checkAll.checked;
+    });
+
+    scheduleSaveBulkGridState();
+  });
+
+  // ＋ / － / 入力類の委譲
+  grid.addEventListener('click', (e) => {
+    const plusBtn = e.target.closest('.btl-plus');
+    if (plusBtn) {
+      const mainTr = plusBtn.closest('.bulk-mainrow');
+      if (!mainTr) return;
+
+      addBottleSubrow(mainTr);
+
+      if (typeof updateBulkFilledState === 'function') {
+        updateBulkFilledState(grid);
+      }
+
+      return;
+    }
+
+    const minusBtn = e.target.closest('.btl-minus');
+    if (minusBtn) {
+      const mainTr = minusBtn.closest('.bulk-mainrow');
+      if (!mainTr) return;
+
+      removeBottleSubrow(mainTr);
+
+      if (typeof updateBulkFilledState === 'function') {
+        updateBulkFilledState(grid);
+      }
+
+      return;
+    }
+  });
+
+  grid.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t) return;
+
+    if (
+      t.closest('.bulk-mainrow') ||
+      t.closest('.btl-subrow')
+    ) {
+      scheduleSaveBulkGridState();
+
+      if (typeof window.scheduleApp3Update === 'function') {
+        window.scheduleApp3Update('bulkGridInput');
+      }
+
+      if (typeof updateBulkFilledState === 'function') {
+        updateBulkFilledState(grid);
+      }
+    }
+  });
+
+  grid.addEventListener('change', (e) => {
+    const t = e.target;
+    if (!t) return;
+
+    if (
+      t.closest('.bulk-mainrow') ||
+      t.closest('.btl-subrow')
+    ) {
+      scheduleSaveBulkGridState();
+
+      if (typeof window.scheduleApp3Update === 'function') {
+        window.scheduleApp3Update('bulkGridChange');
+      }
+
+      if (typeof updateBulkFilledState === 'function') {
+        updateBulkFilledState(grid);
+      }
+    }
+  });
+
+  if (toggle) {
+    toggle.style.display = 'none';
+  }
+});
 
 })();
 
@@ -5716,39 +5783,84 @@ function applyApp2MobileView() {
   const grid = document.getElementById('bulkGrid');
   if (!grid || !grid.tHead || !grid.tBodies[0]) return;
 
-  const isMobile = window.innerWidth <= 768;
+const vw = Math.min(window.innerWidth, window.outerWidth || window.innerWidth);
+const vh = Math.min(window.innerHeight, window.outerHeight || window.innerHeight);
+const isLandscape = vw > vh;
 
-  // モバイルだけ colgroup を外す
-  const cg = grid.querySelector('colgroup');
-  if (isMobile && cg) cg.remove();
+const hasTouchLike =
+  (navigator.maxTouchPoints > 0) ||
+  window.matchMedia('(pointer: coarse)').matches;
 
-  // サブ行（ボトル行）はスマホで隠す
-  grid.querySelectorAll('tbody tr.btl-subrow').forEach(tr => {
-    tr.style.display = isMobile ? 'none' : '';
-  });
+// buildGrid() と同じ判定
+const isCompactLandscapeApp2 =
+  hasTouchLike &&
+  isLandscape &&
+  vw <= 1300;
 
-  const ths = Array.from(grid.tHead.rows[0].cells || []);
-  const rows = Array.from(grid.tBodies[0].rows || []);
+  const ths = Array.from(grid.tHead.rows[0]?.cells || []);
+  const rows = Array.from(grid.tBodies[0]?.rows || []);
+
+  // 共通のテーブル固定
+  grid.style.tableLayout = 'fixed';
+  grid.style.width = '100%';
+  grid.style.borderCollapse = 'collapse';
+
+  const wrap = grid.closest('.bulk-grid-wrap');
+
+  // iPad mini 横向き compact は「全部表示」のままにする
+  if (isCompactLandscapeApp2) {
+    ths.forEach(th => {
+      if (th) th.style.display = 'table-cell';
+    });
+
+    rows.forEach(tr => {
+      Array.from(tr.cells || []).forEach(td => {
+        if (td) td.style.display = 'table-cell';
+      });
+    });
+
+    if (wrap) wrap.style.overflowX = '';
+
+    // buildGrid 側で保存した幅を最後に再強制
+    if (Array.isArray(window._lastBulkGridWidths) && typeof forceBulkGridColumnWidths === 'function') {
+      forceBulkGridColumnWidths(window._lastBulkGridWidths);
+    }
+
+    return;
+  }
+
+  // それ以外だけ mobile view を適用
+  const isPhoneLike =
+    vw <= 768 &&
+    matchMedia('(pointer: coarse)').matches;
 
   for (let i = 0; i < ths.length; i++) {
     const colIndex = i + 1; // 1-based
-    const show = !isMobile || (colIndex === 2 || colIndex === 3 || colIndex === 4);
 
-    if (ths[i]) ths[i].style.display = show ? 'table-cell' : 'none';
+    // スマホ時だけ最低限の列だけ見せる
+    const show = !isPhoneLike || (colIndex === 2 || colIndex === 3 || colIndex === 4);
+
+    if (ths[i]) {
+      ths[i].style.display = show ? 'table-cell' : 'none';
+    }
 
     rows.forEach(tr => {
       if (tr.classList.contains('btl-subrow')) return;
       const td = tr.cells[i];
-      if (td) td.style.display = show ? 'table-cell' : 'none';
+      if (td) {
+        td.style.display = show ? 'table-cell' : 'none';
+      }
     });
   }
 
-  const wrap = grid.closest('.bulk-grid-wrap');
-  if (wrap) wrap.style.overflowX = isMobile ? 'hidden' : '';
+  if (wrap) {
+    wrap.style.overflowX = isPhoneLike ? 'hidden' : '';
+  }
 
-  grid.style.tableLayout = 'fixed';
-  grid.style.width = '100%';
-  grid.style.borderCollapse = 'collapse';
+  // 最後に幅を再強制
+  if (Array.isArray(window._lastBulkGridWidths) && typeof forceBulkGridColumnWidths === 'function') {
+    forceBulkGridColumnWidths(window._lastBulkGridWidths);
+  }
 }
 
   // グローバルに公開（buildGrid 直後でも呼べるように）
@@ -5758,6 +5870,12 @@ function applyApp2MobileView() {
   document.addEventListener('DOMContentLoaded', applyApp2MobileView);
   window.addEventListener('load', applyApp2MobileView);
   window.addEventListener('resize', applyApp2MobileView);
+
+  if (window._lastBulkGridWidths) {
+  forceBulkGridColumnWidths(window._lastBulkGridWidths);
+}
+
+  
 })();
 
 (function () {
@@ -9000,15 +9118,12 @@ function initSlimHistoryUI() {
 
 function initRestoreAllApps() {
   try {
-    // 既存の復元系があれば順に呼ぶ
+    // 通常フォーム系の復元
     if (typeof restoreState === 'function') {
       restoreState();
     }
 
-    if (typeof restoreBulkGridState === 'function') {
-      restoreBulkGridState();
-    }
-
+    // 履歴ベースの候補やインデックスは作る
     if (typeof refreshBottleDropdownsFromHistory === 'function') {
       refreshBottleDropdownsFromHistory();
     }

@@ -890,6 +890,18 @@ body[data-active-app="app3"] #app3-nav{ display:flex !important; }
   margin-top: 10px !important;
 }
 
+/* 行番号セル */
+td.rowNumber {
+  white-space: nowrap;      /* 折り返し禁止 */
+  word-break: keep-all;     /* 数字を途中で割らない */
+  overflow-wrap: normal;    /* 強制改行させない */
+  min-width: 3.8em;         /* 4桁が入る幅を確保 */
+  width: 3.8em;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
 
 
 
@@ -1509,11 +1521,9 @@ body.bulk-wide #app2-sideNav {
 #bulkGrid .btl-detail-wrap{
   display: flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 2px !important;
   width: 100% !important;
   min-width: 0 !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
 }
 
 /* 選択ボタン */
@@ -1904,22 +1914,22 @@ body[data-active-app="app2"] #bulkGrid tbody tr:focus-within td {
 }
 
 /* グループの太い縦線
-   # | 氏名群 | 指名群 | SET群 | Drink群 | 品名群 | 退
+   # | □ | 氏名 体/貸 送迎 | 2k F 場内 | 本指 同伴 枝 | HE | 40 20 VIP | A B C D E | 品名 割 数量 金額 | 退
 */
-body[data-active-app="app2"] #bulkGrid th:nth-child(1),
-body[data-active-app="app2"] #bulkGrid td:nth-child(1),
-body[data-active-app="app2"] #bulkGrid th:nth-child(4),
-body[data-active-app="app2"] #bulkGrid td:nth-child(4),
-body[data-active-app="app2"] #bulkGrid th:nth-child(7),
-body[data-active-app="app2"] #bulkGrid td:nth-child(7),
+body[data-active-app="app2"] #bulkGrid th:nth-child(5),
+body[data-active-app="app2"] #bulkGrid td:nth-child(5),
+body[data-active-app="app2"] #bulkGrid th:nth-child(8),
+body[data-active-app="app2"] #bulkGrid td:nth-child(8),
 body[data-active-app="app2"] #bulkGrid th:nth-child(11),
 body[data-active-app="app2"] #bulkGrid td:nth-child(11),
-body[data-active-app="app2"] #bulkGrid th:nth-child(14),
-body[data-active-app="app2"] #bulkGrid td:nth-child(14),
-body[data-active-app="app2"] #bulkGrid th:nth-child(19),
-body[data-active-app="app2"] #bulkGrid td:nth-child(19),
-body[data-active-app="app2"] #bulkGrid th:nth-child(23),
-body[data-active-app="app2"] #bulkGrid td:nth-child(23) {
+body[data-active-app="app2"] #bulkGrid th:nth-child(12),
+body[data-active-app="app2"] #bulkGrid td:nth-child(12),
+body[data-active-app="app2"] #bulkGrid th:nth-child(15),
+body[data-active-app="app2"] #bulkGrid td:nth-child(15),
+body[data-active-app="app2"] #bulkGrid th:nth-child(20),
+body[data-active-app="app2"] #bulkGrid td:nth-child(20),
+body[data-active-app="app2"] #bulkGrid th:nth-child(24),
+body[data-active-app="app2"] #bulkGrid td:nth-child(24) {
   border-right: 2px solid #00f5ff !important;
   box-shadow: 1px 0 6px rgba(0, 245, 255, 0.22) !important;
 }
@@ -3074,16 +3084,16 @@ body[data-active-app="app2"] #app2{
     min-width:0 !important;
   }
 
-  #bulkGrid .bottle-hierarchy-btn{
-    flex:0 0 42px !important;
-    width:42px !important;
-    min-width:42px !important;
-    max-width:42px !important;
-    height:22px !important;
-    line-height:22px !important;
-    font-size:11px !important;
-    padding:0 4px !important;
-  }
+#bulkGrid .bottle-hierarchy-btn{
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  height: 22px !important;
+  line-height: 22px !important;
+  font-size: 10px !important;
+  padding: 0 2px !important;
+}
 
   #bulkGrid .bottleDetails{
     min-width:0 !important;
@@ -3275,5 +3285,15 @@ body[data-active-app="app1"] #app1.content{
 #bulkGrid .bottleDetails{
   font-size:13px !important;
 }
+
+}
+
+/*スマホ iPadのみ反転印刷*/
+@media print and (hover: none) and (pointer: coarse) {
+
+  body {
+    transform: rotate(180deg);
+    transform-origin: center center;
+  }
 
 }
