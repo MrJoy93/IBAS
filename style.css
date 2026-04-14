@@ -1954,6 +1954,96 @@ body[data-active-app="app2"] #bulkGrid td.bulk-leave-cell {
    14. APP3
 ========================================================= */
 
+body[data-active-app="app3"] #app3 .mini-attendance-row{
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  align-items: center !important;
+  column-gap: 16px !important;
+  width: 100% !important;
+}
+
+body[data-active-app="app3"] #app3 .mini-left{
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+  flex-wrap: wrap !important;
+}
+
+body[data-active-app="app3"] #app3 .mini-left label{
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+
+body[data-active-app="app3"] #app3 .mini-left label > span{
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+  font-size: 17px !important;
+}
+
+/* 左3項目の小さい入力欄 */
+body[data-active-app="app3"] #customersCount,
+body[data-active-app="app3"] #femaleAttendance,
+body[data-active-app="app3"] #maleAttendance{
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  flex: 0 0 60px !important;
+  text-align: right !important;
+  padding-inline: 6px !important;
+  font-size: 15px !important;
+  box-sizing: border-box !important;
+}
+
+/* 右側は「他フォームの右端」に合わせるため専用幅を持たせる */
+body[data-active-app="app3"] #app3 .mini-right{
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+  margin-left: auto !important;
+  justify-self: end !important;
+}
+
+/* 伝票No 行を右寄せ固定 */
+body[data-active-app="app3"] #app3 .ticket-range{
+  display: grid !important;
+  grid-template-columns: auto 96px 18px 96px !important;
+  align-items: center !important;
+  justify-content: end !important;
+  column-gap: 8px !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+body[data-active-app="app3"] #app3 .ticket-range > span:first-child{
+  white-space: nowrap !important;
+  text-align: right !important;
+  justify-self: end !important;
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  opacity: 0.9 !important;
+}
+
+body[data-active-app="app3"] #startTicketNo,
+body[data-active-app="app3"] #endTicketNo{
+  width: 96px !important;
+  min-width: 96px !important;
+  max-width: 96px !important;
+  text-align: right !important;
+  padding-inline: 8px !important;
+  box-sizing: border-box !important;
+}
+
+これで
+
 /* =========================================================
    APP3：ドライバー代フォームのレイアウト整理
 ========================================================= */

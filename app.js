@@ -20,6 +20,12 @@ window._bulkGridSyncTimer = null;
 window._isApplyingBulkGridSync = false;
 window._suppressSyncObservers = false;
 
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.updateAttendanceMiniForm === 'function') {
+    window.updateAttendanceMiniForm();
+  }
+});
+
 /************************************************************
  * 1. 共通ユーティリティ
  ************************************************************/
@@ -7200,6 +7206,45 @@ document.addEventListener('change', (e) => {
  * 5. APP3
  ************************************************************/
 
+// 伝票番号セルの変更・行追加削除・並べ替え時に APP3 の伝票No表示を更新
+(function installTicketNumberRangeObserver() {
+  const formRows = document.getElementById('formRows');
+  if (!formRows) return;
+
+  // contenteditable(.rowNumber) の直接編集を拾う
+  document.addEventListener('input', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.classList.contains('rowNumber')) return;
+
+    if (typeof window.updateAttendanceMiniForm === 'function') {
+      window.updateAttendanceMiniForm();
+    }
+  }, true);
+
+  document.addEventListener('blur', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.classList.contains('rowNumber')) return;
+
+    if (typeof window.updateAttendanceMiniForm === 'function') {
+      window.updateAttendanceMiniForm();
+    }
+  }, true);
+
+  // 行追加・削除・並べ替え・復元を拾う
+  const mo = new MutationObserver(() => {
+    if (typeof window.updateAttendanceMiniForm === 'function') {
+      window.updateAttendanceMiniForm();
+    }
+  });
+
+  mo.observe(formRows, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+})();
 
 /* app3（ざっくり）：id付きの要素を一括保存/復元 */
 function collectApp3State(){
@@ -7388,6 +7433,106 @@ function updateAttendanceMiniForm() {
     const m = historyCountSpan.textContent.match(/(\d+)/);
     const num2 = m ? parseInt(m[1], 10) : NaN;
     femaleInput.value = Number.isNaN(num2) ? '' : num2;
+  }
+
+  // 伝票No. の先頭と末尾を反映
+  const startTicketNoEl = document.getElementById('startTicketNo');
+  const endTicketNoEl = document.getElementById('endTicketNo');
+
+  if (startTicketNoEl && endTicketNoEl) {
+    const range = getTicketNumberRange();
+    startTicketNoEl.value = range.start;
+    endTicketNoEl.value = range.end;
+  }
+}
+
+function getTicketNumberRange() {
+  const cells = Array.from(document.querySelectorAll('#formRows .rowNumber'));
+
+  const nums = cells
+    .map(cell => parseInt((cell.textContent || '').trim(), 10))
+    .filter(n => !Number.isNaN(n));
+
+  if (!nums.length) {
+    return { start: '', end: '' };
+  }
+
+  // 伝票番号の循環上限
+  // 1000で戻すなら 1000
+  // 9999で戻すなら 9999
+  const MAX_TICKET_NO = 1000;
+  const MOD = MAX_TICKET_NO + 1;
+
+  // 0 は使わない前提なので、1..MAX_TICKET_NO に正規化
+  const normalized = nums
+    .map(n => {
+      let v = n % MOD;
+      if (v <= 0) v += MOD;
+      return v;
+    })
+    .sort((a, b) => a - b);
+
+  if (normalized.length === 1) {
+    return {
+      start: String(normalized[0]),
+      end: String(normalized[0])
+    };
+  }
+
+  // 円環上で一番大きい“切れ目”を探し、
+  // その次を開始、切れ目の手前を終了にする
+  let maxGap = -1;
+  let splitIndex = 0;
+
+  for (let i = 0; i < normalized.length; i++) {
+    const current = normalized[i];
+    const next = (i === normalized.length - 1)
+      ? normalized[0] + MOD
+      : normalized[i + 1];
+
+    const gap = next - current;
+
+    if (gap > maxGap) {
+      maxGap = gap;
+      splitIndex = i;
+    }
+  }
+
+  const start = normalized[(splitIndex + 1) % normalized.length];
+  const end = normalized[splitIndex];
+
+  return {
+    start: String(start),
+    end: String(end)
+  };
+}
+
+function updateAttendanceMiniForm() {
+  // 総客数
+  const totalSpan = document.getElementById('totalCustomers');
+  const customersInput = document.getElementById('customersCount');
+  if (totalSpan && customersInput) {
+    const num = parseInt(totalSpan.textContent.replace(/[^0-9\-]/g, ''), 10);
+    customersInput.value = Number.isNaN(num) ? '' : num;
+  }
+
+  // 女子人数
+  const historyCountSpan = document.getElementById('historyIndexCount');
+  const femaleInput = document.getElementById('femaleAttendance');
+  if (historyCountSpan && femaleInput) {
+    const m = historyCountSpan.textContent.match(/(\d+)/);
+    const num2 = m ? parseInt(m[1], 10) : NaN;
+    femaleInput.value = Number.isNaN(num2) ? '' : num2;
+  }
+
+  // 伝票No
+  const startTicketNoEl = document.getElementById('startTicketNo');
+  const endTicketNoEl = document.getElementById('endTicketNo');
+
+  if (startTicketNoEl && endTicketNoEl) {
+    const range = getTicketNumberRange();
+    startTicketNoEl.value = range.start;
+    endTicketNoEl.value = range.end;
   }
 }
 

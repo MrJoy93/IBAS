@@ -622,20 +622,49 @@
     <td style="padding: 10px;">
 
 
-        <div class="mini-attendance-row">
-        <label><span>総客:</span>
-        <input type="number" id="customersCount" name="customersCount"
-          class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
-        </label>
+ <div class="mini-attendance-row">
 
-        <label><span>女子:</span>
-         <input type="number" id="femaleAttendance" name="femaleAttendance"
-           class="num right compact" inputmode="numeric" pattern="\d*" readonly tabindex="-1">
-        </label>
+  <!-- 左側 -->
+  <div class="mini-left">
+    <label>
+      <span>総客:</span>
+      <input type="number" id="customersCount"
+        class="num right compact" readonly tabindex="-1">
+    </label>
 
-        <label><span>男子:</span>
-        <input type="number" id="maleAttendance" name="maleAttendance" class="num right compact" inputmode="numeric" pattern="\d*">
-        </label>
+    <label>
+      <span>女子:</span>
+      <input type="number" id="femaleAttendance"
+        class="num right compact" readonly tabindex="-1">
+    </label>
+
+    <label>
+      <span>男子:</span>
+      <input type="number" id="maleAttendance"
+        class="num right compact">
+    </label>
+  </div>
+
+  <!-- 右側 -->
+  <div class="mini-right">
+    <label class="ticket-range">
+      <span>伝票 No.</span>
+
+      <input type="text" id="startTicketNo"
+        class="num right compact"
+        placeholder="開始"
+        readonly>
+
+      <span>～</span>
+
+      <input type="text" id="endTicketNo"
+        class="num right compact"
+        placeholder="終了"
+        readonly>
+    </label>
+  </div>
+
+</div>
 
 
       <section id="app3-inputSection">
