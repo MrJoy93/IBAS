@@ -2228,7 +2228,7 @@ window.applyApp1State   = applyApp1State;
 
 window.getBulkDom = getBulkDom;
 
-function installCheckboxColumn() {
+function installCheckboxColumn(){
   // buildGrid() でチェック列を直接生成するため不要
 }
 
@@ -5009,6 +5009,148 @@ function buildGrid(n) {
     tbody.appendChild(tr);
   }
 
+  // ============================================
+  // チェック関連
+  // ============================================
+
+  // ===== 行ごとのチェック状態を初期化 =====
+Array.from(tbody.querySelectorAll('tr.bulk-mainrow')).forEach(tr => {
+  if (typeof updateRowCheckState === 'function') {
+    updateRowCheckState(tr);
+  } else {
+    const cb = tr.querySelector('.bulk-check');
+    if (cb) {
+      cb.checked = false;
+      cb.disabled = true;
+    }
+  }
+});
+
+  function getBulkMainRows() {
+    return Array.from(tbody.querySelectorAll('tr.bulk-mainrow'));
+  }
+
+  function rowHasData(tr) {
+    if (!tr) return false;
+
+    // 氏名
+    const name = tr.querySelector('.bulk-name')?.value?.trim() || '';
+    if (name !== '') return true;
+
+    // 体/貸
+    if (tr.querySelector('.bulk-exp')?.checked) return true;
+
+    // 送迎
+    const send = tr.querySelector('.bulk-send')?.value?.trim() || '';
+    if (send !== '') return true;
+
+    // 2k
+    if (tr.querySelector('.bulk-2k')?.checked) return true;
+
+    // 数値系
+    const nums = tr.querySelectorAll('.bulk-num');
+    for (const el of nums) {
+      if ((el.value || '').trim() !== '') return true;
+    }
+
+    // 退
+    if (tr.querySelector('.bulk-leave')?.checked) return true;
+
+    // ボトルが追加されている場合
+    const bottleCount = parseInt(tr.dataset.bottleCount || '0', 10) || 0;
+    if (bottleCount > 0) return true;
+
+    // 念のためボトルサブ行が実在する場合も対象
+    let next = tr.nextElementSibling;
+    while (next && !next.classList.contains('bulk-mainrow')) {
+      if (next.classList.contains('btl-subrow')) return true;
+      next = next.nextElementSibling;
+    }
+
+    return false;
+  }
+
+  function updateBulkCheckAllState() {
+    const bulkCheckAll = document.getElementById('bulkCheckAll');
+    if (!bulkCheckAll) return;
+
+    const rows = getBulkMainRows();
+    const dataRows = rows.filter(rowHasData);
+    const checkedDataRows = dataRows.filter(tr => tr.querySelector('.bulk-check')?.checked);
+
+    if (dataRows.length === 0) {
+      bulkCheckAll.checked = false;
+      bulkCheckAll.indeterminate = false;
+      return;
+    }
+
+    if (checkedDataRows.length === 0) {
+      bulkCheckAll.checked = false;
+      bulkCheckAll.indeterminate = false;
+      return;
+    }
+
+    if (checkedDataRows.length === dataRows.length) {
+      bulkCheckAll.checked = true;
+      bulkCheckAll.indeterminate = false;
+      return;
+    }
+
+    bulkCheckAll.checked = false;
+    bulkCheckAll.indeterminate = true;
+  }
+
+  const bulkCheckAll = document.getElementById('bulkCheckAll');
+
+  if (bulkCheckAll) {
+    bulkCheckAll.addEventListener('change', () => {
+      const rows = getBulkMainRows();
+
+      rows.forEach(tr => {
+        const cb = tr.querySelector('.bulk-check');
+        if (!cb) return;
+
+        if (bulkCheckAll.checked) {
+          cb.checked = rowHasData(tr);
+        } else {
+          cb.checked = false;
+        }
+      });
+
+      updateBulkCheckAllState();
+    });
+  }
+
+  tbody.addEventListener('change', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    if (
+      target.matches('.bulk-check') ||
+      target.matches('.bulk-exp') ||
+      target.matches('.bulk-2k') ||
+      target.matches('.bulk-leave')
+    ) {
+      updateBulkCheckAllState();
+    }
+  });
+
+  tbody.addEventListener('input', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    if (
+      target.matches('.bulk-name') ||
+      target.matches('.bulk-send') ||
+      target.matches('.bulk-num')
+    ) {
+      updateBulkCheckAllState();
+    }
+  });
+
+  // 初期状態反映
+  updateBulkCheckAllState();
+
   if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
     window.applyReadonlyToBulkGridCustomKeypad();
   }
@@ -5142,6 +5284,32 @@ function buildGrid(n) {
           });
         }
       });
+
+      // ===== 復元後に空行チェックを正規化 =====
+Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
+  if (typeof updateRowCheckState === 'function') {
+    updateRowCheckState(tr);
+  } else {
+    const name = tr.querySelector('.bulk-name')?.value?.trim() || '';
+    const send = tr.querySelector('.bulk-send')?.value?.trim() || '';
+    const nums = Array.from(tr.querySelectorAll('.bulk-num'))
+      .some(el => (el.value || '').trim() !== '');
+
+    const isLeave = tr.classList.contains('is-leave');
+    const empty = !name && !send && !nums;
+
+    const cb = tr.querySelector('.bulk-check');
+    if (!cb) return;
+
+    if (isLeave) {
+      cb.disabled = true;
+      cb.checked = false;
+    } else {
+      cb.disabled = empty;
+      if (empty) cb.checked = false;
+    }
+  }
+});
 
       await new Promise(resolve => requestAnimationFrame(resolve));
 
@@ -7447,63 +7615,30 @@ function updateAttendanceMiniForm() {
 }
 
 function getTicketNumberRange() {
-  const cells = Array.from(document.querySelectorAll('#formRows .rowNumber'));
+  const rows = Array.from(document.querySelectorAll('#formRows tr.row'));
 
-  const nums = cells
-    .map(cell => parseInt((cell.textContent || '').trim(), 10))
-    .filter(n => !Number.isNaN(n));
+  // 表示中の行だけ対象
+  const visibleRows = rows.filter(row => {
+    const style = window.getComputedStyle(row);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  });
 
-  if (!nums.length) {
+  if (!visibleRows.length) {
     return { start: '', end: '' };
   }
 
-  // 伝票番号の循環上限
-  // 1000で戻すなら 1000
-  // 9999で戻すなら 9999
-  const MAX_TICKET_NO = 1000;
-  const MOD = MAX_TICKET_NO + 1;
+  const getRowNo = (row) => {
+    const cell = row.querySelector('.rowNumber');
+    const raw = (cell?.textContent || '').trim();
+    return raw;
+  };
 
-  // 0 は使わない前提なので、1..MAX_TICKET_NO に正規化
-  const normalized = nums
-    .map(n => {
-      let v = n % MOD;
-      if (v <= 0) v += MOD;
-      return v;
-    })
-    .sort((a, b) => a - b);
-
-  if (normalized.length === 1) {
-    return {
-      start: String(normalized[0]),
-      end: String(normalized[0])
-    };
-  }
-
-  // 円環上で一番大きい“切れ目”を探し、
-  // その次を開始、切れ目の手前を終了にする
-  let maxGap = -1;
-  let splitIndex = 0;
-
-  for (let i = 0; i < normalized.length; i++) {
-    const current = normalized[i];
-    const next = (i === normalized.length - 1)
-      ? normalized[0] + MOD
-      : normalized[i + 1];
-
-    const gap = next - current;
-
-    if (gap > maxGap) {
-      maxGap = gap;
-      splitIndex = i;
-    }
-  }
-
-  const start = normalized[(splitIndex + 1) % normalized.length];
-  const end = normalized[splitIndex];
+  const start = getRowNo(visibleRows[0]);
+  const end = getRowNo(visibleRows[visibleRows.length - 1]);
 
   return {
-    start: String(start),
-    end: String(end)
+    start,
+    end
   };
 }
 
