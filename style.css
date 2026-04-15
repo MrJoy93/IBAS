@@ -1954,14 +1954,18 @@ body[data-active-app="app2"] #bulkGrid td.bulk-leave-cell {
    14. APP3
 ========================================================= */
 
+/* =========================================================
+   APP3：ミニ出勤行 + 伝票No の右端を通常フォームと揃える
+========================================================= */
 body[data-active-app="app3"] #app3 .mini-attendance-row{
   display: grid !important;
-  grid-template-columns: 1fr auto !important;
+  grid-template-columns: 1fr 360px !important;
   align-items: center !important;
   column-gap: 16px !important;
   width: 100% !important;
 }
 
+/* 左側 */
 body[data-active-app="app3"] #app3 .mini-left{
   display: flex !important;
   align-items: center !important;
@@ -1988,7 +1992,6 @@ body[data-active-app="app3"] #app3 .mini-left label > span{
   font-size: 17px !important;
 }
 
-/* 左3項目の小さい入力欄 */
 body[data-active-app="app3"] #customersCount,
 body[data-active-app="app3"] #femaleAttendance,
 body[data-active-app="app3"] #maleAttendance{
@@ -2002,24 +2005,42 @@ body[data-active-app="app3"] #maleAttendance{
   box-sizing: border-box !important;
 }
 
-/* 右側は「他フォームの右端」に合わせるため専用幅を持たせる */
+/* =========================================================
+   右側
+   通常フォームは .group の右padding 24px 基準
+   ここは outer-table td の padding 10px なので、
+   24 - 10 = 14px 分だけ内側に寄せる
+========================================================= */
 body[data-active-app="app3"] #app3 .mini-right{
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  justify-items: end !important;
+  align-items: center !important;
+
   width: 360px !important;
   min-width: 360px !important;
   max-width: 360px !important;
+
   margin-left: auto !important;
-  justify-self: end !important;
+  margin-right: 0 !important;
+
+  padding-right: 14px !important;   /* ← これが本命 */
+  box-sizing: border-box !important;
 }
 
-/* 伝票No 行を右寄せ固定 */
+/* 伝票No 行 */
 body[data-active-app="app3"] #app3 .ticket-range{
   display: grid !important;
   grid-template-columns: auto 96px 18px 96px !important;
-  align-items: center !important;
   justify-content: end !important;
+  align-items: center !important;
   column-gap: 8px !important;
+
   width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
   margin: 0 !important;
+  box-sizing: border-box !important;
 }
 
 body[data-active-app="app3"] #app3 .ticket-range > span:first-child{
@@ -2032,6 +2053,7 @@ body[data-active-app="app3"] #app3 .ticket-range > span:first-child{
   opacity: 0.9 !important;
 }
 
+/* 伝票No 入力欄 */
 body[data-active-app="app3"] #startTicketNo,
 body[data-active-app="app3"] #endTicketNo{
   width: 96px !important;
@@ -2042,7 +2064,77 @@ body[data-active-app="app3"] #endTicketNo{
   box-sizing: border-box !important;
 }
 
-これで
+/* 通常右列入力欄
+   startSafeCash ではなく startCash が正しい */
+body[data-active-app="app3"] #workDate,
+body[data-active-app="app3"] #startCash,
+body[data-active-app="app3"] #extraSafeCash,
+body[data-active-app="app3"] #cashSales,
+body[data-active-app="app3"] #cardSales,
+body[data-active-app="app3"] #totalSales{
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================
+   伝票No 行
+   右端を他フォームと揃える
+========================= */
+body[data-active-app="app3"] #app3 .ticket-range{
+  display: grid !important;
+  grid-template-columns: auto 96px 18px 96px !important;
+  justify-content: end !important;
+  align-items: center !important;
+  column-gap: 8px !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body[data-active-app="app3"] #app3 .ticket-range > span:first-child{
+  white-space: nowrap !important;
+  text-align: right !important;
+  justify-self: end !important;
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  opacity: 0.9 !important;
+}
+
+/* 伝票No 入力欄 */
+body[data-active-app="app3"] #startTicketNo,
+body[data-active-app="app3"] #endTicketNo{
+  width: 96px !important;
+  min-width: 96px !important;
+  max-width: 96px !important;
+  text-align: right !important;
+  padding-inline: 8px !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================
+   右列の通常入力欄も右端揃え
+   開始時金庫金 / 追加金庫金 / 現金売上 など
+========================= */
+body[data-active-app="app3"] #workDate,
+body[data-active-app="app3"] #startSafeCash,
+body[data-active-app="app3"] #extraSafeCash,
+body[data-active-app="app3"] #cashSales,
+body[data-active-app="app3"] #cardSales,
+body[data-active-app="app3"] #totalSales{
+  justify-self: end !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+
+
 
 /* =========================================================
    APP3：ドライバー代フォームのレイアウト整理
