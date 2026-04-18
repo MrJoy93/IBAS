@@ -5070,56 +5070,66 @@ Array.from(tbody.querySelectorAll('tr.bulk-mainrow')).forEach(tr => {
     return false;
   }
 
-  function updateBulkCheckAllState() {
-    const bulkCheckAll = document.getElementById('bulkCheckAll');
-    if (!bulkCheckAll) return;
+function updateBulkCheckAllState() {
+  const bulkCheckAll = document.getElementById('bulkCheckAll');
+  if (!bulkCheckAll) return;
 
-    const rows = getBulkMainRows();
-    const dataRows = rows.filter(rowHasData);
-    const checkedDataRows = dataRows.filter(tr => tr.querySelector('.bulk-check')?.checked);
+  const rows = getBulkMainRows();
 
-    if (dataRows.length === 0) {
-      bulkCheckAll.checked = false;
-      bulkCheckAll.indeterminate = false;
-      return;
-    }
+  // 退勤行を母数から除外
+  const selectableRows = rows.filter(tr => !tr.classList.contains('is-leave'));
+  const dataRows = selectableRows.filter(rowHasData);
+  const checkedDataRows = dataRows.filter(tr => tr.querySelector('.bulk-check')?.checked);
 
-    if (checkedDataRows.length === 0) {
-      bulkCheckAll.checked = false;
-      bulkCheckAll.indeterminate = false;
-      return;
-    }
-
-    if (checkedDataRows.length === dataRows.length) {
-      bulkCheckAll.checked = true;
-      bulkCheckAll.indeterminate = false;
-      return;
-    }
-
+  if (dataRows.length === 0) {
     bulkCheckAll.checked = false;
-    bulkCheckAll.indeterminate = true;
+    bulkCheckAll.indeterminate = false;
+    return;
   }
+
+  if (checkedDataRows.length === 0) {
+    bulkCheckAll.checked = false;
+    bulkCheckAll.indeterminate = false;
+    return;
+  }
+
+  if (checkedDataRows.length === dataRows.length) {
+    bulkCheckAll.checked = true;
+    bulkCheckAll.indeterminate = false;
+    return;
+  }
+
+  bulkCheckAll.checked = false;
+  bulkCheckAll.indeterminate = true;
+}
 
   const bulkCheckAll = document.getElementById('bulkCheckAll');
 
-  if (bulkCheckAll) {
-    bulkCheckAll.addEventListener('change', () => {
-      const rows = getBulkMainRows();
+if (bulkCheckAll) {
+  bulkCheckAll.addEventListener('change', () => {
+    const rows = getBulkMainRows();
 
-      rows.forEach(tr => {
-        const cb = tr.querySelector('.bulk-check');
-        if (!cb) return;
+    rows.forEach(tr => {
+      const cb = tr.querySelector('.bulk-check');
+      if (!cb) return;
 
-        if (bulkCheckAll.checked) {
-          cb.checked = rowHasData(tr);
-        } else {
-          cb.checked = false;
-        }
-      });
+      const isLeave = tr.classList.contains('is-leave');
 
-      updateBulkCheckAllState();
+      if (isLeave) {
+        cb.checked = false;
+        return;
+      }
+
+      if (bulkCheckAll.checked) {
+        cb.checked = rowHasData(tr);
+      } else {
+        cb.checked = false;
+      }
     });
-  }
+
+    updateBulkCheckAllState();
+  });
+}
 
   tbody.addEventListener('change', (e) => {
     const target = e.target;
@@ -8841,21 +8851,33 @@ function renderApp2History(){
   }
 
   function bindEvents(){
-    document.addEventListener('change', e => {
-      if (e.target && e.target.id === 'bulkCheckAll') {
-        const on = !!e.target.checked;
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'bulkCheckAll') {
+    const on = !!e.target.checked;
 
-        document.querySelectorAll('#bulkGrid tr.bulk-mainrow').forEach(tr => {
-          const cb = tr.querySelector('.bulk-check');
-          if (!cb) return;
+    document.querySelectorAll('#bulkGrid tr.bulk-mainrow').forEach(tr => {
+      const cb = tr.querySelector('.bulk-check');
+      if (!cb) return;
 
-          const isLeave = tr.classList.contains('is-leave');
-          if (cb.disabled || isLeave) return;
-
-          cb.checked = on;
-        });
+      const isLeave = tr.classList.contains('is-leave');
+      if (isLeave) {
+        cb.checked = false;
+        return;
       }
+
+      if (cb.disabled) {
+        cb.checked = false;
+        return;
+      }
+
+      cb.checked = on ? rowHasData(tr) : false;
     });
+
+    if (typeof updateBulkCheckAllState === 'function') {
+      updateBulkCheckAllState();
+    }
+  }
+});
 
     document.addEventListener('click', e => {
       if (e.target && e.target.id === 'bulkToggleChecks') {
