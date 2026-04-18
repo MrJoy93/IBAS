@@ -3553,3 +3553,16 @@ body[data-active-app="app2"] #bulkGrid td:nth-child(3) {
     border-right: 1px solid rgba(0, 234, 255, 0.20) !important;
   }
 }
+
+/* =========================================================
+   APP2：スマホ縦・タブレット縦では一括入力グリッドを非表示
+========================================================= */
+@media (max-width: 1024px) and (orientation: portrait) {
+  body[data-active-app="app2"] .group.group-bulk,
+  body[data-active-app="app2"] #bulkPanel,
+  body[data-active-app="app2"] .bulk-panel,
+  body[data-active-app="app2"] .bulk-grid-wrap,
+  body[data-active-app="app2"] #bulkGrid {
+    display: none !important;
+  }
+}
