@@ -5976,104 +5976,101 @@ function updateBottleAmountForRow(tr) {
 })();
 
 // === スマホ表示：氏名・体/貸・送迎 だけ表示（一本化） ==================
-(function(){
-function applyApp2MobileView() {
-  const grid = document.getElementById('bulkGrid');
-  if (!grid || !grid.tHead || !grid.tBodies[0]) return;
+(function () {
+  function applyApp2MobileView() {
+    const grid = document.getElementById('bulkGrid');
+    if (!grid || !grid.tHead || !grid.tBodies[0]) return;
 
-const vw = Math.min(window.innerWidth, window.outerWidth || window.innerWidth);
-const vh = Math.min(window.innerHeight, window.outerHeight || window.innerHeight);
-const isLandscape = vw > vh;
+    const vw = Math.min(window.innerWidth, window.outerWidth || window.innerWidth);
+    const vh = Math.min(window.innerHeight, window.outerHeight || window.innerHeight);
+    const isLandscape = vw > vh;
 
-const hasTouchLike =
-  (navigator.maxTouchPoints > 0) ||
-  window.matchMedia('(pointer: coarse)').matches;
+    const hasTouchLike =
+      (navigator.maxTouchPoints > 0) ||
+      window.matchMedia('(pointer: coarse)').matches;
 
-// buildGrid() と同じ判定
-const isCompactLandscapeApp2 =
-  hasTouchLike &&
-  isLandscape &&
-  vw <= 1300;
+    const isCompactLandscapeApp2 =
+      hasTouchLike &&
+      isLandscape &&
+      vw <= 1300;
 
-  const ths = Array.from(grid.tHead.rows[0]?.cells || []);
-  const rows = Array.from(grid.tBodies[0]?.rows || []);
+    const ths = Array.from(grid.tHead.rows[0]?.cells || []);
+    const rows = Array.from(grid.tBodies[0]?.rows || []);
+    const wrap = grid.closest('.bulk-grid-wrap');
 
-  // 共通のテーブル固定
-  grid.style.tableLayout = 'fixed';
-  grid.style.width = '100%';
-  grid.style.borderCollapse = 'collapse';
+    grid.style.tableLayout = 'fixed';
+    grid.style.width = '100%';
+    grid.style.borderCollapse = 'collapse';
 
-  const wrap = grid.closest('.bulk-grid-wrap');
+    const isPhoneLike =
+      hasTouchLike &&
+      vw <= 768;
 
-  // iPad mini 横向き compact は「全部表示」のままにする
-  if (isCompactLandscapeApp2) {
-    ths.forEach(th => {
-      if (th) th.style.display = 'table-cell';
-    });
+    const isTabletPortrait =
+      hasTouchLike &&
+      !isLandscape &&
+      vw > 768 &&
+      vw <= 1024;
 
-    rows.forEach(tr => {
-      Array.from(tr.cells || []).forEach(td => {
-        if (td) td.style.display = 'table-cell';
+    const useCompact3Cols = isPhoneLike || isTabletPortrait;
+
+    // iPad横などは全列表示
+    if (isCompactLandscapeApp2 && !isTabletPortrait) {
+      ths.forEach(th => {
+        if (th) th.style.display = 'table-cell';
       });
-    });
 
-    if (wrap) wrap.style.overflowX = '';
+      rows.forEach(tr => {
+        Array.from(tr.cells || []).forEach(td => {
+          if (td) td.style.display = 'table-cell';
+        });
+      });
 
-    // buildGrid 側で保存した幅を最後に再強制
-    if (Array.isArray(window._lastBulkGridWidths) && typeof forceBulkGridColumnWidths === 'function') {
-      forceBulkGridColumnWidths(window._lastBulkGridWidths);
-    }
+      if (wrap) wrap.style.overflowX = '';
 
-    return;
-  }
-
-  // それ以外だけ mobile view を適用
-  const isPhoneLike =
-    vw <= 768 &&
-    matchMedia('(pointer: coarse)').matches;
-
-  for (let i = 0; i < ths.length; i++) {
-    const colIndex = i + 1; // 1-based
-
-    // スマホ時だけ最低限の列だけ見せる
-    const show = !isPhoneLike || (colIndex === 2 || colIndex === 3 || colIndex === 4);
-
-    if (ths[i]) {
-      ths[i].style.display = show ? 'table-cell' : 'none';
-    }
-
-    rows.forEach(tr => {
-      if (tr.classList.contains('btl-subrow')) return;
-      const td = tr.cells[i];
-      if (td) {
-        td.style.display = show ? 'table-cell' : 'none';
+      // 全列表示時だけ buildGrid の列幅を再適用
+      if (
+        Array.isArray(window._lastBulkGridWidths) &&
+        typeof forceBulkGridColumnWidths === 'function'
+      ) {
+        forceBulkGridColumnWidths(window._lastBulkGridWidths);
       }
-    });
+
+      return;
+    }
+
+    // スマホ・タブレット縦：
+    // 2列目=氏名, 3列目=体験, 4列目=送迎 のみ表示
+    for (let i = 0; i < ths.length; i++) {
+      const colIndex = i + 1;
+      const show = !useCompact3Cols || (colIndex === 3 || colIndex === 4 || colIndex === 5);
+
+      if (ths[i]) {
+        ths[i].style.display = show ? 'table-cell' : 'none';
+      }
+
+      rows.forEach(tr => {
+        if (tr.classList.contains('btl-subrow')) return;
+        const td = tr.cells[i];
+        if (td) {
+          td.style.display = show ? 'table-cell' : 'none';
+        }
+      });
+    }
+
+    if (wrap) {
+      wrap.style.overflowX = 'hidden';
+    }
+
+    // 3列表示時は PC用列幅を再適用しない
+    // 代わりに style.css 側の 33.333% で均等化する
   }
 
-  if (wrap) {
-    wrap.style.overflowX = isPhoneLike ? 'hidden' : '';
-  }
-
-  // 最後に幅を再強制
-  if (Array.isArray(window._lastBulkGridWidths) && typeof forceBulkGridColumnWidths === 'function') {
-    forceBulkGridColumnWidths(window._lastBulkGridWidths);
-  }
-}
-
-  // グローバルに公開（buildGrid 直後でも呼べるように）
   window.applyApp2MobileView = applyApp2MobileView;
 
-  // 初期 & リサイズで適用
   document.addEventListener('DOMContentLoaded', applyApp2MobileView);
   window.addEventListener('load', applyApp2MobileView);
   window.addEventListener('resize', applyApp2MobileView);
-
-  if (window._lastBulkGridWidths) {
-  forceBulkGridColumnWidths(window._lastBulkGridWidths);
-}
-
-  
 })();
 
 (function () {
