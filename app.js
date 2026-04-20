@@ -8703,12 +8703,13 @@ function openPrintApp2(innerHTML, opts = {}) {
   box-sizing: border-box;
   transform: scale(var(--scale));
   transform-origin: top center;
+  overflow: visible;
 }
 
 .rotate180 .sheet-inner {
-  transform: rotate(180deg) scale(var(--scale));
+  transform: translateY(-4mm) rotate(180deg) scale(var(--scale));
   transform-origin: center center;
-  padding-top: ${trimBottomMM}mm;
+  padding-top: 0;
 }
 
     .envelope {
@@ -8744,6 +8745,7 @@ function openPrintApp2(innerHTML, opts = {}) {
 .castName {
   display: block !important;
   color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
   font-size: 18pt !important;
   font-weight: 800 !important;
   line-height: 1.25 !important;
