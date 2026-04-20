@@ -8597,18 +8597,16 @@ function openPrintApp2(innerHTML, opts = {}) {
     scale = 1.00,
     rotateOnMobile = true,
     trimBottomMM = 0,
-    title = 'print'
+    title = 'APP2 Print'
   } = opts;
 
-const ua = navigator.userAgent || '';
-const isIOS =
-  /iPhone|iPad|iPod/i.test(ua) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const ua = navigator.userAgent || '';
+  const isIOS =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-// iOS のときだけ 180°反転
-const rotate = !!(rotateOnMobile && isIOS);
+  const rotate = !!(rotateOnMobile && isIOS);
 
-  // 高額時の虹色クラスを各ページ内で付与
   const temp = document.createElement('div');
   temp.innerHTML = innerHTML;
 
@@ -8643,12 +8641,9 @@ const rotate = !!(rotateOnMobile && isIOS);
       margin: 0;
       padding: 0;
       background: #fff;
+      color: #000;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-    }
-
-    body {
-      color: #000;
       font-family: 'ＭＳ 明朝', serif;
     }
 
@@ -8676,6 +8671,7 @@ const rotate = !!(rotateOnMobile && isIOS);
       width: 100%;
       margin: 0 auto;
       padding: 0;
+      background: #fff;
     }
 
     .print-sheet {
@@ -8725,19 +8721,63 @@ const rotate = !!(rotateOnMobile && isIOS);
       font-variant-numeric: tabular-nums;
       letter-spacing: .02em;
       padding: calc(5mm / var(--scale));
+      color: #000 !important;
+      background: #fff !important;
     }
 
     .print-date {
       text-align: left;
       font-size: 11pt;
-      margin: 4mm 0 0;
+      margin: 0 0 3mm 0;
+      color: #000 !important;
     }
 
     .print-title {
       text-align: center;
       font-size: 14pt;
-      margin: 2mm 0 8mm;
+      margin: 0 0 8mm 0;
       font-weight: 700;
+      color: #000 !important;
+    }
+
+    .castName {
+      display: block !important;
+      color: #000 !important;
+      font-size: 18pt !important;
+      font-weight: 800 !important;
+      line-height: 1.25 !important;
+      margin: 3mm 0 !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    .subtotal {
+      display: block !important;
+      color: #333 !important;
+      font-size: 14pt !important;
+      font-weight: 700 !important;
+      margin-top: 2mm !important;
+      margin-bottom: 2mm !important;
+    }
+
+    .totalAmount {
+      display: block !important;
+      color: #0066cc !important;
+      font-size: 15pt !important;
+      font-weight: 800 !important;
+      margin-top: 3mm !important;
+      margin-bottom: 2mm !important;
+    }
+
+    .finalAmount {
+      display: block !important;
+      color: #009944 !important;
+      font-size: 18pt !important;
+      font-weight: 900 !important;
+      margin-top: 4mm !important;
+      margin-bottom: 3mm !important;
     }
 
     .receipt-row {
@@ -8755,36 +8795,7 @@ const rotate = !!(rotateOnMobile && isIOS);
       font-weight: 700;
       font-size: 12pt;
       text-align: right;
-    }
-
-    .castName {
-      font-size: 18pt !important;
-      font-weight: 800 !important;
-      margin: 3mm 0 !important;
-    }
-
-    .subtotal {
-      font-size: 14pt !important;
-      font-weight: 700 !important;
-      color: #333 !important;
-      margin-top: 2mm !important;
-      margin-bottom: 2mm !important;
-    }
-
-    .totalAmount {
-      font-size: 15pt !important;
-      font-weight: 800 !important;
-      color: #0066cc !important;
-      margin-top: 3mm !important;
-      margin-bottom: 2mm !important;
-    }
-
-    .finalAmount {
-      font-size: 18pt !important;
-      font-weight: 900 !important;
-      color: #009944 !important;
-      margin-top: 4mm !important;
-      margin-bottom: 3mm !important;
+      color: #000 !important;
     }
 
     .page-index {
@@ -8804,34 +8815,8 @@ const rotate = !!(rotateOnMobile && isIOS);
       font-weight: 900;
     }
 
-    #result .congrats.print-only,
-    .sheet-inner .congrats.print-only {
-      display: none;
-      text-align: center;
-      font-weight: bold;
-      font-size: 14pt;
-      margin-bottom: 2px;
-    }
-
-    @media print {
-      #result .congrats.print-only,
-      .sheet-inner .congrats.print-only {
-        display: block;
-      }
-
-      #result .congrats-box,
-      .sheet-inner .congrats-box {
-        border: 2px solid #000;
-        padding: 6px 10px;
-        margin: 6px 0;
-        max-width: calc(100% - 4mm);
-        margin-left: 2mm;
-        margin-right: 2mm;
-        text-align: center;
-        border-radius: 6px;
-        display: block;
-        box-sizing: border-box;
-      }
+    .sheet-inner * {
+      color: inherit;
     }
   </style>
 </head>
@@ -9049,25 +9034,6 @@ function renderApp2History(){
     }
   }
 
-  function suspendSyncForPrint(ms = 3000) {
-  window._suppressSyncObservers = true;
-
-  if (typeof window.suppressSync === 'function') {
-    window.suppressSync(ms);
-  }
-}
-
-function resumeSyncAfterPrint(delay = 1500) {
-  setTimeout(() => {
-    window._suppressSyncObservers = false;
-  }, delay);
-}
-
-async function waitForSafariPaint(ms = 80) {
-  await new Promise(r => requestAnimationFrame(r));
-  await new Promise(r => setTimeout(r, ms));
-}
-
 function suspendSyncForPrint(ms = 6000) {
   window._suppressSyncObservers = true;
 
@@ -9091,6 +9057,11 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
   const originalResultHtml = resultEl.innerHTML;
   const sheets = [];
 
+  const ua = navigator.userAgent || '';
+  const isIOS =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   try {
     for (let i = 0; i < selectedRows.length; i++) {
       const row = selectedRows[i];
@@ -9104,26 +9075,50 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => setTimeout(resolve, 80));
 
-      const html = (resultEl.innerHTML || '').trim();
+      let html = (resultEl.innerHTML || '').trim();
       if (!html) continue;
 
-      const wrapped = /class\\s*=\\s*["'][^"']*envelope/.test(html)
+      // 氏名表示を強制補正
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+
+      const castNameInput = document.getElementById('castName');
+      const castNameText = (castNameInput?.value || '').trim();
+
+      let castNode = temp.querySelector('.castName');
+      if (!castNode && castNameText) {
+        castNode = document.createElement('div');
+        castNode.className = 'castName';
+        castNode.textContent = castNameText;
+
+        const firstTitle =
+          temp.querySelector('.print-title') ||
+          temp.firstElementChild;
+
+        if (firstTitle && firstTitle.parentNode) {
+          firstTitle.parentNode.insertBefore(castNode, firstTitle.nextSibling);
+        } else {
+          temp.prepend(castNode);
+        }
+      } else if (castNode && castNameText && !castNode.textContent.trim()) {
+        castNode.textContent = castNameText;
+      }
+
+      html = temp.innerHTML;
+
+      const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
+      const wrapped = hasEnvelope
         ? html
         : `<div class="envelope">${html}</div>`;
 
-const ua = navigator.userAgent || '';
-const isIOS =
-  /iPhone|iPad|iPod/i.test(ua) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-sheets.push(`
-  <section class="print-sheet ${isIOS ? 'rotate180' : ''}">
-    <div class="sheet-inner">
-      ${wrapped}
-    </div>
-    <div class="page-index">${i + 1} / ${selectedRows.length}</div>
-  </section>
-`);
+      sheets.push(`
+        <section class="print-sheet ${isIOS ? 'rotate180' : ''}">
+          <div class="sheet-inner">
+            ${wrapped}
+          </div>
+          <div class="page-index">${i + 1} / ${selectedRows.length}</div>
+        </section>
+      `);
     }
   } finally {
     resultEl.innerHTML = originalResultHtml;
