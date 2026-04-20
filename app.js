@@ -8808,20 +8808,44 @@ function renderApp2History(){
     }
   }
 
-  async function printSelectedRows() {
-    const grid = document.getElementById('bulkGrid');
-    if (!grid) return alert('一括入力テーブルが見つかりません。');
+  function suspendSyncForPrint(ms = 3000) {
+  window._suppressSyncObservers = true;
 
-    const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
-      .filter(tr => {
-        const on = tr.querySelector('.bulk-check')?.checked;
-        return on && !isBulkRowEmpty(tr);
-      });
+  if (typeof window.suppressSync === 'function') {
+    window.suppressSync(ms);
+  }
+}
 
-    if (!selected.length) return alert('出力する行をチェックしてください。');
+function resumeSyncAfterPrint(delay = 1500) {
+  setTimeout(() => {
+    window._suppressSyncObservers = false;
+  }, delay);
+}
 
+async function waitForSafariPaint(ms = 80) {
+  await new Promise(r => requestAnimationFrame(r));
+  await new Promise(r => setTimeout(r, ms));
+}
+
+async function printSelectedRows() {
+  const grid = document.getElementById('bulkGrid');
+  if (!grid) return alert('一括入力テーブルが見つかりません。');
+
+  const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
+    .filter(tr => {
+      const on = tr.querySelector('.bulk-check')?.checked;
+      return on && !isBulkRowEmpty(tr);
+    });
+
+  if (!selected.length) return alert('出力する行をチェックしてください。');
+
+  suspendSyncForPrint(4000);
+
+  try {
     for (const row of selected) {
       pushBulkRowToNormalForm(row);
+
+      await waitForSafariPaint(120);
 
       let win = null;
       try {
@@ -8835,7 +8859,10 @@ function renderApp2History(){
       await waitForWindowClose(win);
       await new Promise(r => setTimeout(r, WAIT_BETWEEN_PRINT_MS));
     }
+  } finally {
+    resumeSyncAfterPrint(1500);
   }
+}
 
   function waitForWindowClose(win) {
     return new Promise(resolve => {
