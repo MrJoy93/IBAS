@@ -8674,41 +8674,42 @@ function openPrintApp2(innerHTML, opts = {}) {
       background: #fff;
     }
 
-    .print-sheet {
-      width: var(--sheet-w);
-      height: var(--sheet-h);
-      margin: 0 auto;
-      overflow: hidden;
-      page-break-after: always;
-      break-after: page;
-      box-sizing: border-box;
-      position: relative;
-      background: #fff;
-    }
+.print-sheet {
+  width: var(--sheet-w);
+  height: var(--sheet-h);
+  margin: 0 auto;
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+  box-sizing: border-box;
+  position: relative;
+  background: #fff;
+}
 
     .print-sheet:last-child {
       page-break-after: auto;
       break-after: auto;
     }
 
-    .rotate180.print-sheet {
-      transform: rotate(180deg);
-      transform-origin: center center;
-    }
+.rotate180.print-sheet {
+  transform: none;
+}
 
-    .sheet-inner {
-      width: calc(var(--sheet-w) / var(--scale));
-      min-height: calc(var(--sheet-h) / var(--scale));
-      margin: 0 auto;
-      padding: 0;
-      box-sizing: border-box;
-      transform: scale(var(--scale));
-      transform-origin: top center;
-    }
+.sheet-inner {
+  width: calc(var(--sheet-w) / var(--scale));
+  min-height: calc(var(--sheet-h) / var(--scale));
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  transform: scale(var(--scale));
+  transform-origin: top center;
+}
 
-    .rotate180 .sheet-inner {
-      margin-top: -${trimBottomMM}mm;
-    }
+.rotate180 .sheet-inner {
+  transform: rotate(180deg) scale(var(--scale));
+  transform-origin: center center;
+  padding-top: ${trimBottomMM}mm;
+}
 
     .envelope {
       box-sizing: border-box;
@@ -8740,18 +8741,20 @@ function openPrintApp2(innerHTML, opts = {}) {
       color: #000 !important;
     }
 
-    .castName {
-      display: block !important;
-      color: #000 !important;
-      font-size: 18pt !important;
-      font-weight: 800 !important;
-      line-height: 1.25 !important;
-      margin: 3mm 0 !important;
-      white-space: pre-wrap !important;
-      word-break: break-word !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-    }
+.castName {
+  display: block !important;
+  color: #000 !important;
+  font-size: 18pt !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  margin: 5mm 0 3mm 0 !important;
+  min-height: 7mm !important;
+  padding-top: 1mm !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 
     .subtotal {
       display: block !important;
