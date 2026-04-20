@@ -8490,203 +8490,326 @@ if (!opts?.noRebuild) {
 
 function openPrintApp2(innerHTML, opts = {}) {
   const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
-  const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+
+  const ua = navigator.userAgent || '';
+  const isIOS =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSP = /iPhone|iPod|Android.*Mobile/i.test(ua) || isIOS;
   const rotate = rotateOnMobile && isSP;
 
-  // ★ 最終合計をチェックして、条件を満たせば special クラスを付与
+  // 最終合計が高額なら印刷時だけ虹色
   const temp = document.createElement('div');
   temp.innerHTML = innerHTML;
+
   const finalEl = temp.querySelector('.finalAmount');
   if (finalEl) {
-    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10);
+    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10) || 0;
     if (num >= 100000) {
       finalEl.classList.add('rainbow-print');
     }
   }
+
   innerHTML = temp.innerHTML;
 
-  const printHTML = `<!doctype html><html lang="ja"><head>
-  <meta charset="utf-8"><title>print</title>
+  const printHTML = `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>print</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     :root { --scale:${scale}; }
-    @page { size: 90mm 205mm; margin: 0; }
-    html,body {
-      margin:0; padding:0; background:#fff;
-      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+
+    @page {
+      size: 90mm 205mm;
+      margin: 0;
     }
 
-    #page { width:90mm; max-height:205mm; margin:0 auto; overflow:hidden; }
-    .rotate180 #page { margin-bottom:-${trimBottomMM}mm; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    #__app2Back {
+      position: fixed;
+      right: 8px;
+      top: 8px;
+      padding: .5em .8em;
+      font-size: 12px;
+      border: 1px solid #888;
+      border-radius: 6px;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+      z-index: 9999;
+    }
+
+    @media print {
+      #__app2Back {
+        display: none !important;
+      }
+    }
+
+    #page {
+      width: 90mm;
+      max-height: 205mm;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .rotate180 #page {
+      margin-bottom: -${trimBottomMM}mm;
+    }
 
     #result {
-      width:calc(90mm/var(--scale));
-      min-height:calc(205mm/var(--scale));
-      margin:0 auto; padding:0;
-      box-sizing:border-box;
-      transform:scale(var(--scale));
-      transform-origin:top center;
+      width: calc(90mm / var(--scale));
+      min-height: calc(205mm / var(--scale));
+      margin: 0 auto;
+      padding: 0;
+      box-sizing: border-box;
+      transform: scale(var(--scale));
+      transform-origin: top center;
     }
+
     .rotate180 #result {
-      transform:rotate(180deg) scale(var(--scale));
-      transform-origin:center center;
+      transform: rotate(180deg) scale(var(--scale));
+      transform-origin: center center;
     }
 
-.envelope {
-  box-sizing: border-box;
-  width: calc(84mm / var(--scale)); /* ← 86→84 にして左右3mmずつの余白を確保 */
-  max-height: 205mm;
-  margin: 0 auto;
-  text-align: left;
-  font-family: 'ＭＳ 明朝', serif;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .02em;
-  padding: calc(5mm / var(--scale)); /* padding もスケールで割って実効幅を維持 */
-}
-    .print-date  { text-align:left;  font-size:11pt; margin:4mm 0 0; }
-    .print-title { text-align:center;font-size:14pt;margin:2mm 0 8mm;font-weight:700; }
-    .receipt-row { display:flex; justify-content:space-between; align-items:baseline; }
-    .receipt-row .label{ margin-right:5mm; white-space:nowrap; }
-    .receipt-row .value{ font-weight:700; font-size:12pt; text-align:right; }
-    .totalAmount{ font-size:18pt !important; font-weight:800; color:#0066cc; margin:3mm 0 2mm; }
-    .finalAmount{ font-size:18pt !important; font-weight:900; color:#009944; margin:4mm 0 3mm; }
-    .castName   { font-size:16pt !important; font-weight:700; }
+    .envelope {
+      box-sizing: border-box;
+      width: calc(84mm / var(--scale));
+      max-height: 205mm;
+      margin: 0 auto;
+      text-align: left;
+      font-family: 'ＭＳ 明朝', serif;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+      padding: calc(5mm / var(--scale));
+    }
 
-      .castName {
-    font-size: 18pt !important;
-    font-weight: 800 !important;
-    margin: 3mm 0 !important;   /* 名前上下の余白復活 */
-  }
+    .print-date {
+      text-align: left;
+      font-size: 11pt;
+      margin: 4mm 0 0;
+    }
 
-  .subtotal {
-    font-size: 14pt !important;
-    font-weight: 700 !important;
-    color: #333 !important;
-    margin-top: 2mm !important;
-    margin-bottom: 2mm !important;
-  }
+    .print-title {
+      text-align: center;
+      font-size: 14pt;
+      margin: 2mm 0 8mm;
+      font-weight: 700;
+    }
 
-  .totalAmount {
-    font-size: 15pt !important;
-    font-weight: 800 !important;
-    color: #0066cc !important;
-    margin-top: 3mm !important;
-    margin-bottom: 2mm !important;
-  }
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
 
-  .finalAmount {
-    font-size: 18pt !important;
-    font-weight: 900 !important;
-    color: #009944 !important;
-    margin-top: 4mm !important;
-    margin-bottom: 3mm !important;
-  }
+    .receipt-row .label {
+      margin-right: 5mm;
+      white-space: nowrap;
+    }
 
-    /* 印刷だけ虹色 */
+    .receipt-row .value {
+      font-weight: 700;
+      font-size: 12pt;
+      text-align: right;
+    }
+
+    .castName {
+      font-size: 18pt !important;
+      font-weight: 800 !important;
+      margin: 3mm 0 !important;
+    }
+
+    .subtotal {
+      font-size: 14pt !important;
+      font-weight: 700 !important;
+      color: #333 !important;
+      margin-top: 2mm !important;
+      margin-bottom: 2mm !important;
+    }
+
+    .totalAmount {
+      font-size: 15pt !important;
+      font-weight: 800 !important;
+      color: #0066cc !important;
+      margin-top: 3mm !important;
+      margin-bottom: 2mm !important;
+    }
+
+    .finalAmount {
+      font-size: 18pt !important;
+      font-weight: 900 !important;
+      color: #009944 !important;
+      margin-top: 4mm !important;
+      margin-bottom: 3mm !important;
+    }
+
     @media print {
-      @keyframes rainbowText {
-        0%   { color: red; }
-        20%  { color: orange; }
-        40%  { color: yellow; }
-        60%  { color: green; }
-        80%  { color: blue; }
-        100% { color: purple; }
+      .rainbow-print {
+        background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900;
       }
 
-  .rainbow-print {
-    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 900;
-  }
+      #result .congrats.print-only {
+        display: block !important;
+        text-align: center;
+        font-weight: bold;
+        font-size: 14pt;
+        margin-bottom: 2px;
+      }
 
-#result .congrats.print-only {
-  display: none;
-  text-align: center;
-  font-weight: bold;
-  font-size: 14pt;
-
-  /* ↓ ここを追加または調整 */
-  margin-bottom: 2px;   /* 最終合計との間隔を小さくする */
-}
-@media print {
-  #result .congrats.print-only {
-    display: block;
-  }
-
-#result .congrats-box {
-  border: 2px solid #000;
-  padding: 6px 10px;
-  margin: 6px 0;
-
-  /* ここから追加/変更 */
-  max-width: calc(100% - 4mm); /* ← 右端クリップ回避の安全幅 */
-  margin-left: 2mm;
-  margin-right: 2mm;
-  /* ここまで */
-
-  text-align: center;
-  border-radius: 6px;
-  display: block;
-  box-sizing: border-box;
-}
-
-#result .congrats.print-only {
-  font-weight: bold;
-  font-size: 14pt;
-  margin-bottom: 2px;       /* 最終合計との間隔を調整 */
-}
-}
-       
+      #result .congrats-box {
+        border: 2px solid #000;
+        padding: 6px 10px;
+        margin: 6px 0;
+        max-width: calc(100% - 4mm);
+        margin-left: 2mm;
+        margin-right: 2mm;
+        text-align: center;
+        border-radius: 6px;
+        display: block;
+        box-sizing: border-box;
+      }
     }
-    
   </style>
-  </head><body class="${rotate ? 'rotate180' : ''}">
-    <div id="page"><div id="result">${innerHTML}</div></div>
-<script>
-  function notifyDone(){
-    try{
-      if (window.opener) {
-        window.opener.postMessage({ type: 'IBASD_PRINT_DONE' }, '*');
+</head>
+<body class="${rotate ? 'rotate180' : ''}">
+  <button id="__app2Back" type="button">← 元の画面へ戻る</button>
+
+  <div id="page">
+    <div id="result">${innerHTML}</div>
+  </div>
+
+  <script>
+    (function () {
+      let done = false;
+      let printed = false;
+
+      function notifyDone() {
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ type: 'IBASD_PRINT_DONE' }, '*');
+          }
+        } catch (_) {}
       }
-    }catch(e){}
-  }
 
-  function tryClose(){
-    notifyDone();
-    try{ window.close(); }catch(e){}
-  }
+      function focusOpener() {
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.focus();
+          }
+        } catch (_) {}
+      }
 
-  window.onload = function(){
-    try{
-      window.focus();
-      window.print();
-    }catch(e){}
+      function finalize() {
+        if (done) return;
+        done = true;
 
-    // iOS対策：print後に必ず通知
-    setTimeout(tryClose, 1200);
-  };
-<\/script>
-  </body></html>`;
+        focusOpener();
+
+        try {
+          window.close();
+        } catch (_) {}
+
+        setTimeout(() => {
+          try {
+            if (!window.closed) {
+              focusOpener();
+              try {
+                window.location.replace('about:blank');
+              } catch (_) {}
+            }
+          } catch (_) {}
+        }, 120);
+
+        setTimeout(() => {
+          notifyDone();
+        }, 200);
+      }
+
+      function kickPrint() {
+        if (printed) return;
+        printed = true;
+
+        try {
+          window.focus();
+          window.print();
+        } catch (_) {}
+      }
+
+      const backBtn = document.getElementById('__app2Back');
+      if (backBtn) {
+        backBtn.addEventListener('click', finalize);
+      }
+
+      if (document.readyState === 'complete') {
+        setTimeout(kickPrint, 80);
+      } else {
+        window.addEventListener('load', () => {
+          setTimeout(kickPrint, 120);
+        }, { once: true });
+      }
+
+      setTimeout(kickPrint, 1200);
+
+      window.addEventListener('afterprint', finalize, { once: true });
+
+      window.addEventListener('focus', () => {
+        if (printed) finalize();
+      }, { once: true });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && printed) finalize();
+      });
+
+      try {
+        const mql = window.matchMedia('print');
+        const handler = (e) => {
+          if (!e.matches && printed) finalize();
+        };
+
+        if (mql.addEventListener) {
+          mql.addEventListener('change', handler, { once: true });
+        } else if (mql.addListener) {
+          mql.addListener(handler);
+        }
+      } catch (_) {}
+
+      setTimeout(finalize, 12000);
+    })();
+  <\/script>
+</body>
+</html>`;
 
   try {
-  let w = window.open('', 'PRINT_APP2', 'width=480,height=800');
-  if (w && w.document) {
-    w.document.open(); 
-    w.document.write(printHTML); 
-    w.document.close();
-    return w; // ← return に修正！
-  }
-} catch(_) {}
+    const w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+    if (w && w.document) {
+      w.document.open();
+      w.document.write(printHTML);
+      w.document.close();
+      return w;
+    }
+  } catch (_) {}
 
-try {
-  const blob = new Blob([printHTML], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url,'_blank');
-  return w; // ← こちらもreturn w
-} catch(_) {}
+  try {
+    const blob = new Blob([printHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    return w || null;
+  } catch (_) {}
 
+  return null;
 }
 
 // HTMLエスケープ（XSS/レイアウト崩れ対策）
@@ -8841,37 +8964,68 @@ async function waitForSafariPaint(ms = 80) {
   await new Promise(r => setTimeout(r, ms));
 }
 
+function suspendSyncForPrint(ms = 4000) {
+  window._suppressSyncObservers = true;
+
+  if (typeof window.suppressSync === 'function') {
+    window.suppressSync(ms);
+  }
+}
+
+function resumeSyncAfterPrint(delay = 1500) {
+  setTimeout(() => {
+    window._suppressSyncObservers = false;
+  }, delay);
+}
+
+async function waitForSafariPaint(ms = 120) {
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  await new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function printSelectedRows() {
   const grid = document.getElementById('bulkGrid');
-  if (!grid) return alert('一括入力テーブルが見つかりません。');
+  if (!grid) {
+    alert('一括入力テーブルが見つかりません。');
+    return;
+  }
 
-  const selected = Array.from(grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || [])
-    .filter(tr => {
-      const on = tr.querySelector('.bulk-check')?.checked;
-      return on && !isBulkRowEmpty(tr);
-    });
+  const selected = Array.from(
+    grid.tBodies?.[0]?.querySelectorAll('tr.bulk-mainrow') || []
+  ).filter(tr => {
+    const checked = !!tr.querySelector('.bulk-check')?.checked;
+    return checked && !isBulkRowEmpty(tr);
+  });
 
-  if (!selected.length) return alert('出力する行をチェックしてください。');
+  if (!selected.length) {
+    alert('出力する行をチェックしてください。');
+    return;
+  }
 
-  suspendSyncForPrint(4000);
+  suspendSyncForPrint(6000);
 
   try {
     for (const row of selected) {
       pushBulkRowToNormalForm(row);
 
-      await waitForSafariPaint(120);
+      await waitForSafariPaint(160);
 
       let win = null;
       try {
         if (typeof window.preparePrintApp2 === 'function') {
-          win = await window.preparePrintApp2();
+          win = await window.preparePrintApp2('envelope');
         }
       } catch (e) {
         console.error('印刷呼び出しエラー:', e);
       }
 
       await waitForWindowClose(win);
-      await new Promise(r => setTimeout(r, WAIT_BETWEEN_PRINT_MS));
+
+      const waitMs = (typeof WAIT_BETWEEN_PRINT_MS === 'number')
+        ? WAIT_BETWEEN_PRINT_MS
+        : 500;
+
+      await new Promise(resolve => setTimeout(resolve, waitMs));
     }
   } finally {
     resumeSyncAfterPrint(1500);
@@ -8880,33 +9034,59 @@ async function printSelectedRows() {
 
 function waitForWindowClose(win) {
   return new Promise(resolve => {
-
-    if (!win) return resolve();
+    if (!win) {
+      resolve();
+      return;
+    }
 
     let done = false;
+    let timer = null;
+    let hardTimeout = null;
 
-    function finish(){
+    function cleanup() {
+      try {
+        window.removeEventListener('message', onMessage);
+      } catch (_) {}
+
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+
+      if (hardTimeout) {
+        clearTimeout(hardTimeout);
+        hardTimeout = null;
+      }
+    }
+
+    function finish() {
       if (done) return;
       done = true;
-      window.removeEventListener('message', onMsg);
+      cleanup();
       resolve();
     }
 
-    function onMsg(e){
-      if (e.data && e.data.type === 'IBASD_PRINT_DONE') {
+    function onMessage(e) {
+      if (e && e.data && e.data.type === 'IBASD_PRINT_DONE') {
         finish();
       }
     }
 
-    window.addEventListener('message', onMsg);
+    window.addEventListener('message', onMessage);
 
-    // フォールバック（念のため）
-    const timer = setInterval(() => {
-      if (!win || win.closed) {
-        clearInterval(timer);
+    timer = setInterval(() => {
+      try {
+        if (!win || win.closed) {
+          finish();
+        }
+      } catch (_) {
         finish();
       }
     }, 300);
+
+    hardTimeout = setTimeout(() => {
+      finish();
+    }, 15000);
   });
 }
 
@@ -9044,18 +9224,26 @@ function isBulkRowEmpty(mainRow){
 }
 
 window.preparePrintApp2 = function (mode = 'envelope') {
-  if (typeof window.showApp === 'function') window.showApp('app2');
+  if (typeof window.showApp === 'function') {
+    window.showApp('app2');
+  }
 
-  if (typeof saveBottleForms === 'function') saveBottleForms();
-  if (typeof window.calculate === 'function') window.calculate();
+  if (typeof saveBottleForms === 'function') {
+    saveBottleForms();
+  }
+
+  if (typeof window.calculate === 'function') {
+    window.calculate();
+  }
 
   const html = (document.getElementById('result')?.innerHTML || '').trim();
+
   if (!html) {
     alert('印刷する内容がありません。先に「計算」で結果を出してください。');
     return null;
   }
 
-  const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
+  const hasEnvelope = /class\\s*=\\s*["'][^"']*envelope/.test(html);
   const inner = (mode === 'envelope' && !hasEnvelope)
     ? `<div class="envelope">${html}</div>`
     : html;
