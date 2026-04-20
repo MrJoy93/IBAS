@@ -8644,16 +8644,30 @@ function openPrintApp2(innerHTML, opts = {}) {
   </style>
   </head><body class="${rotate ? 'rotate180' : ''}">
     <div id="page"><div id="result">${innerHTML}</div></div>
-    <script>
-      function tryClose(){ try{ window.close(); }catch(e){} }
-      window.onload = function(){
-        try{ window.focus(); window.print(); }catch(e){}
-        window.onafterprint = tryClose;
-        window.addEventListener('focus', tryClose, { once:true });
-        document.addEventListener('visibilitychange', function(){ if(!document.hidden) tryClose(); });
-        setTimeout(tryClose, 2500);
-      };
-    <\/script>
+<script>
+  function notifyDone(){
+    try{
+      if (window.opener) {
+        window.opener.postMessage({ type: 'IBASD_PRINT_DONE' }, '*');
+      }
+    }catch(e){}
+  }
+
+  function tryClose(){
+    notifyDone();
+    try{ window.close(); }catch(e){}
+  }
+
+  window.onload = function(){
+    try{
+      window.focus();
+      window.print();
+    }catch(e){}
+
+    // iOS対策：print後に必ず通知
+    setTimeout(tryClose, 1200);
+  };
+<\/script>
   </body></html>`;
 
   try {
@@ -8864,18 +8878,37 @@ async function printSelectedRows() {
   }
 }
 
-  function waitForWindowClose(win) {
-    return new Promise(resolve => {
-      if (!win || win.closed) return resolve();
+function waitForWindowClose(win) {
+  return new Promise(resolve => {
 
-      const timer = setInterval(() => {
-        if (win.closed) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 300);
-    });
-  }
+    if (!win) return resolve();
+
+    let done = false;
+
+    function finish(){
+      if (done) return;
+      done = true;
+      window.removeEventListener('message', onMsg);
+      resolve();
+    }
+
+    function onMsg(e){
+      if (e.data && e.data.type === 'IBASD_PRINT_DONE') {
+        finish();
+      }
+    }
+
+    window.addEventListener('message', onMsg);
+
+    // フォールバック（念のため）
+    const timer = setInterval(() => {
+      if (!win || win.closed) {
+        clearInterval(timer);
+        finish();
+      }
+    }, 300);
+  });
+}
 
   function bindEvents(){
 document.addEventListener('change', e => {
@@ -9013,15 +9046,13 @@ function isBulkRowEmpty(mainRow){
 window.preparePrintApp2 = function (mode = 'envelope') {
   if (typeof window.showApp === 'function') window.showApp('app2');
 
-  // 印刷前に保存内容も最新化
   if (typeof saveBottleForms === 'function') saveBottleForms();
-
   if (typeof window.calculate === 'function') window.calculate();
 
   const html = (document.getElementById('result')?.innerHTML || '').trim();
   if (!html) {
     alert('印刷する内容がありません。先に「計算」で結果を出してください。');
-    return;
+    return null;
   }
 
   const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
@@ -9029,7 +9060,11 @@ window.preparePrintApp2 = function (mode = 'envelope') {
     ? `<div class="envelope">${html}</div>`
     : html;
 
-  openPrintApp2(inner, { scale: 1.05, rotateOnMobile: true, trimBottomMM: 20 });
+  return openPrintApp2(inner, {
+    scale: 1.05,
+    rotateOnMobile: true,
+    trimBottomMM: 20
+  });
 };
 
 
