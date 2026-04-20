@@ -8242,7 +8242,7 @@ window.exportAsFilledHTML = function(){
         }
       </style>`;
 
-    openPrintApp1(printCSS + `<div id="result">${html}</div>`, { rotateOnMobile: true });
+    openPrintApp1(printCSS + `<div id="result">${html}</div>`, { rotateOnIOS: true });
   };
 
   // 封筒印刷（ALL or 個別カテゴリ）
@@ -8333,184 +8333,55 @@ openPrintApp1(innerCat, { rotateOnMobile:true, noRebuild:true });
   }
 
   // コア：印刷ウィンドウ生成・整形・復帰制御
-  function openPrintApp1(innerHTML, opts = { rotateOnMobile:true }) {
-    // ---- 行テキスト化して3行パターンを再構成 ----
-    // ---- 行テキスト化して3行パターンを再構成 ----
-let rebuilt = innerHTML;
-if (!opts?.noRebuild) {
-  const tmpEl = document.createElement('div');
-  tmpEl.innerHTML = innerHTML;
-  const lines = (tmpEl.innerText.trim().split(/\r?\n/)).map(s => s.trim());
-
-  rebuilt = "";
-  for (let i = 0; i < lines.length; i++) {
-    const a = lines[i] || "";
-    const b = lines[i + 1] || "";
-    const c = lines[i + 2] || "";
-
-    if (/^[A-Z]{1,6}$/.test(a) &&
-        (/^\d{1,3}(?:,\d{3})*(?:\s*×\s*\d+)?$|^\d+$/.test(b)) &&
-        c.includes("計")) {
-      rebuilt += `
-        <div class="cat-line">
-          <span class="cat">${a}</span>
-          <span class="val">${b}</span>
-          <span class="cnt">${c}</span>
-        </div>`;
-      i += 2;
-    } else if (a === "") {
-      rebuilt += `<div class="group-sep"></div>`;
-    } else {
-      rebuilt += `<div class="misc">${a}</div>`;
-    }
-  }
-}
-
-    // ---- 子ウィンドウ生成（毎回ユニーク名）----
-    const isSP = /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
-    const winName = "app1print_" + Date.now();
-    const w = window.open("", winName);
-    if (!w) { alert("ポップアップがブロックされました。許可してください。"); return; }
-
-    const doc = w.document;
-    doc.open();
-    doc.write(`
-      <!doctype html>
-      <html lang="ja">
-      <head>
-        <meta charset="utf-8">
-        <title>APP1 出力</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          @page { size: 90mm 205mm; margin: 0; }
-          html, body {
-            margin: 0; padding: 0; background: #fff;
-            -webkit-print-color-adjust: exact; print-color-adjust: exact;
-          }
-          #page {
-            width: 90mm; height: 205mm;
-            padding: 8mm 6mm; box-sizing: border-box;
-            font-size: 11pt; line-height: 1.3;
-          }
-          .rotate180 #page { transform: rotate(180deg); transform-origin: 50% 50%; }
-          .cat-line {
-            display: grid; grid-template-columns: 3.2em 6em auto;
-            column-gap: 8px; align-items: baseline;
-          }
-          .cat-line .cat { font-weight: 700; }
-          .cat-line .val, .cat-line .cnt { text-align: right; }
-          .cat-line .cnt { opacity: .9; }
-          .group-sep { height: 0.8em; }
-          .misc { margin: 2px 0; }
-          #__app1Back {
-            position: fixed; right: 8px; top: 8px; padding: .5em .8em;
-            font-size: 12px; border: 1px solid #888; border-radius: 6px;
-            background: #fff; cursor: pointer; z-index: 9999;
-          }
-          @media print { #__app1Back { display:none } }
-        </style>
-      </head>
-      <body class="${isSP && opts.rotateOnMobile ? 'rotate180' : ''}">
-        <div id="page">${rebuilt}</div>
-        <button id="__app1Back">← 元の画面へ戻る</button>
-        <script>
-          (function(){
-            function backToOpener(){
-              try { if (window.opener && !window.opener.closed) window.opener.focus(); } catch(e){}
-              try { window.close(); } catch(e){}
-              try { if (window.opener && !window.opener.closed) window.opener.postMessage({type:'IBASD_PRINT_DONE'}, '*'); } catch(e){}
-            }
-
-            // 印刷キック（load 済みでも一回だけ）
-            let kicked=false, printed=false;
-            function kick(){
-              if (kicked) return; kicked=true;
-              try { window.focus(); window.print(); printed=true; } catch(e){}
-            }
-            if (document.readyState === 'complete') { setTimeout(kick, 80); }
-            else {
-              window.addEventListener('load', ()=> setTimeout(kick,120), {once:true});
-              document.addEventListener('readystatechange', ()=> {
-                if (document.readyState === 'complete') setTimeout(kick, 80);
-              });
-            }
-            setTimeout(kick, 1500); // 最後の一押し
-
-            // 必ず閉じて戻る：5重トリガ
-            window.addEventListener('afterprint', backToOpener);
-            window.addEventListener('focus', ()=> { if (printed) backToOpener(); });
-            document.addEventListener('visibilitychange', ()=> { if (!document.hidden) backToOpener(); });
-            try {
-              const mql = matchMedia('print');
-              const h = e => { if (!e.matches) backToOpener(); };
-              (mql.addEventListener ? mql.addEventListener('change', h) : mql.addListener(h));
-            } catch(e){}
-            setTimeout(backToOpener, 12000); // タイムアウト保険
-
-            // 手動戻る
-            document.getElementById('__app1Back')?.addEventListener('click', backToOpener);
-          })();
-        <\/script>
-      </body>
-      </html>
-    `);
-    doc.close();
-
-    // 親側：ユーザー操作直後の“第一弾”をここで試す
-    try {
-      w.__app1Printed = false;
-      w.focus();
-      w.print();           // ここで開けば最短
-      w.__app1Printed = true;
-
-      w.addEventListener('load', () => {
-        if (!w.__app1Printed) {
-          try { w.focus(); w.print(); w.__app1Printed = true; } catch(e){}
-        }
-      }, { once:true });
-    } catch(e) {}
-
-    // 親側ウォッチドッグ：子が閉じたら即フォーカス
-    try {
-      const wd = setInterval(() => {
-        if (!w || w.closed) { clearInterval(wd); try { window.focus(); } catch(e){} }
-      }, 700);
-
-      window.addEventListener('message', (ev) => {
-        if (ev && ev.data && ev.data.type === 'IBASD_PRINT_DONE') {
-          try { window.focus(); } catch(e){}
-        }
-      }, { once:true });
-    } catch(e){}
-  }
-
-})();
-
-// APP2 印刷
-
-function openPrintApp2(innerHTML, opts = {}) {
-  const { scale = 1.00, rotateOnMobile = true, trimBottomMM = 0 } = opts;
+function openPrintApp1(innerHTML, opts = {}) {
+  const {
+    rotateOnIOS = null,
+    rotateOnMobile = true,
+    noRebuild = false
+  } = opts;
 
   const ua = navigator.userAgent || '';
   const isIOS =
     /iPhone|iPad|iPod/i.test(ua) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isSP = /iPhone|iPod|Android.*Mobile/i.test(ua) || isIOS;
-  const rotate = rotateOnMobile && isSP;
 
-  // 最終合計が高額なら印刷時だけ虹色
-  const temp = document.createElement('div');
-  temp.innerHTML = innerHTML;
+  // 後方互換:
+  // 既存呼び出しが rotateOnMobile:true のままでも、
+  // 実際に反転するのは iOS のときだけ
+  const rotate = (rotateOnIOS !== null)
+    ? !!(rotateOnIOS && isIOS)
+    : !!(rotateOnMobile && isIOS);
 
-  const finalEl = temp.querySelector('.finalAmount');
-  if (finalEl) {
-    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10) || 0;
-    if (num >= 100000) {
-      finalEl.classList.add('rainbow-print');
-    }
+  // ---- 行テキスト化して3行パターンを再構成 ----
+let rebuilt = innerHTML;
+
+if (!noRebuild) {
+  const tmpEl = document.createElement('div');
+  tmpEl.innerHTML = innerHTML;
+
+  const lines = (tmpEl.innerText || '')
+    .trim()
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  rebuilt = '';
+  for (let i = 0; i < lines.length; i += 3) {
+    const l1 = lines[i] || '';
+    const l2 = lines[i + 1] || '';
+    const l3 = lines[i + 2] || '';
+
+    rebuilt += `
+      <div class="receipt-row">
+        <span class="label">${l1}</span>
+        <span class="value">${l2}</span>
+      </div>
+      ${l3 ? `<div class="receipt-row"><span class="label"></span><span class="value">${l3}</span></div>` : ''}
+    `;
   }
+}
 
-  innerHTML = temp.innerHTML;
+rebuilt = `<div class="${noRebuild ? 'print-inner' : 'envelope'}">${rebuilt}</div>`;
 
   const printHTML = `<!doctype html>
 <html lang="ja">
@@ -8519,7 +8390,249 @@ function openPrintApp2(innerHTML, opts = {}) {
   <title>print</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    :root { --scale:${scale}; }
+@page {
+  size: 90mm 205mm;
+  margin: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #000;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-family: 'ＭＳ 明朝', serif;
+}
+
+#__app1Back {
+  position: fixed;
+  right: 8px;
+  top: 8px;
+  padding: .5em .8em;
+  font-size: 12px;
+  border: 1px solid #888;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+  z-index: 9999;
+}
+
+@media print {
+  #__app1Back {
+    display: none !important;
+  }
+}
+
+#page {
+  width: 90mm;
+  height: 205mm;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #fff;
+  box-sizing: border-box;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  ${rotate ? 'transform: rotate(180deg); transform-origin: center center;' : ''}
+}
+
+#result {
+  width: 90mm;
+  height: 205mm;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.envelope,
+.print-inner {
+  width: 84mm;
+  min-height: 205mm;
+  margin: 0 auto;
+  padding: 5mm 3mm 5mm 3mm;
+  box-sizing: border-box;
+
+  text-align: left;
+  font-family: 'ＭＳ 明朝', serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+
+.print-date {
+  text-align: left;
+  font-size: 11pt;
+  margin: 0 0 3mm 0;
+}
+
+.print-title {
+  text-align: center;
+  font-size: 14pt;
+  margin: 0 0 8mm 0;
+  font-weight: 700;
+}
+
+.receipt-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 4mm;
+  align-items: baseline;
+  margin: 1.2mm 0;
+  font-size: 12pt;
+  line-height: 1.35;
+}
+
+.receipt-row .label {
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.receipt-row .value {
+  text-align: right;
+  font-weight: 700;
+  white-space: nowrap;
+}
+  </style>
+</head>
+<body>
+  <button id="__app1Back" type="button">← 元の画面へ戻る</button>
+
+  <div id="page">
+    <div id="result">${rebuilt}</div>
+  </div>
+
+  <script>
+    (function () {
+      let printed = false;
+
+      function finish() {
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.focus();
+          }
+        } catch (_) {}
+
+        try { window.close(); } catch (_) {}
+
+        setTimeout(() => {
+          try {
+            if (!window.closed) {
+              window.location.replace('about:blank');
+            }
+          } catch (_) {}
+        }, 120);
+      }
+
+      function kickPrint() {
+        if (printed) return;
+        printed = true;
+
+        try {
+          window.focus();
+          window.print();
+        } catch (_) {}
+      }
+
+      document.getElementById('__app1Back')?.addEventListener('click', finish);
+
+      if (document.readyState === 'complete') {
+        setTimeout(kickPrint, 80);
+      } else {
+        window.addEventListener('load', () => {
+          setTimeout(kickPrint, 120);
+        }, { once: true });
+      }
+
+      window.addEventListener('afterprint', finish, { once: true });
+
+      window.addEventListener('focus', () => {
+        if (printed) finish();
+      }, { once: true });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && printed) finish();
+      });
+
+      setTimeout(finish, 12000);
+    })();
+  <\/script>
+</body>
+</html>`;
+
+  try {
+    const w = window.open('', 'PRINT_APP1', 'width=480,height=800');
+    if (w && w.document) {
+      w.document.open();
+      w.document.write(printHTML);
+      w.document.close();
+      return w;
+    }
+  } catch (_) {}
+
+  try {
+    const blob = new Blob([printHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    return w || null;
+  } catch (_) {}
+
+  return null;
+}
+
+})();
+
+// APP2 印刷
+
+function openPrintApp2(innerHTML, opts = {}) {
+  const {
+    scale = 1.00,
+    rotateOnMobile = true,
+    trimBottomMM = 0,
+    title = 'print'
+  } = opts;
+
+const ua = navigator.userAgent || '';
+const isIOS =
+  /iPhone|iPad|iPod/i.test(ua) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// iOS のときだけ 180°反転
+const rotate = !!(rotateOnMobile && isIOS);
+
+  // 高額時の虹色クラスを各ページ内で付与
+  const temp = document.createElement('div');
+  temp.innerHTML = innerHTML;
+
+  temp.querySelectorAll('.finalAmount').forEach(finalEl => {
+    const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10) || 0;
+    if (num >= 100000) {
+      finalEl.classList.add('rainbow-print');
+    }
+  });
+
+  innerHTML = temp.innerHTML;
+
+  const printHTML = `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --scale: ${scale};
+      --sheet-w: 90mm;
+      --sheet-h: 205mm;
+    }
 
     @page {
       size: 90mm 205mm;
@@ -8532,6 +8645,11 @@ function openPrintApp2(innerHTML, opts = {}) {
       background: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+    }
+
+    body {
+      color: #000;
+      font-family: 'ＭＳ 明朝', serif;
     }
 
     #__app2Back {
@@ -8554,20 +8672,37 @@ function openPrintApp2(innerHTML, opts = {}) {
       }
     }
 
-    #page {
-      width: 90mm;
-      max-height: 205mm;
+    .print-root {
+      width: 100%;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .print-sheet {
+      width: var(--sheet-w);
+      height: var(--sheet-h);
       margin: 0 auto;
       overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      box-sizing: border-box;
+      position: relative;
+      background: #fff;
     }
 
-    .rotate180 #page {
-      margin-bottom: -${trimBottomMM}mm;
+    .print-sheet:last-child {
+      page-break-after: auto;
+      break-after: auto;
     }
 
-    #result {
-      width: calc(90mm / var(--scale));
-      min-height: calc(205mm / var(--scale));
+    .rotate180.print-sheet {
+      transform: rotate(180deg);
+      transform-origin: center center;
+    }
+
+    .sheet-inner {
+      width: calc(var(--sheet-w) / var(--scale));
+      min-height: calc(var(--sheet-h) / var(--scale));
       margin: 0 auto;
       padding: 0;
       box-sizing: border-box;
@@ -8575,15 +8710,14 @@ function openPrintApp2(innerHTML, opts = {}) {
       transform-origin: top center;
     }
 
-    .rotate180 #result {
-      transform: rotate(180deg) scale(var(--scale));
-      transform-origin: center center;
+    .rotate180 .sheet-inner {
+      margin-top: -${trimBottomMM}mm;
     }
 
     .envelope {
       box-sizing: border-box;
       width: calc(84mm / var(--scale));
-      max-height: 205mm;
+      min-height: calc(var(--sheet-h) / var(--scale));
       margin: 0 auto;
       text-align: left;
       font-family: 'ＭＳ 明朝', serif;
@@ -8653,23 +8787,40 @@ function openPrintApp2(innerHTML, opts = {}) {
       margin-bottom: 3mm !important;
     }
 
+    .page-index {
+      position: absolute;
+      right: 4mm;
+      bottom: 3mm;
+      font-size: 8pt;
+      color: #555;
+      font-family: Arial, sans-serif;
+      font-weight: 400;
+    }
+
+    .rainbow-print {
+      background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 900;
+    }
+
+    #result .congrats.print-only,
+    .sheet-inner .congrats.print-only {
+      display: none;
+      text-align: center;
+      font-weight: bold;
+      font-size: 14pt;
+      margin-bottom: 2px;
+    }
+
     @media print {
-      .rainbow-print {
-        background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 900;
+      #result .congrats.print-only,
+      .sheet-inner .congrats.print-only {
+        display: block;
       }
 
-      #result .congrats.print-only {
-        display: block !important;
-        text-align: center;
-        font-weight: bold;
-        font-size: 14pt;
-        margin-bottom: 2px;
-      }
-
-      #result .congrats-box {
+      #result .congrats-box,
+      .sheet-inner .congrats-box {
         border: 2px solid #000;
         padding: 6px 10px;
         margin: 6px 0;
@@ -8684,58 +8835,29 @@ function openPrintApp2(innerHTML, opts = {}) {
     }
   </style>
 </head>
-<body class="${rotate ? 'rotate180' : ''}">
+<body>
   <button id="__app2Back" type="button">← 元の画面へ戻る</button>
-
-  <div id="page">
-    <div id="result">${innerHTML}</div>
-  </div>
-
+  ${innerHTML}
   <script>
     (function () {
-      let done = false;
       let printed = false;
 
-      function notifyDone() {
-        try {
-          if (window.opener && !window.opener.closed) {
-            window.opener.postMessage({ type: 'IBASD_PRINT_DONE' }, '*');
-          }
-        } catch (_) {}
-      }
-
-      function focusOpener() {
+      function finish() {
         try {
           if (window.opener && !window.opener.closed) {
             window.opener.focus();
           }
         } catch (_) {}
-      }
 
-      function finalize() {
-        if (done) return;
-        done = true;
-
-        focusOpener();
-
-        try {
-          window.close();
-        } catch (_) {}
+        try { window.close(); } catch (_) {}
 
         setTimeout(() => {
           try {
             if (!window.closed) {
-              focusOpener();
-              try {
-                window.location.replace('about:blank');
-              } catch (_) {}
+              window.location.replace('about:blank');
             }
           } catch (_) {}
         }, 120);
-
-        setTimeout(() => {
-          notifyDone();
-        }, 200);
       }
 
       function kickPrint() {
@@ -8748,10 +8870,7 @@ function openPrintApp2(innerHTML, opts = {}) {
         } catch (_) {}
       }
 
-      const backBtn = document.getElementById('__app2Back');
-      if (backBtn) {
-        backBtn.addEventListener('click', finalize);
-      }
+      document.getElementById('__app2Back')?.addEventListener('click', finish);
 
       if (document.readyState === 'complete') {
         setTimeout(kickPrint, 80);
@@ -8761,39 +8880,24 @@ function openPrintApp2(innerHTML, opts = {}) {
         }, { once: true });
       }
 
-      setTimeout(kickPrint, 1200);
-
-      window.addEventListener('afterprint', finalize, { once: true });
+      window.addEventListener('afterprint', finish, { once: true });
 
       window.addEventListener('focus', () => {
-        if (printed) finalize();
+        if (printed) finish();
       }, { once: true });
 
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && printed) finalize();
+        if (!document.hidden && printed) finish();
       });
 
-      try {
-        const mql = window.matchMedia('print');
-        const handler = (e) => {
-          if (!e.matches && printed) finalize();
-        };
-
-        if (mql.addEventListener) {
-          mql.addEventListener('change', handler, { once: true });
-        } else if (mql.addListener) {
-          mql.addListener(handler);
-        }
-      } catch (_) {}
-
-      setTimeout(finalize, 12000);
+      setTimeout(finish, 12000);
     })();
   <\/script>
 </body>
 </html>`;
 
   try {
-    const w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+    const w = window.open('', 'PRINT_APP2_COMBINED', 'width=520,height=860');
     if (w && w.document) {
       w.document.open();
       w.document.write(printHTML);
@@ -8964,7 +9068,7 @@ async function waitForSafariPaint(ms = 80) {
   await new Promise(r => setTimeout(r, ms));
 }
 
-function suspendSyncForPrint(ms = 4000) {
+function suspendSyncForPrint(ms = 6000) {
   window._suppressSyncObservers = true;
 
   if (typeof window.suppressSync === 'function') {
@@ -8978,9 +9082,54 @@ function resumeSyncAfterPrint(delay = 1500) {
   }, delay);
 }
 
-async function waitForSafariPaint(ms = 120) {
-  await new Promise(resolve => requestAnimationFrame(resolve));
-  await new Promise(resolve => setTimeout(resolve, ms));
+async function collectBulkSelectedPrintSheets(selectedRows) {
+  const resultEl = document.getElementById('result');
+  if (!resultEl) {
+    throw new Error('#result が見つかりません');
+  }
+
+  const originalResultHtml = resultEl.innerHTML;
+  const sheets = [];
+
+  try {
+    for (let i = 0; i < selectedRows.length; i++) {
+      const row = selectedRows[i];
+
+      pushBulkRowToNormalForm(row);
+
+      if (typeof window.calculate === 'function') {
+        window.calculate();
+      }
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 80));
+
+      const html = (resultEl.innerHTML || '').trim();
+      if (!html) continue;
+
+      const wrapped = /class\\s*=\\s*["'][^"']*envelope/.test(html)
+        ? html
+        : `<div class="envelope">${html}</div>`;
+
+const ua = navigator.userAgent || '';
+const isIOS =
+  /iPhone|iPad|iPod/i.test(ua) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+sheets.push(`
+  <section class="print-sheet ${isIOS ? 'rotate180' : ''}">
+    <div class="sheet-inner">
+      ${wrapped}
+    </div>
+    <div class="page-index">${i + 1} / ${selectedRows.length}</div>
+  </section>
+`);
+    }
+  } finally {
+    resultEl.innerHTML = originalResultHtml;
+  }
+
+  return sheets.join('');
 }
 
 async function printSelectedRows() {
@@ -9002,92 +9151,31 @@ async function printSelectedRows() {
     return;
   }
 
-  suspendSyncForPrint(6000);
+  suspendSyncForPrint(8000);
 
   try {
-    for (const row of selected) {
-      pushBulkRowToNormalForm(row);
+    const sheetsHtml = await collectBulkSelectedPrintSheets(selected);
 
-      await waitForSafariPaint(160);
-
-      let win = null;
-      try {
-        if (typeof window.preparePrintApp2 === 'function') {
-          win = await window.preparePrintApp2('envelope');
-        }
-      } catch (e) {
-        console.error('印刷呼び出しエラー:', e);
-      }
-
-      await waitForWindowClose(win);
-
-      const waitMs = (typeof WAIT_BETWEEN_PRINT_MS === 'number')
-        ? WAIT_BETWEEN_PRINT_MS
-        : 500;
-
-      await new Promise(resolve => setTimeout(resolve, waitMs));
-    }
-  } finally {
-    resumeSyncAfterPrint(1500);
-  }
-}
-
-function waitForWindowClose(win) {
-  return new Promise(resolve => {
-    if (!win) {
-      resolve();
+    if (!sheetsHtml) {
+      alert('印刷データを作成できませんでした。');
       return;
     }
 
-    let done = false;
-    let timer = null;
-    let hardTimeout = null;
-
-    function cleanup() {
-      try {
-        window.removeEventListener('message', onMessage);
-      } catch (_) {}
-
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
+    openPrintApp2(
+      `<div class="print-root">${sheetsHtml}</div>`,
+      {
+        scale: 1.05,
+        rotateOnMobile: true,
+        trimBottomMM: 20,
+        title: 'APP2 Combined Print'
       }
-
-      if (hardTimeout) {
-        clearTimeout(hardTimeout);
-        hardTimeout = null;
-      }
-    }
-
-    function finish() {
-      if (done) return;
-      done = true;
-      cleanup();
-      resolve();
-    }
-
-    function onMessage(e) {
-      if (e && e.data && e.data.type === 'IBASD_PRINT_DONE') {
-        finish();
-      }
-    }
-
-    window.addEventListener('message', onMessage);
-
-    timer = setInterval(() => {
-      try {
-        if (!win || win.closed) {
-          finish();
-        }
-      } catch (_) {
-        finish();
-      }
-    }, 300);
-
-    hardTimeout = setTimeout(() => {
-      finish();
-    }, 15000);
-  });
+    );
+  } catch (err) {
+    console.error('まとめ印刷エラー:', err);
+    alert('まとめ印刷に失敗しました。');
+  } finally {
+    resumeSyncAfterPrint(1500);
+  }
 }
 
   function bindEvents(){
@@ -9224,26 +9312,18 @@ function isBulkRowEmpty(mainRow){
 }
 
 window.preparePrintApp2 = function (mode = 'envelope') {
-  if (typeof window.showApp === 'function') {
-    window.showApp('app2');
-  }
+  if (typeof window.showApp === 'function') window.showApp('app2');
 
-  if (typeof saveBottleForms === 'function') {
-    saveBottleForms();
-  }
-
-  if (typeof window.calculate === 'function') {
-    window.calculate();
-  }
+  if (typeof saveBottleForms === 'function') saveBottleForms();
+  if (typeof window.calculate === 'function') window.calculate();
 
   const html = (document.getElementById('result')?.innerHTML || '').trim();
-
   if (!html) {
     alert('印刷する内容がありません。先に「計算」で結果を出してください。');
     return null;
   }
 
-  const hasEnvelope = /class\\s*=\\s*["'][^"']*envelope/.test(html);
+  const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
   const inner = (mode === 'envelope' && !hasEnvelope)
     ? `<div class="envelope">${html}</div>`
     : html;
