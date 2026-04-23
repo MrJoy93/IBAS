@@ -8598,6 +8598,53 @@ html, body {
 
 // APP2 印刷
 
+function openPrintApp2Shell(title = 'APP2 Combined Print') {
+  try {
+    const w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+    if (!w) {
+      alert('印刷ウィンドウを開けませんでした。ポップアップ許可を確認してください。');
+      return null;
+    }
+
+    w.document.open();
+    w.document.write(`<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #111;
+      font-family: sans-serif;
+    }
+    .loading {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">印刷データを準備中...</div>
+</body>
+</html>`);
+    w.document.close();
+
+    return w;
+  } catch (e) {
+    console.error('openPrintApp2Shell error:', e);
+    return null;
+  }
+}
+
 function openPrintApp2(innerHTML, opts = {}) {
   const {
     scale = 1.00,
@@ -9170,10 +9217,21 @@ async function printSelectedRows() {
 
   suspendSyncForPrint(8000);
 
+  let shellWin = null;
+
   try {
+    // iOS対策：ユーザー操作直後に先に印刷ウィンドウを確保
+    shellWin = openPrintApp2Shell('APP2 Combined Print');
+    if (!shellWin) {
+      throw new Error('印刷ウィンドウを開けませんでした。');
+    }
+
     const sheetsHtml = await collectBulkSelectedPrintSheets(selected);
 
     if (!sheetsHtml) {
+      try {
+        if (shellWin && !shellWin.closed) shellWin.close();
+      } catch (_) {}
       alert('印刷データを作成できませんでした。');
       return;
     }
@@ -9184,12 +9242,20 @@ async function printSelectedRows() {
         scale: 1.05,
         rotateOnMobile: true,
         trimBottomMM: 20,
-        title: 'APP2 Combined Print'
+        title: 'APP2 Combined Print',
+        printWindow: shellWin
       }
     );
   } catch (err) {
     console.error('まとめ印刷エラー:', err);
-    alert('まとめ印刷に失敗しました。');
+
+    try {
+      if (shellWin && !shellWin.closed) {
+        shellWin.close();
+      }
+    } catch (_) {}
+
+    alert(`まとめ印刷に失敗しました。\n${err.message || err}`);
   } finally {
     resumeSyncAfterPrint(1500);
   }
