@@ -9064,41 +9064,6 @@ function suspendSyncForPrint(ms = 6000) {
   }
 }
 
-async function runApp2CalculationForPrint() {
-  const resultEl = document.getElementById('result');
-
-  // まず計算本体を実行
-  if (typeof window.confirmAndCalculate === 'function') {
-    const ret = window.confirmAndCalculate({ preventDefault() {} });
-    if (ret && typeof ret.then === 'function') {
-      await ret;
-    }
-  } else if (typeof window.calculate === 'function') {
-    const ret = window.calculate();
-    if (ret && typeof ret.then === 'function') {
-      await ret;
-    }
-  }
-
-  // DOM反映待ち
-  await new Promise(resolve => requestAnimationFrame(resolve));
-  await new Promise(resolve => requestAnimationFrame(resolve));
-
-  // iOS Safari は描画反映が遅いので余裕を持たせる
-  if (isIOS()) {
-    await new Promise(resolve => setTimeout(resolve, 220));
-  } else {
-    await new Promise(resolve => setTimeout(resolve, 80));
-  }
-
-  // レイアウト確定を促す
-  if (resultEl) {
-    void resultEl.offsetHeight;
-  }
-
-  return (resultEl?.innerHTML || '').trim();
-}
-
 function resumeSyncAfterPrint(delay = 1500) {
   setTimeout(() => {
     window._suppressSyncObservers = false;
@@ -9111,19 +9076,13 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
     throw new Error('#result が見つかりません');
   }
 
-  const castNameEl = document.getElementById('castName');
-  const experienceEl = document.getElementById('experienceAndRental');
-  const sendoffEl = document.getElementById('sendoffAmount');
-  const bottleContainer = document.getElementById('bottleFormsContainer');
-
   const originalResultHtml = resultEl.innerHTML;
-  const originalCastName = castNameEl ? castNameEl.value : '';
-  const originalExperience = experienceEl ? experienceEl.checked : false;
-  const originalSendoff = sendoffEl ? sendoffEl.value : '';
-  const originalBottleHtml = bottleContainer ? bottleContainer.innerHTML : '';
-
   const sheets = [];
-  const ios = isIOS();
+
+  const ua = navigator.userAgent || '';
+  const isIOS =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   try {
     for (let i = 0; i < selectedRows.length; i++) {
@@ -9131,15 +9090,24 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
 
       pushBulkRowToNormalForm(row);
 
-      const htmlAfterCalc = await runApp2CalculationForPrint();
-      if (!htmlAfterCalc) continue;
+      if (typeof window.calculate === 'function') {
+        window.calculate();
+      }
 
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 80));
+
+      let html = (resultEl.innerHTML || '').trim();
+      if (!html) continue;
+
+      // 氏名表示を強制補正
       const temp = document.createElement('div');
-      temp.innerHTML = htmlAfterCalc;
+      temp.innerHTML = html;
 
-      const castNameText = (castNameEl?.value || '').trim();
+      const castNameInput = document.getElementById('castName');
+      const castNameText = (castNameInput?.value || '').trim();
+
       let castNode = temp.querySelector('.castName');
-
       if (!castNode && castNameText) {
         castNode = document.createElement('div');
         castNode.className = 'castName';
@@ -9158,14 +9126,15 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
         castNode.textContent = castNameText;
       }
 
-      const html = temp.innerHTML;
+      html = temp.innerHTML;
+
       const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
       const wrapped = hasEnvelope
         ? html
         : `<div class="envelope">${html}</div>`;
 
       sheets.push(`
-        <section class="print-sheet ${ios ? 'rotate180' : ''}">
+        <section class="print-sheet ${isIOS ? 'rotate180' : ''}">
           <div class="sheet-inner">
             ${wrapped}
           </div>
@@ -9175,11 +9144,6 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
     }
   } finally {
     resultEl.innerHTML = originalResultHtml;
-
-    if (castNameEl) castNameEl.value = originalCastName;
-    if (experienceEl) experienceEl.checked = originalExperience;
-    if (sendoffEl) sendoffEl.value = originalSendoff;
-    if (bottleContainer) bottleContainer.innerHTML = originalBottleHtml;
   }
 
   return sheets.join('');
@@ -9364,15 +9328,13 @@ function isBulkRowEmpty(mainRow){
   return !(name || send || exp || anyQuant || anyBottle);
 }
 
-window.preparePrintApp2 = async function (mode = 'envelope') {
+window.preparePrintApp2 = function (mode = 'envelope') {
   if (typeof window.showApp === 'function') window.showApp('app2');
 
-  if (typeof saveBottleForms === 'function') {
-    saveBottleForms();
-  }
+  if (typeof saveBottleForms === 'function') saveBottleForms();
+  if (typeof window.calculate === 'function') window.calculate();
 
-  const html = await runApp2CalculationForPrint();
-
+  const html = (document.getElementById('result')?.innerHTML || '').trim();
   if (!html) {
     alert('印刷する内容がありません。先に「計算」で結果を出してください。');
     return null;
