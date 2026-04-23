@@ -14,6 +14,8 @@ let catchbackDetails = {};
 
 let _raf = 0;
 
+let _bulkPrintingNow = false;
+
 window.totalStoreCovered = 0;
 
 window._bulkGridSyncTimer = null;
@@ -8597,7 +8599,8 @@ function openPrintApp2(innerHTML, opts = {}) {
     scale = 1.00,
     rotateOnMobile = true,
     trimBottomMM = 0,
-    title = 'APP2 Print'
+    title = 'APP2 Print',
+    printWindow = null
   } = opts;
 
   const ua = navigator.userAgent || '';
@@ -8671,157 +8674,46 @@ function openPrintApp2(innerHTML, opts = {}) {
       width: 100%;
       margin: 0 auto;
       padding: 0;
-      background: #fff;
     }
 
-.print-sheet {
-  width: var(--sheet-w);
-  height: var(--sheet-h);
-  margin: 0 auto;
-  overflow: hidden;
-  page-break-after: always;
-  break-after: page;
-  box-sizing: border-box;
-  position: relative;
-  background: #fff;
-}
+    .print-sheet {
+      width: 90mm;
+      height: ${205 - trimBottomMM}mm;
+      margin: 0 auto;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+    }
 
     .print-sheet:last-child {
       page-break-after: auto;
       break-after: auto;
     }
 
-.rotate180.print-sheet {
-  transform: none;
-}
-
-.sheet-inner {
-  width: calc(var(--sheet-w) / var(--scale));
-  min-height: calc(var(--sheet-h) / var(--scale));
-  margin: 0 auto;
-  padding: 0;
-  box-sizing: border-box;
-  transform: scale(var(--scale));
-  transform-origin: top center;
-  overflow: visible;
-}
-
-.rotate180 .sheet-inner {
-  transform: translateY(-4mm) rotate(180deg) scale(var(--scale));
-  transform-origin: center center;
-  padding-top: 0;
-}
-
-    .envelope {
-      box-sizing: border-box;
-      width: calc(84mm / var(--scale));
-      min-height: calc(var(--sheet-h) / var(--scale));
-      margin: 0 auto;
-      text-align: left;
-      font-family: 'ＭＳ 明朝', serif;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: .02em;
-      padding: calc(5mm / var(--scale));
-      color: #000 !important;
-      background: #fff !important;
+    .sheet-inner {
+      width: 90mm;
+      min-height: ${205 - trimBottomMM}mm;
+      transform-origin: top center;
+      transform: scale(var(--scale));
     }
 
-    .print-date {
-      text-align: left;
-      font-size: 11pt;
-      margin: 0 0 3mm 0;
-      color: #000 !important;
-    }
-
-    .print-title {
-      text-align: center;
-      font-size: 14pt;
-      margin: 0 0 8mm 0;
-      font-weight: 700;
-      color: #000 !important;
-    }
-
-.castName {
-  display: block !important;
-  color: #000 !important;
-  -webkit-text-fill-color: #000 !important;
-  font-size: 18pt !important;
-  font-weight: 800 !important;
-  line-height: 1.25 !important;
-  margin: 5mm 0 3mm 0 !important;
-  min-height: 7mm !important;
-  padding-top: 1mm !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-    .subtotal {
-      display: block !important;
-      color: #333 !important;
-      font-size: 14pt !important;
-      font-weight: 700 !important;
-      margin-top: 2mm !important;
-      margin-bottom: 2mm !important;
-    }
-
-    .totalAmount {
-      display: block !important;
-      color: #0066cc !important;
-      font-size: 15pt !important;
-      font-weight: 800 !important;
-      margin-top: 3mm !important;
-      margin-bottom: 2mm !important;
-    }
-
-    .finalAmount {
-      display: block !important;
-      color: #009944 !important;
-      font-size: 18pt !important;
-      font-weight: 900 !important;
-      margin-top: 4mm !important;
-      margin-bottom: 3mm !important;
-    }
-
-    .receipt-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-
-    .receipt-row .label {
-      margin-right: 5mm;
-      white-space: nowrap;
-    }
-
-    .receipt-row .value {
-      font-weight: 700;
-      font-size: 12pt;
-      text-align: right;
-      color: #000 !important;
+    .rotate180 .sheet-inner {
+      transform: rotate(180deg) scale(var(--scale));
+      transform-origin: center center;
     }
 
     .page-index {
       position: absolute;
-      right: 4mm;
-      bottom: 3mm;
-      font-size: 8pt;
-      color: #555;
-      font-family: Arial, sans-serif;
-      font-weight: 400;
+      right: 3mm;
+      bottom: 2mm;
+      font-size: 9pt;
+      color: #666;
     }
 
     .rainbow-print {
-      background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-weight: 900;
-    }
-
-    .sheet-inner * {
-      color: inherit;
+      font-weight: 700;
     }
   </style>
 </head>
@@ -8886,21 +8778,28 @@ function openPrintApp2(innerHTML, opts = {}) {
 </body>
 </html>`;
 
-  try {
-    const w = window.open('', 'PRINT_APP2_COMBINED', 'width=520,height=860');
-    if (w && w.document) {
-      w.document.open();
-      w.document.write(printHTML);
-      w.document.close();
-      return w;
+  let w = printWindow;
+
+  if (!w || w.closed) {
+    try {
+      w = window.open('', 'PRINT_APP2', 'width=480,height=800');
+    } catch (_) {
+      w = null;
     }
-  } catch (_) {}
+  }
+
+  if (w && w.document) {
+    w.document.open();
+    w.document.write(printHTML);
+    w.document.close();
+    return w;
+  }
 
   try {
     const blob = new Blob([printHTML], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank');
-    return w || null;
+    const fallback = window.open(url, '_blank');
+    return fallback || null;
   } catch (_) {}
 
   return null;
@@ -9133,7 +9032,13 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
 }
 
 async function printSelectedRows() {
+  if (_bulkPrintingNow) {
+    return;
+  }
+
   const grid = document.getElementById('bulkGrid');
+  const printBtn = document.getElementById('bulkPrintSelected');
+
   if (!grid) {
     alert('一括入力テーブルが見つかりません。');
     return;
@@ -9151,12 +9056,43 @@ async function printSelectedRows() {
     return;
   }
 
-  suspendSyncForPrint(8000);
+  _bulkPrintingNow = true;
+
+  if (printBtn) {
+    printBtn.disabled = true;
+    printBtn.textContent = '出力準備中...';
+  }
+
+  let printWindow = null;
 
   try {
+    // ここが重要：ユーザー操作直後に先に開く
+    printWindow = window.open('', 'PRINT_APP2', 'width=480,height=800');
+
+    if (!printWindow) {
+      alert('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。');
+      return;
+    }
+
+    try {
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>APP2 Combined Print</title>
+</head>
+<body style="font-family:sans-serif;padding:16px;">印刷データを準備中...</body>
+</html>`);
+      printWindow.document.close();
+    } catch (_) {}
+
+    suspendSyncForPrint(8000);
+
     const sheetsHtml = await collectBulkSelectedPrintSheets(selected);
 
     if (!sheetsHtml) {
+      try { printWindow.close(); } catch (_) {}
       alert('印刷データを作成できませんでした。');
       return;
     }
@@ -9167,14 +9103,26 @@ async function printSelectedRows() {
         scale: 1.05,
         rotateOnMobile: true,
         trimBottomMM: 20,
-        title: 'APP2 Combined Print'
+        title: 'APP2 Combined Print',
+        printWindow
       }
     );
   } catch (err) {
     console.error('まとめ印刷エラー:', err);
+    try {
+      if (printWindow && !printWindow.closed) {
+        printWindow.close();
+      }
+    } catch (_) {}
     alert('まとめ印刷に失敗しました。');
   } finally {
     resumeSyncAfterPrint(1500);
+    _bulkPrintingNow = false;
+
+    if (printBtn) {
+      printBtn.disabled = false;
+      printBtn.textContent = '選択行を出力';
+    }
   }
 }
 
@@ -9221,11 +9169,13 @@ document.addEventListener('change', e => {
       }
     });
 
-    document.addEventListener('click', e => {
-      if (e.target && e.target.id === 'bulkPrintSelected') {
-        printSelectedRows();
-      }
-    });
+document.addEventListener('click', e => {
+  const btn = e.target.closest('#bulkPrintSelected');
+  if (!btn) return;
+
+  e.preventDefault();
+  printSelectedRows();
+});
 
     const tbody = document.querySelector('#bulkGrid tbody');
     if (tbody) {
