@@ -8844,7 +8844,7 @@ function openPrintApp2(innerHTML, opts = {}) {
 </head>
 <body>
   <button id="__app2Back" type="button">← 元の画面へ戻る</button>
-  ${innerHTML}
+  ${wrappedInnerHTML}
   <script>
     (function () {
       let printed = false;
