@@ -30,6 +30,12 @@ window.addEventListener('DOMContentLoaded', () => {
  * 1. 共通ユーティリティ
  ************************************************************/
 
+function isIOS() {
+  const ua = navigator.userAgent || '';
+  return /iPhone|iPad|iPod/i.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 // ---- 固定ヘッダ(タブ+可視サブナビ)込みで目的地へスクロール ----
 function scrollToFixed(targetId) {
   const target = document.getElementById(targetId);
@@ -8619,6 +8625,12 @@ function openPrintApp2(innerHTML, opts = {}) {
 
   innerHTML = temp.innerHTML;
 
+    const wrappedInnerHTML = `
+    <div class="print-root ${rotate ? 'rotate180' : ''}">
+      ${innerHTML}
+    </div>
+  `;
+
   const printHTML = `<!doctype html>
 <html lang="ja">
 <head>
@@ -8673,6 +8685,11 @@ function openPrintApp2(innerHTML, opts = {}) {
       padding: 0;
       background: #fff;
     }
+
+    .print-root.rotate180 {
+  transform: rotate(180deg);
+  transform-origin: center center;
+}
 
 .print-sheet {
   width: var(--sheet-w);
