@@ -1717,14 +1717,17 @@ body.bulk-wide #app2-sideNav {
    ボトル階層ピッカー（割り人数・数量だけ）
 =============================== */
 #bottleHierarchyPicker {
-  position: absolute;
-  z-index: 100000;
+  position: fixed !important;
+  z-index: 100000 !important;
+
   left: 8px;
   top: 8px;
+
   width: 420px;
-  max-width: min(420px, calc(100vw - 16px));
-  max-height: 80vh;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
   overflow: auto;
+
   background: rgba(18, 24, 38, 0.98);
   border: 1px solid rgba(0, 245, 255, 0.35);
   border-radius: 12px;

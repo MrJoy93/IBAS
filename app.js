@@ -3301,14 +3301,43 @@ function positionBottleHierarchyPicker(anchorEl) {
 
   const rect = anchorEl.getBoundingClientRect();
 
-  const scrollX = window.scrollX || window.pageXOffset;
-  const scrollY = window.scrollY || window.pageYOffset;
+  const gap = 6;
+  const margin = 8;
 
-  const left = rect.left + scrollX;
-  const top  = rect.bottom + scrollY + 6;
+  // fixed基準なので scrollX / scrollY は足さない
+  picker.style.left = margin + 'px';
+  picker.style.top = margin + 'px';
 
-  picker.style.left = left + 'px';
-  picker.style.top  = top + 'px';
+  const pickerRect = picker.getBoundingClientRect();
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let left = rect.left;
+  let top = rect.bottom + gap;
+
+  // 右にはみ出す場合は左へ寄せる
+  if (left + pickerRect.width > vw - margin) {
+    left = vw - pickerRect.width - margin;
+  }
+
+  // 左にはみ出す場合
+  if (left < margin) {
+    left = margin;
+  }
+
+  // 下にはみ出す場合はボタンの上に出す
+  if (top + pickerRect.height > vh - margin) {
+    top = rect.top - pickerRect.height - gap;
+  }
+
+  // 上にもはみ出す場合は画面内に固定
+  if (top < margin) {
+    top = margin;
+  }
+
+  picker.style.left = Math.round(left) + 'px';
+  picker.style.top = Math.round(top) + 'px';
 }
 
 window.addEventListener('scroll', () => {
