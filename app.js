@@ -999,18 +999,19 @@ function attachCommaFormatApp1and3() {
   };
 
   // スクロールのたびに「現在のAPP」の位置を保存（rAFスロットル）
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      ticking = false;
-      const id = document.body.getAttribute('data-active-app');
-      if (!id) return;
-      scrollMap[id] = getY();
-      saveMap(scrollMap);
-    });
-  }, { passive: true });
+let scrollSaveTimer = null;
+
+window.addEventListener('scroll', () => {
+  const id = document.body.getAttribute('data-active-app');
+  if (!id) return;
+
+  scrollMap[id] = getY();
+
+  clearTimeout(scrollSaveTimer);
+  scrollSaveTimer = setTimeout(() => {
+    saveMap(scrollMap);
+  }, 500);
+}, { passive: true });
 
 function apply(targetId) {
   // 切替前に現在の位置を保存
@@ -2322,13 +2323,14 @@ function collectBulkGridStateForSync() {
   const mains = [...grid.querySelectorAll('.bulk-mainrow')];
 
   const rows = mains.map(tr => {
-    const row = {
-      name: tr.querySelector('.bulk-name')?.value || '',
-      exp: tr.querySelector('.bulk-exp')?.checked || false,
-      send: tr.querySelector('.bulk-send')?.value || '',
-      nums: {},
-      bottles: []
-    };
+const row = {
+  name: tr.querySelector('.bulk-name')?.value || '',
+  exp: tr.querySelector('.bulk-exp')?.checked || false,
+  send: tr.querySelector('.bulk-send')?.value || '',
+  leave: tr.querySelector('.bulk-leave')?.checked || false,
+  nums: {},
+  bottles: []
+};
 
     tr.querySelectorAll('[data-k]').forEach(el => {
       const k = el.dataset.k;
@@ -5266,6 +5268,18 @@ if (bulkCheckAll) {
         if (expEl)  expEl.checked = !!row.exp;
         if (sendEl) sendEl.value = row.send || '';
 
+        const leaveEl = tr.querySelector('.bulk-leave');
+
+if (leaveEl) {
+  leaveEl.checked = !!row.leave;
+
+  if (window._bulkLeave && typeof window._bulkLeave.applyRowLeaveState === 'function') {
+    window._bulkLeave.applyRowLeaveState(tr, !!row.leave);
+  } else {
+    tr.classList.toggle('is-leave', !!row.leave);
+  }
+}
+
         if (row.nums && typeof row.nums === 'object') {
           tr.querySelectorAll('[data-k]').forEach(el => {
             const k = el.dataset.k;
@@ -5395,13 +5409,14 @@ Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
     const mains = [...grid.querySelectorAll('.bulk-mainrow')];
 
     const rows = mains.map(tr => {
-      const row = {
-        name: tr.querySelector('.bulk-name')?.value || '',
-        exp: tr.querySelector('.bulk-exp')?.checked || false,
-        send: tr.querySelector('.bulk-send')?.value || '',
-        nums: {},
-        bottles: []
-      };
+const row = {
+  name: tr.querySelector('.bulk-name')?.value || '',
+  exp: tr.querySelector('.bulk-exp')?.checked || false,
+  send: tr.querySelector('.bulk-send')?.value || '',
+  leave: tr.querySelector('.bulk-leave')?.checked || false,
+  nums: {},
+  bottles: []
+};
 
       tr.querySelectorAll('[data-k]').forEach(el => {
         const k = el.dataset.k;
@@ -5561,69 +5576,74 @@ Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
     });
   }
 
-  // === 一括登録 ============================================================
-  async function bulkRegister() {
-    const tb = document.querySelector('#bulkGrid tbody');
-    if (!tb) {
-      alert('内部テーブルが見つかりません');
-      return;
-    }
+// === 一括登録 ============================================================
+async function bulkRegister() {
+  const tb = document.querySelector('#bulkGrid tbody');
+  if (!tb) {
+    alert('内部テーブルが見つかりません');
+    return;
+  }
 
-    const mains = [...tb.querySelectorAll('.bulk-mainrow')];
+  const mains = [...tb.querySelectorAll('.bulk-mainrow')];
 
-    const rows = mains.map(m => {
-      const nums = {};
+  const rows = mains.map(m => {
+    const nums = {};
 
-      nums['2k'] = !!m.querySelector('[data-k="2k"]')?.checked;
-      nums.f2 = parseInt(m.querySelector('[data-k="f2"]')?.value || '0', 10) || 0;
+    nums['2k'] = !!m.querySelector('[data-k="2k"]')?.checked;
+    nums.f2 = parseInt(m.querySelector('[data-k="f2"]')?.value || '0', 10) || 0;
 
-      [
-        'jounai', 'honshiri', 'douhan', 'eda', 'help',
-        'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
-      ].forEach(k => {
-        nums[k] = parseInt(m.querySelector(`[data-k="${k}"]`)?.value || '0', 10) || 0;
-      });
+    [
+      'jounai', 'honshiri', 'douhan', 'eda', 'help',
+      'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
+    ].forEach(k => {
+      nums[k] = parseInt(m.querySelector(`[data-k="${k}"]`)?.value || '0', 10) || 0;
+    });
 
-      const bottles = [];
-      let n = m.nextElementSibling;
+    const bottles = [];
+    let n = m.nextElementSibling;
 
-      while (n && n.classList.contains('btl-subrow')) {
-        const detail = n.querySelector('.bottleDetails')?.value || '';
-        const split  = n.querySelector('.splitCount')?.value || '';
-        const qty    = n.querySelector('.bottleQuantity')?.value || '';
-        const amount = parseInt((n.querySelector('.bottleAmount')?.value || '0').replace(/,/g, ''), 10) || 0;
+    while (n && n.classList.contains('btl-subrow')) {
+      const detail = n.querySelector('.bottleDetails')?.value || '';
+      const split  = n.querySelector('.splitCount')?.value || '';
+      const qty    = n.querySelector('.bottleQuantity')?.value || '';
+      const amount = parseInt((n.querySelector('.bottleAmount')?.value || '0').replace(/,/g, ''), 10) || 0;
 
-        if (detail || split || qty || amount) {
-          bottles.push({ detail, split, qty, amount });
-        }
-        n = n.nextElementSibling;
+      if (detail || split || qty || amount) {
+        bottles.push({ detail, split, qty, amount });
       }
 
-      return {
-        mainRow: m,
-        name: m.querySelector('.bulk-name')?.value || '',
-        exp: m.querySelector('.bulk-exp')?.checked || false,
-        send: parseInt(m.querySelector('.bulk-send')?.value || '0', 10) || 0,
-        nums,
-        bottles
-      };
-    }).filter(r =>
-      r.name ||
-      r.exp ||
-      r.send ||
-      Object.values(r.nums).some(v => !!v) ||
-      r.bottles.length
-    );
-
-    if (!rows.length) {
-      alert('入力がありません');
-      return;
+      n = n.nextElementSibling;
     }
 
-    if (!confirm(`${rows.length}人分を登録しますか？`)) {
-      return;
-    }
+    return {
+      mainRow: m,
+      name: m.querySelector('.bulk-name')?.value || '',
+      exp: m.querySelector('.bulk-exp')?.checked || false,
+      send: parseInt(m.querySelector('.bulk-send')?.value || '0', 10) || 0,
+      nums,
+      bottles
+    };
+  }).filter(r =>
+    r.name ||
+    r.exp ||
+    r.send ||
+    Object.values(r.nums).some(v => !!v) ||
+    r.bottles.length
+  );
 
+  if (!rows.length) {
+    alert('入力がありません');
+    return;
+  }
+
+  if (!confirm(`${rows.length}人分を登録しますか？`)) {
+    return;
+  }
+
+  const prevSuppress = window._suppressSyncObservers;
+  window._suppressSyncObservers = true;
+
+  try {
     for (const r of rows) {
       setValue('castName', r.name);
       setChecked('experienceAndRental', r.exp);
@@ -5645,8 +5665,8 @@ Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
 
         r.bottles.forEach(b => {
           if (typeof createBottleForm === 'function') {
-            const f = createBottleForm(b.detail, b.split, b.qty, b.amount);
-            cont.appendChild(f);
+            const form = createBottleForm(b.detail, b.split, b.qty, b.amount);
+            cont.appendChild(form);
           }
         });
 
@@ -5665,18 +5685,32 @@ Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
         });
       }
 
-      if (typeof confirmAndCalculate === 'function') {
-        confirmAndCalculate();
-      } else if (typeof calculate === 'function') {
-        calculate();
+      // 登録ボタン側で calculate 系を呼ぶ想定なので、ここでは直接呼ばない
+      document.getElementById('registerButton')?.click();
+
+      if (typeof rememberBottleSelectionsFromMainRow === 'function') {
+        rememberBottleSelectionsFromMainRow(r.mainRow);
       }
 
-      document.getElementById('registerButton')?.click();
-      rememberBottleSelectionsFromMainRow(r.mainRow);
+      // UIフリーズ軽減
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
-
-    alert('一括登録完了');
+  } finally {
+    window._suppressSyncObservers = prevSuppress;
   }
+
+  if (typeof createHistoryIndex === 'function') {
+    createHistoryIndex();
+  }
+
+  if (typeof window.scheduleAutosave === 'function') {
+    window.scheduleAutosave();
+  } else if (typeof window.saveAllApps === 'function') {
+    window.saveAllApps();
+  }
+
+  alert('一括登録完了');
+}
 
   // === 初期化 ==============================================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -6686,6 +6720,26 @@ function createHistoryIndex() {
   }
 
 }
+
+// createHistoryIndex の多重発火を1フレーム1回に圧縮
+(function throttleCreateHistoryIndex() {
+  if (typeof window.createHistoryIndex !== 'function') return;
+  if (window.createHistoryIndex._throttled) return;
+
+  const original = window.createHistoryIndex;
+  let rafId = 0;
+
+  window.createHistoryIndex = function throttledCreateHistoryIndex(...args) {
+    if (rafId) return;
+
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      original.apply(this, args);
+    });
+  };
+
+  window.createHistoryIndex._throttled = true;
+})();
 
 window.createHistoryIndex = createHistoryIndex;
 window.createHistoryIndex = createHistoryIndex;
@@ -9356,6 +9410,12 @@ function isBulkRowEmpty(mainRow){
   // 送迎も "0" は空扱いにしたい場合は norm(send) にしてOK
   return !(name || send || exp || anyQuant || anyBottle);
 }
+
+// ===== 入力あり判定：bulkCheckAll 用 =====
+function rowHasData(mainRow) {
+  return !isBulkRowEmpty(mainRow);
+}
+window.rowHasData = rowHasData;
 
 window.preparePrintApp2 = function (mode = 'envelope') {
   if (typeof window.showApp === 'function') window.showApp('app2');

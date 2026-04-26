@@ -169,9 +169,17 @@ function scheduleAutosave(){
 
   _saveTimer = setTimeout(() => {
     if (!canSyncNow()) return;
+
+    if (window._suppressSyncObservers) {
+      scheduleAutosave();
+      return;
+    }
+
     saveAllApps(monthKey());
-  }, 800);
+  }, 3000);
 }
+
+window.scheduleAutosave = scheduleAutosave;
 
 // ===== 同期ヘルパ =====
 function saveNow(reason=""){
@@ -219,8 +227,8 @@ function wrapAndSync(name, {immediate=false} = {}){
   wrapAndSync(n, { immediate:true });
 });
 
-// APP2 計算実行（フォーム onsubmit から呼ばれる想定）
-wrapAndSync("confirmAndCalculate", { immediate:true });
+// 出力・計算時に即Firestore保存すると重いのでデバウンス保存にする
+wrapAndSync("confirmAndCalculate", { immediate:false });
 
 // APP1 伝票フィルタ
 wrapAndSync("filterCategory",      { immediate:false });
@@ -238,12 +246,9 @@ wrapAndSync("resetSearch",         { immediate:false });
     clearTimeout(debounceTimer);
 
     debounceTimer = setTimeout(() => {
-      if (window._suppressSyncObservers) {
-        if (typeof createHistoryIndex === 'function') {
-          createHistoryIndex();
-        }
-        return;
-      }
+if (window._suppressSyncObservers) {
+  return;
+}
 
       if (!canSyncNow()) {
         if (typeof createHistoryIndex === 'function') {
