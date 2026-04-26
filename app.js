@@ -5403,51 +5403,57 @@ Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
   let lastBulkGridStateJson = '';
 
   function saveBulkGridState() {
-    const { grid } = getBulkDom();
-    if (!grid) return;
+  const { grid } = getBulkDom();
+  if (!grid) return;
 
-    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+  const mains = [...grid.querySelectorAll('.bulk-mainrow')];
 
-    const rows = mains.map(tr => {
-const row = {
-  name: tr.querySelector('.bulk-name')?.value || '',
-  exp: tr.querySelector('.bulk-exp')?.checked || false,
-  send: tr.querySelector('.bulk-send')?.value || '',
-  leave: tr.querySelector('.bulk-leave')?.checked || false,
-  nums: {},
-  bottles: []
-};
+  const rows = mains.map(tr => {
+    const row = {
+      name: tr.querySelector('.bulk-name')?.value || '',
+      exp: tr.querySelector('.bulk-exp')?.checked || false,
+      send: tr.querySelector('.bulk-send')?.value || '',
 
-      tr.querySelectorAll('[data-k]').forEach(el => {
-        const k = el.dataset.k;
-        if (el.type === 'checkbox') {
-          row.nums[k] = !!el.checked;
-        } else {
-          row.nums[k] = el.value || '';
-        }
-      });
+      // ★追加：退勤状態
+      leave: tr.querySelector('.bulk-leave')?.checked || false,
 
-      let n = tr.nextElementSibling;
-      while (n && n.classList.contains('btl-subrow')) {
-        row.bottles.push({
-          detail: (typeof getSelectedDetail === 'function') ? (getSelectedDetail(n) || '') : '',
-          split: n.querySelector('.splitCount')?.value || '',
-          qty: n.querySelector('.bottleQuantity')?.value || '',
-          amount: n.querySelector('.bottleAmount')?.value || ''
-        });
-        n = n.nextElementSibling;
+      nums: {},
+      bottles: []
+    };
+
+    tr.querySelectorAll('[data-k]').forEach(el => {
+      const k = el.dataset.k;
+      if (!k) return;
+
+      if (el.type === 'checkbox') {
+        row.nums[k] = !!el.checked;
+      } else {
+        row.nums[k] = el.value || '';
       }
-
-      return row;
     });
 
-    const json = JSON.stringify(rows);
+    let n = tr.nextElementSibling;
+    while (n && n.classList.contains('btl-subrow')) {
+      row.bottles.push({
+        detail: (typeof getSelectedDetail === 'function') ? (getSelectedDetail(n) || '') : '',
+        split: n.querySelector('.splitCount')?.value || '',
+        qty: n.querySelector('.bottleQuantity')?.value || '',
+        amount: n.querySelector('.bottleAmount')?.value || ''
+      });
 
-    if (json === lastBulkGridStateJson) return;
+      n = n.nextElementSibling;
+    }
 
-    lastBulkGridStateJson = json;
-    localStorage.setItem(GRID_KEY, json);
-  }
+    return row;
+  });
+
+  const json = JSON.stringify(rows);
+
+  if (json === lastBulkGridStateJson) return;
+
+  lastBulkGridStateJson = json;
+  localStorage.setItem(GRID_KEY, json);
+}
 
   function scheduleSaveBulkGridState(delay = 120) {
     clearTimeout(bulkSaveTimer);
@@ -5460,105 +5466,132 @@ const row = {
 
   // === 復元 ================================================================
   function restoreBulkGridState(forcedRowCount = null) {
-    const { grid, sel } = getBulkDom();
-    if (!grid) return;
+  const { grid, sel } = getBulkDom();
+  if (!grid) return;
 
+  let data = [];
+
+  try {
     const raw = localStorage.getItem(GRID_KEY);
-    const data = JSON.parse(raw || '[]');
+    data = JSON.parse(raw || '[]');
+  } catch (_) {
+    data = [];
+  }
 
-    const rowCount =
-      Number.isInteger(forcedRowCount) && forcedRowCount > 0
-        ? forcedRowCount
-        : (data.length || parseInt(sel?.value || '40', 10) || 40);
+  const rowCount =
+    Number.isInteger(forcedRowCount) && forcedRowCount > 0
+      ? forcedRowCount
+      : (data.length || parseInt(sel?.value || '40', 10) || 40);
 
-    buildGrid(rowCount);
+  buildGrid(rowCount);
 
-    if (!data.length) {
-      return;
+  const mains = [...grid.querySelectorAll('.bulk-mainrow')];
+
+  data.slice(0, rowCount).forEach((r, i) => {
+    const tr = mains[i];
+    if (!tr) return;
+
+    const nameEl = tr.querySelector('.bulk-name');
+    const expEl  = tr.querySelector('.bulk-exp');
+    const sendEl = tr.querySelector('.bulk-send');
+
+    if (nameEl) nameEl.value = r.name || '';
+    if (expEl)  expEl.checked = !!r.exp;
+    if (sendEl) sendEl.value = norm(r.send);
+
+    // ★追加：退勤状態を復元
+    const leaveEl = tr.querySelector('.bulk-leave');
+    if (leaveEl) {
+      leaveEl.checked = !!r.leave;
+
+      if (window._bulkLeave && typeof window._bulkLeave.applyRowLeaveState === 'function') {
+        window._bulkLeave.applyRowLeaveState(tr, !!r.leave);
+      } else {
+        tr.classList.toggle('is-leave', !!r.leave);
+      }
     }
 
-    const mains = [...grid.querySelectorAll('.bulk-mainrow')];
-
-    data.slice(0, rowCount).forEach((r, i) => {
-      const tr = mains[i];
-      if (!tr) return;
-
-      const nameEl = tr.querySelector('.bulk-name');
-      const expEl  = tr.querySelector('.bulk-exp');
-      const sendEl = tr.querySelector('.bulk-send');
-
-      if (nameEl) nameEl.value = r.name || '';
-      if (expEl)  expEl.checked = !!r.exp;
-      if (sendEl) sendEl.value = norm(r.send);
-
-      const kmap = {};
-      tr.querySelectorAll('[data-k]').forEach(el => {
-        kmap[el.dataset.k] = el;
-      });
-
-      const nums = { ...(r.nums || {}) };
-
-      if (!('2k' in nums) && ('f' in nums)) {
-        nums['2k'] = nums['f'];
-      }
-
-      for (const k in nums) {
-        const el = kmap[k];
-        if (!el) continue;
-
-        if (el.type === 'checkbox') {
-          el.checked = !!nums[k];
-        } else {
-          el.value = norm(nums[k]);
-        }
-      }
-
-      if (Array.isArray(r.bottles) && r.bottles.length) {
-        r.bottles.forEach(b => {
-          addBottleSubrow(tr);
-
-          const subs = getBottleSubrows(tr);
-          const last = subs[subs.length - 1];
-          if (!last) return;
-
-          const detailSelect = last.querySelector('.bottleDetails');
-          if (detailSelect && typeof setBottleDetailValue === 'function') {
-            setBottleDetailValue(detailSelect, b.detail || '');
-          }
-
-          const splitEl  = last.querySelector('.splitCount');
-          const qtyEl    = last.querySelector('.bottleQuantity');
-          const amountEl = last.querySelector('.bottleAmount');
-
-          if (splitEl)  splitEl.value  = norm(b.split);
-          if (qtyEl)    qtyEl.value    = norm(b.qty);
-          if (amountEl) amountEl.value = norm(b.amount);
-
-          if (typeof updateBottleAmountForRow === 'function') {
-            updateBottleAmountForRow(last);
-          }
-        });
-      }
+    const kmap = {};
+    tr.querySelectorAll('[data-k]').forEach(el => {
+      kmap[el.dataset.k] = el;
     });
 
-    if (typeof updateBulkFilledState === 'function') {
-      updateBulkFilledState(grid);
+    const nums = { ...(r.nums || {}) };
+
+    if (!('2k' in nums) && ('f' in nums)) {
+      nums['2k'] = nums['f'];
     }
 
-    if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
-      window.applyReadonlyToBulkGridCustomKeypad();
+    for (const k in nums) {
+      const el = kmap[k];
+      if (!el) continue;
+
+      if (el.type === 'checkbox') {
+        el.checked = !!nums[k];
+      } else {
+        el.value = norm(nums[k]);
+      }
     }
 
-    if (typeof window.applyApp2MobileView === 'function') {
-      window.applyApp2MobileView();
+    if (Array.isArray(r.bottles) && r.bottles.length) {
+      r.bottles.forEach(b => {
+        if (typeof addBottleSubrow !== 'function') return;
+
+        addBottleSubrow(tr);
+
+        const subs = getBottleSubrows(tr);
+        const last = subs[subs.length - 1];
+        if (!last) return;
+
+        const detailSelect = last.querySelector('.bottleDetails');
+        const splitEl = last.querySelector('.splitCount');
+        const qtyEl = last.querySelector('.bottleQuantity');
+        const amountEl = last.querySelector('.bottleAmount');
+
+        const detail = b.detail ?? b.details ?? '';
+        const split = b.split ?? b.splitCount ?? '';
+        const qty = b.qty ?? b.quantity ?? b.bottleQuantity ?? '';
+        const amount = b.amount ?? b.bottleAmount ?? '';
+
+        if (detailSelect) {
+          if (typeof setBottleDetailValue === 'function') {
+            setBottleDetailValue(detailSelect, detail);
+          } else {
+            detailSelect.value = detail;
+          }
+        }
+
+        if (splitEl) splitEl.value = split || '';
+        if (qtyEl) qtyEl.value = qty || '';
+        if (amountEl) amountEl.value = amount || '';
+
+        if (typeof updateBottleAmountForRow === 'function') {
+          updateBottleAmountForRow(last);
+        }
+      });
     }
 
-    try {
-      lastBulkGridStateJson = localStorage.getItem(GRID_KEY) || '';
-    } catch (_) {
-      lastBulkGridStateJson = '';
+    if (typeof updateRowCheckState === 'function') {
+      updateRowCheckState(tr);
     }
+  });
+
+  if (typeof updateBulkFilledState === 'function') {
+    updateBulkFilledState(grid);
   }
+
+  if (typeof window.applyApp2MobileView === 'function') {
+    window.applyApp2MobileView();
+  }
+
+  if (typeof window.applyReadonlyToBulkGridCustomKeypad === 'function') {
+    window.applyReadonlyToBulkGridCustomKeypad();
+  }
+
+  if (typeof window.applyReadonlyToCustomKeypadTargets === 'function') {
+    window.applyReadonlyToCustomKeypadTargets();
+  }
+}
 
   // === メイン行→ボトル選択記憶 =============================================
   function rememberBottleSelectionsFromMainRow(mainRow) {
