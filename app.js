@@ -8854,20 +8854,23 @@ function openPrintApp2(innerHTML, opts = {}) {
     }
 
     .sheet-inner {
-      width: calc(var(--sheet-w) / var(--scale));
-      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-      margin: 0 auto;
-      padding: 0;
-      box-sizing: border-box;
-      transform: scale(var(--scale));
-      transform-origin: top center;
-      overflow: visible;
-    }
+  width: calc(var(--sheet-w) / var(--scale));
+  min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+  max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 
-    .print-sheet.rotate180 .sheet-inner {
-      transform: rotate(180deg) scale(var(--scale));
-      transform-origin: center center;
-    }
+  transform: translateY(-6mm) scale(var(--scale));
+  transform-origin: top center;
+}
+
+/* iOS回転あり専用 */
+.print-sheet.rotate180 .sheet-inner {
+  transform: translateY(-18mm) rotate(180deg) scale(var(--scale));
+  transform-origin: center center;
+}
 
     .envelope {
       box-sizing: border-box;
@@ -8977,9 +8980,6 @@ function openPrintApp2(innerHTML, opts = {}) {
       font-weight: 900;
     }
 
-    .sheet-inner * {
-      color: inherit;
-    }
   </style>
 </head>
 <body>
@@ -9493,10 +9493,10 @@ window.preparePrintApp2 = function (mode = 'envelope') {
     : html;
 
   return openPrintApp2(inner, {
-    scale: 1.05,
-    rotateOnMobile: true,
-    trimBottomMM: 20
-  });
+  scale: 0.96,          // ←重要（1.05は攻めすぎ）
+  rotateOnMobile: true,
+  trimBottomMM: 8       // ←20は削りすぎ
+});
 };
 
 
