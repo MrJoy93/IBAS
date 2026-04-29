@@ -8706,7 +8706,7 @@ html, body {
 
 function openPrintApp2(innerHTML, opts = {}) {
   const {
-    scale = 1.12,
+    scale = 1.00,
     rotateOnMobile = true,
     trimBottomMM = 0,
     title = 'APP2 Print'
@@ -8721,6 +8721,14 @@ function openPrintApp2(innerHTML, opts = {}) {
 
   const temp = document.createElement('div');
   temp.innerHTML = innerHTML;
+
+  // 戻るボタン混入対策
+  temp.querySelectorAll('#__app2Back, button').forEach(el => {
+    const text = (el.textContent || '').trim();
+    if (el.id === '__app2Back' || text.includes('元の画面へ戻る')) {
+      el.remove();
+    }
+  });
 
   temp.querySelectorAll('.finalAmount').forEach(finalEl => {
     const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10) || 0;
@@ -8772,6 +8780,14 @@ function openPrintApp2(innerHTML, opts = {}) {
     `;
   }
 
+  // 念押し：再ラップ後にも戻るボタン除去
+  temp.querySelectorAll('#__app2Back, button').forEach(el => {
+    const text = (el.textContent || '').trim();
+    if (el.id === '__app2Back' || text.includes('元の画面へ戻る')) {
+      el.remove();
+    }
+  });
+
   const wrappedInnerHTML = temp.innerHTML;
 
   const printHTML = `<!doctype html>
@@ -8793,11 +8809,11 @@ function openPrintApp2(innerHTML, opts = {}) {
       --env-pad-top: 5mm;
       --env-pad-bottom: 5mm;
 
-      /* PC側：氏名上切れ防止 */
-      --pc-shift-y: 5mm;
+      /* PC：氏名上切れ防止 */
+      --pc-shift-y: 6mm;
 
-      /* iOS側：画面上で下げる。下余白を減らしたいなら増やす */
-      --ios-rotate-shift-y: 42mm;
+      /* iOS：画面上で下げる。下余白を減らすなら増やす */
+      --ios-rotate-shift-y: 46mm;
     }
 
     @page {
@@ -8808,7 +8824,6 @@ function openPrintApp2(innerHTML, opts = {}) {
     html,
     body {
       width: var(--sheet-w);
-      min-height: var(--sheet-h);
       margin: 0;
       padding: 0;
       background: #fff;
@@ -8819,9 +8834,10 @@ function openPrintApp2(innerHTML, opts = {}) {
       overflow: visible;
     }
 
-    /* 印刷プレビューにも印刷にも絶対に乗せない */
-    #__app2Back {
+    #__app2Back,
+    button[id="__app2Back"] {
       display: none !important;
+      visibility: hidden !important;
     }
 
     .print-root {
@@ -8830,18 +8846,19 @@ function openPrintApp2(innerHTML, opts = {}) {
       padding: 0;
       background: #fff;
       transform: none !important;
+      overflow: visible;
     }
 
     .print-sheet {
       width: var(--sheet-w);
-      height: var(--sheet-h);
+      min-height: var(--sheet-h);
       margin: 0;
       padding: 0;
-      overflow: hidden;
       box-sizing: border-box;
       position: relative;
       background: #fff;
       transform: none !important;
+      overflow: visible;
 
       page-break-after: always;
       break-after: page;
@@ -8854,22 +8871,19 @@ function openPrintApp2(innerHTML, opts = {}) {
       break-after: auto;
     }
 
-.sheet-inner {
-  width: calc(var(--sheet-w) / var(--scale));
+    .sheet-inner {
+      width: calc(var(--sheet-w) / var(--scale));
+      height: auto;
+      min-height: auto;
+      max-height: none;
+      margin: 0 auto;
+      padding: 0;
+      box-sizing: border-box;
+      overflow: visible;
 
-  /* ←ここが最重要 */
-  height: auto;
-  min-height: auto;
-  max-height: none;
-
-  margin: 0 auto;
-  padding: 0;
-  box-sizing: border-box;
-  overflow: visible;
-
-  transform: translateY(var(--pc-shift-y)) scale(var(--scale));
-  transform-origin: top center;
-}
+      transform: translateY(var(--pc-shift-y)) scale(var(--scale));
+      transform-origin: top center;
+    }
 
     .print-sheet.rotate180 .sheet-inner {
       transform:
@@ -8882,8 +8896,9 @@ function openPrintApp2(innerHTML, opts = {}) {
     .envelope {
       box-sizing: border-box;
       width: calc(var(--env-w) / var(--scale));
-      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-      max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      height: auto;
+      min-height: auto;
+      max-height: none;
       margin: 0 auto;
       padding:
         calc(var(--env-pad-top) / var(--scale))
@@ -8899,7 +8914,7 @@ function openPrintApp2(innerHTML, opts = {}) {
 
       color: #000 !important;
       background: #fff !important;
-      overflow: hidden;
+      overflow: visible;
       transform: none !important;
     }
 
