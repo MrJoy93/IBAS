@@ -8892,11 +8892,9 @@ function openPrintApp2(innerHTML, opts = {}) {
     transform: none !important;
   }
 
-  .print-sheet.rotate180 .envelope {
-    padding-top: calc(var(--env-rotate-pad-top) / var(--scale));
-    padding-bottom: calc(var(--env-rotate-pad-bottom) / var(--scale));
-    transform: none !important;
-  }
+.print-sheet.rotate180 .envelope {
+  padding-top: 80mm;
+}
 
   .print-date {
     text-align: left;
