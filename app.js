@@ -8781,14 +8781,12 @@ function openPrintApp2(innerHTML, opts = {}) {
     --sheet-h: 205mm;
     --trim-bottom: ${trimBottomMM}mm;
 
-    /* 通常時の本文余白 */
+    /* 通常時 */
     --env-pad-x: 5mm;
     --env-pad-top: 0mm;
-    --env-pad-bottom: 5mm;
 
-    /* iOS 180°回転時の本文位置補正 */
-    --env-rotate-pad-top: 32mm;
-    --env-rotate-pad-bottom: 0mm;
+    /* iOS回転時（ここだけ触る） */
+    --env-rotate-pad-top: 52mm;
   }
 
   @page {
@@ -8806,32 +8804,10 @@ function openPrintApp2(innerHTML, opts = {}) {
     font-family: 'ＭＳ 明朝', serif;
   }
 
-  #__app2Back {
-    position: fixed;
-    right: 8px;
-    top: 8px;
-    padding: .5em .8em;
-    font-size: 12px;
-    border: 1px solid #888;
-    border-radius: 6px;
-    background: #fff;
-    color: #111;
-    cursor: pointer;
-    z-index: 9999;
-  }
-
-  @media print {
-    #__app2Back {
-      display: none !important;
-    }
-  }
-
   .print-root {
     width: 100%;
     margin: 0 auto;
-    padding: 0;
     background: #fff;
-    transform: none !important;
   }
 
   .print-sheet {
@@ -8840,16 +8816,8 @@ function openPrintApp2(innerHTML, opts = {}) {
     margin: 0 auto;
     overflow: hidden;
     page-break-after: always;
-    break-after: page;
-    box-sizing: border-box;
     position: relative;
     background: #fff;
-    transform: none !important;
-  }
-
-  .print-sheet:last-child {
-    page-break-after: auto;
-    break-after: auto;
   }
 
   .sheet-inner {
@@ -8857,140 +8825,50 @@ function openPrintApp2(innerHTML, opts = {}) {
     min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
     max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
     margin: 0 auto;
-    padding: 0;
     box-sizing: border-box;
     overflow: hidden;
+
     transform: scale(var(--scale));
     transform-origin: top center;
   }
 
+  /* iOS回転 */
   .print-sheet.rotate180 .sheet-inner {
     transform: rotate(180deg) scale(var(--scale));
     transform-origin: center center;
   }
 
+  /* 本文 */
   .envelope {
-    box-sizing: border-box;
     width: calc(84mm / var(--scale));
     min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-    max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
     margin: 0 auto;
-    text-align: left;
-    font-family: 'ＭＳ 明朝', serif;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: .02em;
+    box-sizing: border-box;
 
     padding-left: calc(var(--env-pad-x) / var(--scale));
     padding-right: calc(var(--env-pad-x) / var(--scale));
     padding-top: calc(var(--env-pad-top) / var(--scale));
-    padding-bottom: calc(var(--env-pad-bottom) / var(--scale));
 
-    color: #000 !important;
-    background: #fff !important;
-    overflow: hidden;
-    transform: none !important;
-  }
-
-.print-sheet.rotate180 .envelope {
-  padding-top: 20mm;
-}
-
-  .print-date {
-    text-align: left;
-    font-size: 11pt;
-    margin: 0 0 3mm 0;
-    color: #000 !important;
-  }
-
-  .print-title {
-    text-align: center;
-    font-size: 14pt;
-    margin: 0 0 8mm 0;
+    font-family: 'ＭＳ 明朝', serif;
     font-weight: 700;
-    color: #000 !important;
+    color: #000;
+  }
+
+  /* 🔥ここだけで位置制御（他は触らない） */
+  .print-sheet.rotate180 .envelope {
+    padding-top: calc(var(--env-rotate-pad-top) / var(--scale));
   }
 
   .castName {
-    display: block !important;
-    color: #000 !important;
-    -webkit-text-fill-color: #000 !important;
-    font-size: 18pt !important;
-    font-weight: 800 !important;
-    line-height: 1.25 !important;
-    margin: 1mm 0 3mm 0 !important;
-    min-height: 8mm !important;
-    padding-top: 1mm !important;
-    white-space: pre-wrap !important;
-    word-break: break-word !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-
-  .subtotal {
-    display: block !important;
-    color: #333 !important;
-    font-size: 14pt !important;
-    font-weight: 700 !important;
-    margin-top: 2mm !important;
-    margin-bottom: 2mm !important;
-  }
-
-  .totalAmount {
-    display: block !important;
-    color: #0066cc !important;
-    font-size: 15pt !important;
-    font-weight: 800 !important;
-    margin-top: 3mm !important;
-    margin-bottom: 2mm !important;
+    font-size: 18pt;
+    font-weight: 800;
+    margin: 1mm 0 3mm 0;
   }
 
   .finalAmount {
-    display: block !important;
-    color: #009944 !important;
-    font-size: 18pt !important;
-    font-weight: 900 !important;
-    margin-top: 4mm !important;
-    margin-bottom: 3mm !important;
-  }
-
-  .receipt-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-
-  .receipt-row .label {
-    margin-right: 5mm;
-    white-space: nowrap;
-  }
-
-  .receipt-row .value {
-    font-weight: 700;
-    font-size: 12pt;
-    text-align: right;
-    color: #000 !important;
-  }
-
-  .page-index {
-    position: absolute;
-    right: 4mm;
-    bottom: 3mm;
-    font-size: 8pt;
-    color: #555;
-    font-family: Arial, sans-serif;
-    font-weight: 400;
-  }
-
-  .rainbow-print {
-    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #009944;
+    font-size: 18pt;
     font-weight: 900;
-  }
-
-  .sheet-inner * {
-    color: inherit;
   }
 </style>
 </head>
