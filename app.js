@@ -8724,9 +8724,7 @@ function openPrintApp2(innerHTML, opts = {}) {
 
   temp.querySelectorAll('.finalAmount').forEach(finalEl => {
     const num = parseInt(finalEl.textContent.replace(/[^0-9]/g, ''), 10) || 0;
-    if (num >= 100000) {
-      finalEl.classList.add('rainbow-print');
-    }
+    if (num >= 100000) finalEl.classList.add('rainbow-print');
   });
 
   let printRoot = temp.querySelector('.print-root');
@@ -8736,11 +8734,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     if (!printRoot) {
       printRoot = document.createElement('div');
       printRoot.className = 'print-root';
-
-      while (temp.firstChild) {
-        printRoot.appendChild(temp.firstChild);
-      }
-
+      while (temp.firstChild) printRoot.appendChild(temp.firstChild);
       temp.appendChild(printRoot);
     }
 
@@ -8749,7 +8743,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     existingSheets.forEach(sheet => {
       sheet.classList.toggle('rotate180', shouldRotate);
 
-      if (!sheet.querySelector('.sheet-inner')) {
+      if (!sheet.querySelector(':scope > .sheet-inner')) {
         const inner = document.createElement('div');
         inner.className = 'sheet-inner';
 
@@ -8799,12 +8793,11 @@ function openPrintApp2(innerHTML, opts = {}) {
       --env-pad-top: 5mm;
       --env-pad-bottom: 5mm;
 
-      /*
-        iOS 180°回転時の見た目位置補正。
-        画面上で下げたい → 数値を増やす。
-        画面上で上げたい → 数値を減らす。
-      */
-      --ios-rotate-shift-y: 35mm;
+      /* PC側：氏名上切れ防止 */
+      --pc-shift-y: 5mm;
+
+      /* iOS側：画面上で下げる。下余白を減らしたいなら増やす */
+      --ios-rotate-shift-y: 42mm;
     }
 
     @page {
@@ -8814,6 +8807,8 @@ function openPrintApp2(innerHTML, opts = {}) {
 
     html,
     body {
+      width: var(--sheet-w);
+      min-height: var(--sheet-h);
       margin: 0;
       padding: 0;
       background: #fff;
@@ -8821,31 +8816,17 @@ function openPrintApp2(innerHTML, opts = {}) {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       font-family: 'ＭＳ 明朝', serif;
+      overflow: visible;
     }
 
+    /* 印刷プレビューにも印刷にも絶対に乗せない */
     #__app2Back {
-      position: fixed;
-      right: 8px;
-      top: 8px;
-      padding: .5em .8em;
-      font-size: 12px;
-      border: 1px solid #888;
-      border-radius: 6px;
-      background: #fff;
-      color: #111;
-      cursor: pointer;
-      z-index: 9999;
-    }
-
-    @media print {
-      #__app2Back {
-        display: none !important;
-      }
+      display: none !important;
     }
 
     .print-root {
-      width: 100%;
-      margin: 0 auto;
+      width: var(--sheet-w);
+      margin: 0;
       padding: 0;
       background: #fff;
       transform: none !important;
@@ -8854,15 +8835,18 @@ function openPrintApp2(innerHTML, opts = {}) {
     .print-sheet {
       width: var(--sheet-w);
       height: var(--sheet-h);
-      margin: 0 auto;
+      margin: 0;
       padding: 0;
       overflow: hidden;
-      page-break-after: always;
-      break-after: page;
       box-sizing: border-box;
       position: relative;
       background: #fff;
       transform: none !important;
+
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .print-sheet:last-child {
@@ -8872,21 +8856,17 @@ function openPrintApp2(innerHTML, opts = {}) {
 
     .sheet-inner {
       width: calc(var(--sheet-w) / var(--scale));
-      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       margin: 0 auto;
       padding: 0;
       box-sizing: border-box;
       overflow: hidden;
 
-      transform: scale(var(--scale));
+      transform: translateY(var(--pc-shift-y)) scale(var(--scale));
       transform-origin: top center;
     }
 
-    /*
-      iOS回転時。
-      位置補正は .envelope ではなく、回転している親 .sheet-inner に集約。
-    */
     .print-sheet.rotate180 .sheet-inner {
       transform:
         translateY(var(--ios-rotate-shift-y))
@@ -8898,7 +8878,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     .envelope {
       box-sizing: border-box;
       width: calc(var(--env-w) / var(--scale));
-      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       margin: 0 auto;
       padding:
@@ -9019,7 +8999,6 @@ function openPrintApp2(innerHTML, opts = {}) {
 </head>
 
 <body>
-  <button id="__app2Back" type="button">← 元の画面へ戻る</button>
   ${wrappedInnerHTML}
 
   <script>
@@ -9053,8 +9032,6 @@ function openPrintApp2(innerHTML, opts = {}) {
           window.print();
         } catch (_) {}
       }
-
-      document.getElementById('__app2Back')?.addEventListener('click', finish);
 
       if (document.readyState === 'complete') {
         setTimeout(kickPrint, 80);
