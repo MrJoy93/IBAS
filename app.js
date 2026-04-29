@@ -8893,7 +8893,7 @@ function openPrintApp2(innerHTML, opts = {}) {
   }
 
 .print-sheet.rotate180 .envelope {
-  padding-top: -80mm;
+  padding-top: 20mm;
 }
 
   .print-date {
