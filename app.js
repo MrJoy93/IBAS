@@ -8706,7 +8706,7 @@ html, body {
 
 function openPrintApp2(innerHTML, opts = {}) {
   const {
-    scale = 1.00,
+    scale = 1.12,
     rotateOnMobile = true,
     trimBottomMM = 0,
     title = 'APP2 Print'
