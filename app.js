@@ -8780,6 +8780,15 @@ function openPrintApp2(innerHTML, opts = {}) {
     --sheet-w: 90mm;
     --sheet-h: 205mm;
     --trim-bottom: ${trimBottomMM}mm;
+
+    /* 位置調整 */
+    --env-pad-x: 5mm;
+    --env-pad-top: 0mm;
+    --env-pad-bottom: 5mm;
+
+    /* iOS 180°回転時の本文位置補正 */
+    --env-rotate-pad-top: 22mm;
+    --env-rotate-pad-bottom: 0mm;
   }
 
   @page {
@@ -8864,20 +8873,29 @@ function openPrintApp2(innerHTML, opts = {}) {
     box-sizing: border-box;
     width: calc(84mm / var(--scale));
     min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+    max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
     margin: 0 auto;
     text-align: left;
     font-family: 'ＭＳ 明朝', serif;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     letter-spacing: .02em;
-    padding: calc(5mm / var(--scale));
+
+    padding-left: calc(var(--env-pad-x) / var(--scale));
+    padding-right: calc(var(--env-pad-x) / var(--scale));
+    padding-top: calc(var(--env-pad-top) / var(--scale));
+    padding-bottom: calc(var(--env-pad-bottom) / var(--scale));
+
     color: #000 !important;
     background: #fff !important;
-    transform: translateY(-6mm);
+    overflow: hidden;
+    transform: none !important;
   }
 
   .print-sheet.rotate180 .envelope {
-    transform: translateY(-4mm);
+    padding-top: calc(var(--env-rotate-pad-top) / var(--scale));
+    padding-bottom: calc(var(--env-rotate-pad-bottom) / var(--scale));
+    transform: none !important;
   }
 
   .print-date {
@@ -8902,9 +8920,9 @@ function openPrintApp2(innerHTML, opts = {}) {
     font-size: 18pt !important;
     font-weight: 800 !important;
     line-height: 1.25 !important;
-    margin: 2mm 0 3mm 0 !important;
+    margin: 1mm 0 3mm 0 !important;
     min-height: 8mm !important;
-    padding-top: 2mm !important;
+    padding-top: 1mm !important;
     white-space: pre-wrap !important;
     word-break: break-word !important;
     opacity: 1 !important;
