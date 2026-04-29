@@ -8786,7 +8786,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     --env-pad-top: 0mm;
 
     /* iOS回転時（ここだけ触る） */
-    --env-rotate-pad-top: 52mm;
+    --env-rotate-pad-top: 12mm;
   }
 
   @page {
