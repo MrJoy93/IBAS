@@ -8755,10 +8755,7 @@ function openPrintApp2(innerHTML, opts = {}) {
         const inner = document.createElement('div');
         inner.className = 'sheet-inner';
 
-        while (sheet.firstChild) {
-          inner.appendChild(sheet.firstChild);
-        }
-
+        while (sheet.firstChild) inner.appendChild(sheet.firstChild);
         sheet.appendChild(inner);
       }
     });
@@ -8780,7 +8777,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     `;
   }
 
-  // 念押し：再ラップ後にも戻るボタン除去
+  // 再ラップ後にも戻るボタン除去
   temp.querySelectorAll('#__app2Back, button').forEach(el => {
     const text = (el.textContent || '').trim();
     if (el.id === '__app2Back' || text.includes('元の画面へ戻る')) {
@@ -8812,8 +8809,8 @@ function openPrintApp2(innerHTML, opts = {}) {
       /* PC：氏名上切れ防止 */
       --pc-shift-y: 6mm;
 
-      /* iOS：画面上で下げる。下余白を減らすなら増やす */
-      --ios-rotate-shift-y: 38mm;
+      /* iOS回転時：transformではなくpaddingで補正 */
+      --ios-env-pad-top: 14mm;
     }
 
     @page {
@@ -8824,6 +8821,7 @@ function openPrintApp2(innerHTML, opts = {}) {
     html,
     body {
       width: var(--sheet-w);
+      height: var(--sheet-h);
       margin: 0;
       padding: 0;
       background: #fff;
@@ -8831,7 +8829,7 @@ function openPrintApp2(innerHTML, opts = {}) {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       font-family: 'ＭＳ 明朝', serif;
-      overflow: visible;
+      overflow: hidden;
     }
 
     #__app2Back,
@@ -8845,20 +8843,20 @@ function openPrintApp2(innerHTML, opts = {}) {
       margin: 0;
       padding: 0;
       background: #fff;
+      overflow: hidden;
       transform: none !important;
-      overflow: visible;
     }
 
     .print-sheet {
       width: var(--sheet-w);
-      min-height: var(--sheet-h);
+      height: var(--sheet-h);
       margin: 0;
       padding: 0;
       box-sizing: border-box;
       position: relative;
       background: #fff;
+      overflow: hidden;
       transform: none !important;
-      overflow: visible;
 
       page-break-after: always;
       break-after: page;
@@ -8873,32 +8871,25 @@ function openPrintApp2(innerHTML, opts = {}) {
 
     .sheet-inner {
       width: calc(var(--sheet-w) / var(--scale));
-      height: auto;
-      min-height: auto;
-      max-height: none;
+      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       margin: 0 auto;
       padding: 0;
       box-sizing: border-box;
-      overflow: visible;
+      overflow: hidden;
 
       transform: translateY(var(--pc-shift-y)) scale(var(--scale));
       transform-origin: top center;
     }
 
     .print-sheet.rotate180 .sheet-inner {
-      transform:
-        translateY(var(--ios-rotate-shift-y))
-        rotate(180deg)
-        scale(var(--scale));
+      transform: rotate(180deg) scale(var(--scale));
       transform-origin: center center;
     }
 
     .envelope {
       box-sizing: border-box;
       width: calc(var(--env-w) / var(--scale));
-      height: auto;
-      min-height: auto;
-      max-height: none;
+      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       margin: 0 auto;
       padding:
         calc(var(--env-pad-top) / var(--scale))
@@ -8914,8 +8905,12 @@ function openPrintApp2(innerHTML, opts = {}) {
 
       color: #000 !important;
       background: #fff !important;
-      overflow: visible;
+      overflow: hidden;
       transform: none !important;
+    }
+
+    .print-sheet.rotate180 .envelope {
+      padding-top: calc(var(--ios-env-pad-top) / var(--scale)) !important;
     }
 
     .print-date {
@@ -9026,18 +9021,14 @@ function openPrintApp2(innerHTML, opts = {}) {
 
       function finish() {
         try {
-          if (window.opener && !window.opener.closed) {
-            window.opener.focus();
-          }
+          if (window.opener && !window.opener.closed) window.opener.focus();
         } catch (_) {}
 
         try { window.close(); } catch (_) {}
 
         setTimeout(() => {
           try {
-            if (!window.closed) {
-              window.location.replace('about:blank');
-            }
+            if (!window.closed) window.location.replace('about:blank');
           } catch (_) {}
         }, 120);
       }
@@ -9117,7 +9108,6 @@ function renderApp2History(){
   }).join('');
 }
 
-// 一括入力グリッド：選択→まとめて出力
 // 一括入力グリッド：選択→まとめて出力
 (function(){
   const QUANT_IDS = ['f','f2','jounai','honshiri','douhan','eda','help','set40','set20','vip','a','b','c','d','e'];
