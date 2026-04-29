@@ -8729,7 +8729,6 @@ function openPrintApp2(innerHTML, opts = {}) {
     }
   });
 
-  // 既にまとめ印刷用 .print-sheet がある場合
   let printRoot = temp.querySelector('.print-root');
   const existingSheets = Array.from(temp.querySelectorAll('.print-sheet'));
 
@@ -8749,17 +8748,30 @@ function openPrintApp2(innerHTML, opts = {}) {
 
     existingSheets.forEach(sheet => {
       sheet.classList.toggle('rotate180', shouldRotate);
+
+      if (!sheet.querySelector('.sheet-inner')) {
+        const inner = document.createElement('div');
+        inner.className = 'sheet-inner';
+
+        while (sheet.firstChild) {
+          inner.appendChild(sheet.firstChild);
+        }
+
+        sheet.appendChild(inner);
+      }
     });
   } else {
-    // 個別印刷用：単体HTMLを1枚の print-sheet に包む
     const raw = temp.innerHTML.trim();
+
     temp.innerHTML = `
       <div class="print-root">
         <section class="print-sheet ${shouldRotate ? 'rotate180' : ''}">
           <div class="sheet-inner">
-            ${/class\s*=\s*["'][^"']*envelope/.test(raw)
-              ? raw
-              : `<div class="envelope">${raw}</div>`}
+            ${
+              /class\s*=\s*["'][^"']*envelope/.test(raw)
+                ? raw
+                : `<div class="envelope">${raw}</div>`
+            }
           </div>
         </section>
       </div>
@@ -8774,105 +8786,238 @@ function openPrintApp2(innerHTML, opts = {}) {
   <meta charset="utf-8">
   <title>${title}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  :root {
-    --scale: ${scale};
-    --sheet-w: 90mm;
-    --sheet-h: 205mm;
-    --trim-bottom: ${trimBottomMM}mm;
 
-    /* 通常時 */
-    --env-pad-x: 5mm;
-    --env-pad-top: 0mm;
+  <style>
+    :root {
+      --scale: ${scale};
+      --sheet-w: 90mm;
+      --sheet-h: 205mm;
+      --trim-bottom: ${trimBottomMM}mm;
 
-    /* iOS回転時（ここだけ触る） */
-    --env-rotate-pad-top: 12mm;
-  }
+      --env-w: 84mm;
+      --env-pad-x: 5mm;
+      --env-pad-top: 5mm;
+      --env-pad-bottom: 5mm;
 
-  @page {
-    size: 90mm 205mm;
-    margin: 0;
-  }
+      /*
+        iOS 180°回転時の見た目位置補正。
+        画面上で下げたい → 数値を増やす。
+        画面上で上げたい → 数値を減らす。
+      */
+      --ios-rotate-shift-y: 24mm;
+    }
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #fff;
-    color: #000;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    font-family: 'ＭＳ 明朝', serif;
-  }
+    @page {
+      size: 90mm 205mm;
+      margin: 0;
+    }
 
-  .print-root {
-    width: 100%;
-    margin: 0 auto;
-    background: #fff;
-  }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      font-family: 'ＭＳ 明朝', serif;
+    }
 
-  .print-sheet {
-    width: var(--sheet-w);
-    height: var(--sheet-h);
-    margin: 0 auto;
-    overflow: hidden;
-    page-break-after: always;
-    position: relative;
-    background: #fff;
-  }
+    #__app2Back {
+      position: fixed;
+      right: 8px;
+      top: 8px;
+      padding: .5em .8em;
+      font-size: 12px;
+      border: 1px solid #888;
+      border-radius: 6px;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+      z-index: 9999;
+    }
 
-  .sheet-inner {
-    width: calc(var(--sheet-w) / var(--scale));
-    min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-    max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-    margin: 0 auto;
-    box-sizing: border-box;
-    overflow: hidden;
+    @media print {
+      #__app2Back {
+        display: none !important;
+      }
+    }
 
-    transform: scale(var(--scale));
-    transform-origin: top center;
-  }
+    .print-root {
+      width: 100%;
+      margin: 0 auto;
+      padding: 0;
+      background: #fff;
+      transform: none !important;
+    }
 
-  /* iOS回転 */
-  .print-sheet.rotate180 .sheet-inner {
-    transform: rotate(180deg) scale(var(--scale));
-    transform-origin: center center;
-  }
+    .print-sheet {
+      width: var(--sheet-w);
+      height: var(--sheet-h);
+      margin: 0 auto;
+      padding: 0;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      box-sizing: border-box;
+      position: relative;
+      background: #fff;
+      transform: none !important;
+    }
 
-  /* 本文 */
-  .envelope {
-    width: calc(84mm / var(--scale));
-    min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-    margin: 0 auto;
-    box-sizing: border-box;
+    .print-sheet:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
 
-    padding-left: calc(var(--env-pad-x) / var(--scale));
-    padding-right: calc(var(--env-pad-x) / var(--scale));
-    padding-top: calc(var(--env-pad-top) / var(--scale));
+    .sheet-inner {
+      width: calc(var(--sheet-w) / var(--scale));
+      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      margin: 0 auto;
+      padding: 0;
+      box-sizing: border-box;
+      overflow: hidden;
 
-    font-family: 'ＭＳ 明朝', serif;
-    font-weight: 700;
-    color: #000;
-  }
+      transform: scale(var(--scale));
+      transform-origin: top center;
+    }
 
-  /* 🔥ここだけで位置制御（他は触らない） */
-  .print-sheet.rotate180 .envelope {
-  padding-top: 0 !important;
-  margin-top: 20mm;
-  }
+    /*
+      iOS回転時。
+      位置補正は .envelope ではなく、回転している親 .sheet-inner に集約。
+    */
+    .print-sheet.rotate180 .sheet-inner {
+      transform:
+        translateY(var(--ios-rotate-shift-y))
+        rotate(180deg)
+        scale(var(--scale));
+      transform-origin: center center;
+    }
 
-  .castName {
-    font-size: 18pt;
-    font-weight: 800;
-    margin: 1mm 0 3mm 0;
-  }
+    .envelope {
+      box-sizing: border-box;
+      width: calc(var(--env-w) / var(--scale));
+      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      margin: 0 auto;
+      padding:
+        calc(var(--env-pad-top) / var(--scale))
+        calc(var(--env-pad-x) / var(--scale))
+        calc(var(--env-pad-bottom) / var(--scale))
+        calc(var(--env-pad-x) / var(--scale));
 
-  .finalAmount {
-    color: #009944;
-    font-size: 18pt;
-    font-weight: 900;
-  }
-</style>
+      text-align: left;
+      font-family: 'ＭＳ 明朝', serif;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+
+      color: #000 !important;
+      background: #fff !important;
+      overflow: hidden;
+      transform: none !important;
+    }
+
+    .print-date {
+      text-align: left;
+      font-size: 11pt;
+      margin: 0 0 3mm 0;
+      color: #000 !important;
+    }
+
+    .print-title {
+      text-align: center;
+      font-size: 14pt;
+      margin: 0 0 8mm 0;
+      font-weight: 700;
+      color: #000 !important;
+    }
+
+    .castName {
+      display: block !important;
+      color: #000 !important;
+      -webkit-text-fill-color: #000 !important;
+      font-size: 18pt !important;
+      font-weight: 800 !important;
+      line-height: 1.25 !important;
+      margin: 1mm 0 3mm 0 !important;
+      min-height: 8mm !important;
+      padding-top: 1mm !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    .subtotal {
+      display: block !important;
+      color: #333 !important;
+      font-size: 14pt !important;
+      font-weight: 700 !important;
+      margin-top: 2mm !important;
+      margin-bottom: 2mm !important;
+    }
+
+    .totalAmount {
+      display: block !important;
+      color: #0066cc !important;
+      font-size: 15pt !important;
+      font-weight: 800 !important;
+      margin-top: 3mm !important;
+      margin-bottom: 2mm !important;
+    }
+
+    .finalAmount {
+      display: block !important;
+      color: #009944 !important;
+      font-size: 18pt !important;
+      font-weight: 900 !important;
+      margin-top: 4mm !important;
+      margin-bottom: 3mm !important;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .receipt-row .label {
+      margin-right: 5mm;
+      white-space: nowrap;
+    }
+
+    .receipt-row .value {
+      font-weight: 700;
+      font-size: 12pt;
+      text-align: right;
+      color: #000 !important;
+    }
+
+    .page-index {
+      position: absolute;
+      right: 4mm;
+      bottom: 3mm;
+      font-size: 8pt;
+      color: #555;
+      font-family: Arial, sans-serif;
+      font-weight: 400;
+    }
+
+    .rainbow-print {
+      background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 900;
+    }
+
+    .sheet-inner * {
+      color: inherit;
+    }
+  </style>
 </head>
+
 <body>
   <button id="__app2Back" type="button">← 元の画面へ戻る</button>
   ${wrappedInnerHTML}
