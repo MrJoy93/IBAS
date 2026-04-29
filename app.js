@@ -8781,13 +8781,13 @@ function openPrintApp2(innerHTML, opts = {}) {
     --sheet-h: 205mm;
     --trim-bottom: ${trimBottomMM}mm;
 
-    /* 位置調整 */
+    /* 通常時の本文余白 */
     --env-pad-x: 5mm;
     --env-pad-top: 0mm;
     --env-pad-bottom: 5mm;
 
     /* iOS 180°回転時の本文位置補正 */
-    --env-rotate-pad-top: 22mm;
+    --env-rotate-pad-top: 32mm;
     --env-rotate-pad-bottom: 0mm;
   }
 
