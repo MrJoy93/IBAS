@@ -8852,14 +8852,22 @@ function openPrintApp2(innerHTML, opts = {}) {
   box-sizing: border-box;
   overflow: hidden;
 
-  transform: translateY(-6mm) scale(var(--scale));
+  transform: scale(var(--scale));
   transform-origin: top center;
 }
 
-/* iOS回転あり専用 */
 .print-sheet.rotate180 .sheet-inner {
-  transform: translateY(-18mm) rotate(180deg) scale(var(--scale));
+  transform: rotate(180deg) scale(var(--scale));
   transform-origin: center center;
+}
+
+/* 印字本文そのものを上へ寄せる */
+.print-sheet .envelope {
+  transform: translateY(-10mm);
+}
+
+.print-sheet.rotate180 .envelope {
+  transform: translateY(-24mm);
 }
 
     .envelope {
@@ -9310,14 +9318,14 @@ async function printSelectedRows() {
     }
 
     openPrintApp2(
-      `<div class="print-root">${sheetsHtml}</div>`,
-      {
-        scale: 1.05,
-        rotateOnMobile: true,
-        trimBottomMM: 20,
-        title: 'APP2 Combined Print'
-      }
-    );
+  `<div class="print-root">${sheetsHtml}</div>`,
+  {
+    scale: 1.00,
+    rotateOnMobile: true,
+    trimBottomMM: 0,
+    title: 'APP2 Combined Print'
+  }
+);
   } catch (err) {
     console.error('まとめ印刷エラー:', err);
     alert('まとめ印刷に失敗しました。');
@@ -9483,9 +9491,9 @@ window.preparePrintApp2 = function (mode = 'envelope') {
     : html;
 
   return openPrintApp2(inner, {
-  scale: 0.96,          // ←重要（1.05は攻めすぎ）
+  scale: 1.00,
   rotateOnMobile: true,
-  trimBottomMM: 8       // ←20は削りすぎ
+  trimBottomMM: 0
 });
 };
 
