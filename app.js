@@ -8856,7 +8856,8 @@ function openPrintApp2(innerHTML, opts = {}) {
 
   /* 🔥ここだけで位置制御（他は触らない） */
   .print-sheet.rotate180 .envelope {
-    padding-top: calc(var(--env-rotate-pad-top) / var(--scale));
+  padding-top: 0 !important;
+  margin-top: 20mm;
   }
 
   .castName {
