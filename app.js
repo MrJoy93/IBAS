@@ -8804,7 +8804,7 @@ function openPrintApp2(innerHTML, opts = {}) {
         画面上で下げたい → 数値を増やす。
         画面上で上げたい → 数値を減らす。
       */
-      --ios-rotate-shift-y: 24mm;
+      --ios-rotate-shift-y: 35mm;
     }
 
     @page {
