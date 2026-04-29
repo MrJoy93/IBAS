@@ -8867,7 +8867,7 @@ function openPrintApp2(innerHTML, opts = {}) {
 }
 
 .print-sheet.rotate180 .envelope {
-  transform: translateY(-24mm);
+  transform: translateY(-14mm);
 }
 
     .envelope {
@@ -8901,20 +8901,22 @@ function openPrintApp2(innerHTML, opts = {}) {
     }
 
     .castName {
-      display: block !important;
-      color: #000 !important;
-      -webkit-text-fill-color: #000 !important;
-      font-size: 18pt !important;
-      font-weight: 800 !important;
-      line-height: 1.25 !important;
-      margin: 5mm 0 3mm 0 !important;
-      min-height: 7mm !important;
-      padding-top: 1mm !important;
-      white-space: pre-wrap !important;
-      word-break: break-word !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-    }
+  display: block !important;
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+  font-size: 18pt !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+
+  margin: 2mm 0 3mm 0 !important;
+  min-height: 8mm !important;
+  padding-top: 2mm !important;
+
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 
     .subtotal {
       display: block !important;
