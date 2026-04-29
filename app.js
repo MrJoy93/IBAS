@@ -8813,7 +8813,7 @@ function openPrintApp2(innerHTML, opts = {}) {
       --pc-shift-y: 6mm;
 
       /* iOS：画面上で下げる。下余白を減らすなら増やす */
-      --ios-rotate-shift-y: 46mm;
+      --ios-rotate-shift-y: 38mm;
     }
 
     @page {
