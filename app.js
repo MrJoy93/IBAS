@@ -8877,7 +8877,7 @@ function openPrintApp2(innerHTML, opts = {}) {
   }
 
   .print-sheet.rotate180 .envelope {
-    transform: translateY(-14mm);
+    transform: translateY(-4mm);
   }
 
   .print-date {
