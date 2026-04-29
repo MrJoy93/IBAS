@@ -8723,11 +8723,11 @@ function openPrintApp2(innerHTML, opts = {}) {
   } = opts;
 
   const ua = navigator.userAgent || '';
-  const isIOS =
+  const ios =
     /iPhone|iPad|iPod/i.test(ua) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const rotate = !!(rotateOnMobile && isIOS);
+  const shouldRotate = !!(rotateOnMobile && ios);
 
   const temp = document.createElement('div');
   temp.innerHTML = innerHTML;
@@ -8739,13 +8739,44 @@ function openPrintApp2(innerHTML, opts = {}) {
     }
   });
 
-  innerHTML = temp.innerHTML;
+  // 既にまとめ印刷用 .print-sheet がある場合
+  let printRoot = temp.querySelector('.print-root');
+  const existingSheets = Array.from(temp.querySelectorAll('.print-sheet'));
 
-    const wrappedInnerHTML = `
-    <div class="print-root ${rotate ? 'rotate180' : ''}">
-      ${innerHTML}
-    </div>
-  `;
+  if (existingSheets.length) {
+    if (!printRoot) {
+      printRoot = document.createElement('div');
+      printRoot.className = 'print-root';
+
+      while (temp.firstChild) {
+        printRoot.appendChild(temp.firstChild);
+      }
+
+      temp.appendChild(printRoot);
+    }
+
+    printRoot.classList.remove('rotate180');
+
+    existingSheets.forEach(sheet => {
+      sheet.classList.toggle('rotate180', shouldRotate);
+    });
+  } else {
+    // 個別印刷用：単体HTMLを1枚の print-sheet に包む
+    const raw = temp.innerHTML.trim();
+    temp.innerHTML = `
+      <div class="print-root">
+        <section class="print-sheet ${shouldRotate ? 'rotate180' : ''}">
+          <div class="sheet-inner">
+            ${/class\s*=\s*["'][^"']*envelope/.test(raw)
+              ? raw
+              : `<div class="envelope">${raw}</div>`}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  const wrappedInnerHTML = temp.innerHTML;
 
   const printHTML = `<!doctype html>
 <html lang="ja">
@@ -8758,6 +8789,7 @@ function openPrintApp2(innerHTML, opts = {}) {
       --scale: ${scale};
       --sheet-w: 90mm;
       --sheet-h: 205mm;
+      --trim-bottom: ${trimBottomMM}mm;
     }
 
     @page {
@@ -8800,55 +8832,47 @@ function openPrintApp2(innerHTML, opts = {}) {
       margin: 0 auto;
       padding: 0;
       background: #fff;
+      transform: none !important;
     }
 
-    .print-root.rotate180 {
-  transform: rotate(180deg);
-  transform-origin: center center;
-}
-
-.print-sheet {
-  width: var(--sheet-w);
-  height: var(--sheet-h);
-  margin: 0 auto;
-  overflow: hidden;
-  page-break-after: always;
-  break-after: page;
-  box-sizing: border-box;
-  position: relative;
-  background: #fff;
-}
+    .print-sheet {
+      width: var(--sheet-w);
+      height: var(--sheet-h);
+      margin: 0 auto;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      box-sizing: border-box;
+      position: relative;
+      background: #fff;
+      transform: none !important;
+    }
 
     .print-sheet:last-child {
       page-break-after: auto;
       break-after: auto;
     }
 
-.rotate180.print-sheet {
-  transform: none;
-}
+    .sheet-inner {
+      width: calc(var(--sheet-w) / var(--scale));
+      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      margin: 0 auto;
+      padding: 0;
+      box-sizing: border-box;
+      transform: scale(var(--scale));
+      transform-origin: top center;
+      overflow: visible;
+    }
 
-.sheet-inner {
-  width: calc(var(--sheet-w) / var(--scale));
-  min-height: calc(var(--sheet-h) / var(--scale));
-  margin: 0 auto;
-  padding: 0;
-  box-sizing: border-box;
-  transform: scale(var(--scale));
-  transform-origin: top center;
-  overflow: visible;
-}
-
-.rotate180 .sheet-inner {
-  transform: translateY(-4mm) rotate(180deg) scale(var(--scale));
-  transform-origin: center center;
-  padding-top: 0;
-}
+    .print-sheet.rotate180 .sheet-inner {
+      transform: rotate(180deg) scale(var(--scale));
+      transform-origin: center center;
+    }
 
     .envelope {
       box-sizing: border-box;
       width: calc(84mm / var(--scale));
-      min-height: calc(var(--sheet-h) / var(--scale));
+      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
       margin: 0 auto;
       text-align: left;
       font-family: 'ＭＳ 明朝', serif;
@@ -8875,21 +8899,21 @@ function openPrintApp2(innerHTML, opts = {}) {
       color: #000 !important;
     }
 
-.castName {
-  display: block !important;
-  color: #000 !important;
-  -webkit-text-fill-color: #000 !important;
-  font-size: 18pt !important;
-  font-weight: 800 !important;
-  line-height: 1.25 !important;
-  margin: 5mm 0 3mm 0 !important;
-  min-height: 7mm !important;
-  padding-top: 1mm !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
+    .castName {
+      display: block !important;
+      color: #000 !important;
+      -webkit-text-fill-color: #000 !important;
+      font-size: 18pt !important;
+      font-weight: 800 !important;
+      line-height: 1.25 !important;
+      margin: 5mm 0 3mm 0 !important;
+      min-height: 7mm !important;
+      padding-top: 1mm !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
 
     .subtotal {
       display: block !important;
@@ -8961,6 +8985,7 @@ function openPrintApp2(innerHTML, opts = {}) {
 <body>
   <button id="__app2Back" type="button">← 元の画面へ戻る</button>
   ${wrappedInnerHTML}
+
   <script>
     (function () {
       let printed = false;
