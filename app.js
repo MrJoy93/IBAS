@@ -8854,18 +8854,22 @@ function openPrintApp2(innerHTML, opts = {}) {
       break-after: auto;
     }
 
-    .sheet-inner {
-      width: calc(var(--sheet-w) / var(--scale));
-      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-      max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-      margin: 0 auto;
-      padding: 0;
-      box-sizing: border-box;
-      overflow: hidden;
+.sheet-inner {
+  width: calc(var(--sheet-w) / var(--scale));
 
-      transform: translateY(var(--pc-shift-y)) scale(var(--scale));
-      transform-origin: top center;
-    }
+  /* ←ここが最重要 */
+  height: auto;
+  min-height: auto;
+  max-height: none;
+
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: visible;
+
+  transform: translateY(var(--pc-shift-y)) scale(var(--scale));
+  transform-origin: top center;
+}
 
     .print-sheet.rotate180 .sheet-inner {
       transform:
