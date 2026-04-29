@@ -8774,213 +8774,209 @@ function openPrintApp2(innerHTML, opts = {}) {
   <meta charset="utf-8">
   <title>${title}</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root {
-      --scale: ${scale};
-      --sheet-w: 90mm;
-      --sheet-h: 205mm;
-      --trim-bottom: ${trimBottomMM}mm;
-    }
+<style>
+  :root {
+    --scale: ${scale};
+    --sheet-w: 90mm;
+    --sheet-h: 205mm;
+    --trim-bottom: ${trimBottomMM}mm;
+  }
 
-    @page {
-      size: 90mm 205mm;
-      margin: 0;
-    }
+  @page {
+    size: 90mm 205mm;
+    margin: 0;
+  }
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #000;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-      font-family: 'ＭＳ 明朝', serif;
-    }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-family: 'ＭＳ 明朝', serif;
+  }
 
+  #__app2Back {
+    position: fixed;
+    right: 8px;
+    top: 8px;
+    padding: .5em .8em;
+    font-size: 12px;
+    border: 1px solid #888;
+    border-radius: 6px;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    z-index: 9999;
+  }
+
+  @media print {
     #__app2Back {
-      position: fixed;
-      right: 8px;
-      top: 8px;
-      padding: .5em .8em;
-      font-size: 12px;
-      border: 1px solid #888;
-      border-radius: 6px;
-      background: #fff;
-      color: #111;
-      cursor: pointer;
-      z-index: 9999;
+      display: none !important;
     }
+  }
 
-    @media print {
-      #__app2Back {
-        display: none !important;
-      }
-    }
+  .print-root {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+    background: #fff;
+    transform: none !important;
+  }
 
-    .print-root {
-      width: 100%;
-      margin: 0 auto;
-      padding: 0;
-      background: #fff;
-      transform: none !important;
-    }
+  .print-sheet {
+    width: var(--sheet-w);
+    height: var(--sheet-h);
+    margin: 0 auto;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+    box-sizing: border-box;
+    position: relative;
+    background: #fff;
+    transform: none !important;
+  }
 
-    .print-sheet {
-      width: var(--sheet-w);
-      height: var(--sheet-h);
-      margin: 0 auto;
-      overflow: hidden;
-      page-break-after: always;
-      break-after: page;
-      box-sizing: border-box;
-      position: relative;
-      background: #fff;
-      transform: none !important;
-    }
+  .print-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
 
-    .print-sheet:last-child {
-      page-break-after: auto;
-      break-after: auto;
-    }
+  .sheet-inner {
+    width: calc(var(--sheet-w) / var(--scale));
+    min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+    max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    transform: scale(var(--scale));
+    transform-origin: top center;
+  }
 
-    .sheet-inner {
-  width: calc(var(--sheet-w) / var(--scale));
-  min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-  max-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-  margin: 0 auto;
-  padding: 0;
-  box-sizing: border-box;
-  overflow: hidden;
+  .print-sheet.rotate180 .sheet-inner {
+    transform: rotate(180deg) scale(var(--scale));
+    transform-origin: center center;
+  }
 
-  transform: scale(var(--scale));
-  transform-origin: top center;
-}
+  .envelope {
+    box-sizing: border-box;
+    width: calc(84mm / var(--scale));
+    min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+    margin: 0 auto;
+    text-align: left;
+    font-family: 'ＭＳ 明朝', serif;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+    padding: calc(5mm / var(--scale));
+    color: #000 !important;
+    background: #fff !important;
+    transform: translateY(-6mm);
+  }
 
-.print-sheet.rotate180 .sheet-inner {
-  transform: rotate(180deg) scale(var(--scale));
-  transform-origin: center center;
-}
+  .print-sheet.rotate180 .envelope {
+    transform: translateY(-14mm);
+  }
 
-/* 印字本文そのものを上へ寄せる */
-.print-sheet .envelope {
-  transform: translateY(-10mm);
-}
+  .print-date {
+    text-align: left;
+    font-size: 11pt;
+    margin: 0 0 3mm 0;
+    color: #000 !important;
+  }
 
-.print-sheet.rotate180 .envelope {
-  transform: translateY(-14mm);
-}
+  .print-title {
+    text-align: center;
+    font-size: 14pt;
+    margin: 0 0 8mm 0;
+    font-weight: 700;
+    color: #000 !important;
+  }
 
-    .envelope {
-      box-sizing: border-box;
-      width: calc(84mm / var(--scale));
-      min-height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
-      margin: 0 auto;
-      text-align: left;
-      font-family: 'ＭＳ 明朝', serif;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: .02em;
-      padding: calc(5mm / var(--scale));
-      color: #000 !important;
-      background: #fff !important;
-    }
+  .castName {
+    display: block !important;
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    font-size: 18pt !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    margin: 2mm 0 3mm 0 !important;
+    min-height: 8mm !important;
+    padding-top: 2mm !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
 
-    .print-date {
-      text-align: left;
-      font-size: 11pt;
-      margin: 0 0 3mm 0;
-      color: #000 !important;
-    }
+  .subtotal {
+    display: block !important;
+    color: #333 !important;
+    font-size: 14pt !important;
+    font-weight: 700 !important;
+    margin-top: 2mm !important;
+    margin-bottom: 2mm !important;
+  }
 
-    .print-title {
-      text-align: center;
-      font-size: 14pt;
-      margin: 0 0 8mm 0;
-      font-weight: 700;
-      color: #000 !important;
-    }
+  .totalAmount {
+    display: block !important;
+    color: #0066cc !important;
+    font-size: 15pt !important;
+    font-weight: 800 !important;
+    margin-top: 3mm !important;
+    margin-bottom: 2mm !important;
+  }
 
-    .castName {
-  display: block !important;
-  color: #000 !important;
-  -webkit-text-fill-color: #000 !important;
-  font-size: 18pt !important;
-  font-weight: 800 !important;
-  line-height: 1.25 !important;
+  .finalAmount {
+    display: block !important;
+    color: #009944 !important;
+    font-size: 18pt !important;
+    font-weight: 900 !important;
+    margin-top: 4mm !important;
+    margin-bottom: 3mm !important;
+  }
 
-  margin: 2mm 0 3mm 0 !important;
-  min-height: 8mm !important;
-  padding-top: 2mm !important;
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
 
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
+  .receipt-row .label {
+    margin-right: 5mm;
+    white-space: nowrap;
+  }
 
-    .subtotal {
-      display: block !important;
-      color: #333 !important;
-      font-size: 14pt !important;
-      font-weight: 700 !important;
-      margin-top: 2mm !important;
-      margin-bottom: 2mm !important;
-    }
+  .receipt-row .value {
+    font-weight: 700;
+    font-size: 12pt;
+    text-align: right;
+    color: #000 !important;
+  }
 
-    .totalAmount {
-      display: block !important;
-      color: #0066cc !important;
-      font-size: 15pt !important;
-      font-weight: 800 !important;
-      margin-top: 3mm !important;
-      margin-bottom: 2mm !important;
-    }
+  .page-index {
+    position: absolute;
+    right: 4mm;
+    bottom: 3mm;
+    font-size: 8pt;
+    color: #555;
+    font-family: Arial, sans-serif;
+    font-weight: 400;
+  }
 
-    .finalAmount {
-      display: block !important;
-      color: #009944 !important;
-      font-size: 18pt !important;
-      font-weight: 900 !important;
-      margin-top: 4mm !important;
-      margin-bottom: 3mm !important;
-    }
+  .rainbow-print {
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+  }
 
-    .receipt-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-
-    .receipt-row .label {
-      margin-right: 5mm;
-      white-space: nowrap;
-    }
-
-    .receipt-row .value {
-      font-weight: 700;
-      font-size: 12pt;
-      text-align: right;
-      color: #000 !important;
-    }
-
-    .page-index {
-      position: absolute;
-      right: 4mm;
-      bottom: 3mm;
-      font-size: 8pt;
-      color: #555;
-      font-family: Arial, sans-serif;
-      font-weight: 400;
-    }
-
-    .rainbow-print {
-      background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-weight: 900;
-    }
-
-  </style>
+  .sheet-inner * {
+    color: inherit;
+  }
+</style>
 </head>
 <body>
   <button id="__app2Back" type="button">← 元の画面へ戻る</button>

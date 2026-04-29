@@ -3475,15 +3475,6 @@ body[data-active-app="app1"] #app1.content{
 
 }
 
-/*スマホ iPadのみ反転印刷*/
-@media print and (hover: none) and (pointer: coarse) {
-
-  body {
-    transform: rotate(180deg);
-    transform-origin: center center;
-  }
-
-}
 
 /* =========================================
    APP2 グリッド 3列表示の幅強制
