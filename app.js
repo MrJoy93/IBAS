@@ -3660,11 +3660,12 @@ function getSelectedDetail(formOrRow) {
 }
 
 function confirmAndCalculate(e) {
-  let subtotal = 0;
   let totalAmount = 0;
   let finalAmount = 0;
 
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+  const isBulkRegister = !!e?._fromBulkRegister;
 
   const castName   = document.getElementById('castName').value || '（名前なし）';
   const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
@@ -3683,66 +3684,53 @@ function confirmAndCalculate(e) {
   });
 
   const bottles = [];
-document.querySelectorAll('.bottle-form').forEach(form => {
-  const det = getSelectedDetail(form);
-  const spl = form.querySelector('.splitCount')?.value || '';
-  const qty = form.querySelector('.bottleQuantity')?.value || '';
-  const amtNum = parseInt(
-    (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''),
-    10
-  ) || 0;
+  document.querySelectorAll('.bottle-form').forEach(form => {
+    const det = getSelectedDetail(form);
+    const spl = form.querySelector('.splitCount')?.value || '';
+    const qty = form.querySelector('.bottleQuantity')?.value || '';
+    const amtNum = parseInt(
+      (form.querySelector('.bottleAmount')?.value || '').replace(/,/g, ''),
+      10
+    ) || 0;
 
-  if (det || spl || qty || amtNum) {
-    const amt = amtNum.toLocaleString();
-    bottles.push(`${det}|${spl}|${qty}|${amt}`);
-  }
-});
+    if (det || spl || qty || amtNum) {
+      const amt = amtNum.toLocaleString();
+      bottles.push(`${det}|${spl}|${qty}|${amt}`);
+    }
+  });
 
-  // === 手動登録時のみ確認ダイアログを表示 ===
-  if (e) {
-    let msg = `内容を確認してください。\n\n`
-            + `キャスト名:${castName}\n体験及び貸出:${experience}\n送迎金額:¥${sendoff}\n`
-            + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
-            + (bottles.length   ? `--- ボトル明細 ---\n${bottles.join('\n')}\n`   : '');
+  if (e && !isBulkRegister) {
+    const msg = `内容を確認してください。\n\n`
+      + `キャスト名:${castName}\n体験及び貸出:${experience}\n送迎金額:¥${sendoff}\n`
+      + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
+      + (bottles.length ? `--- ボトル明細 ---\n${bottles.join('\n')}\n` : '');
+
     if (!window.confirm(msg)) return false;
   }
 
-  // --- 計算処理 ---
   if (typeof calculate === 'function') calculate();
   if (typeof updateCalculations === 'function') updateCalculations();
-  requestAnimationFrame(() => navScrollTo('app2-resultSection', 'smooth'));
 
-  // #result から合計金額を抽出
+  if (!isBulkRegister) {
+    requestAnimationFrame(() => navScrollTo('app2-resultSection', 'smooth'));
+  }
+
   const resultText = document.querySelector('#result')?.innerText || '';
   const match = resultText.match(/合計[^\d]*(\d[\d,]*)/);
+
   if (match) {
-    totalAmount = parseInt(match[1].replace(/,/g,''),10);
+    totalAmount = parseInt(match[1].replace(/,/g, ''), 10);
     finalAmount = totalAmount;
   }
 
-  // === ✅ 手動登録時のみ履歴リスト追加 ===
-  if (e) {
-    const historyEl = document.getElementById('historyList');
-    if (historyEl) {
-      const li = document.createElement('li');
-      const bottleText = bottles.length
-        ? bottles.map(b=>{
-            const [det,spl,qty,amt]=b.split('|');
-            return `¥${amt}（${det}${spl?'/割:'+spl:''}${qty?'/数量:'+qty:''}）`;
-          }).join('・')
-        : 'ボトルなし';
-      li.textContent = `${castName}｜合計¥${finalAmount.toLocaleString()}｜${bottleText}`;
-      historyEl.prepend(li);
-    }
-  }
 
-  // === 🔵 ボトル履歴保存（手動・一括どちらでも） ===
   try {
     if (bottles.length > 0) {
       const bottleHistory = JSON.parse(localStorage.getItem('BOTTLE_HISTORY') || '[]');
       bottles.forEach(b => bottleHistory.unshift(b));
       localStorage.setItem('BOTTLE_HISTORY', JSON.stringify(bottleHistory));
     }
+
     if (typeof refreshBottleDropdownsFromHistory === 'function') {
       refreshBottleDropdownsFromHistory();
     }
@@ -5611,72 +5599,78 @@ Array.from(grid.querySelectorAll('.bulk-mainrow')).forEach(tr => {
 
 // === 一括登録 ============================================================
 async function bulkRegister() {
-  const tb = document.querySelector('#bulkGrid tbody');
-  if (!tb) {
-    alert('内部テーブルが見つかりません');
-    return;
-  }
-
-  const mains = [...tb.querySelectorAll('.bulk-mainrow')];
-
-  const rows = mains.map(m => {
-    const nums = {};
-
-    nums['2k'] = !!m.querySelector('[data-k="2k"]')?.checked;
-    nums.f2 = parseInt(m.querySelector('[data-k="f2"]')?.value || '0', 10) || 0;
-
-    [
-      'jounai', 'honshiri', 'douhan', 'eda', 'help',
-      'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
-    ].forEach(k => {
-      nums[k] = parseInt(m.querySelector(`[data-k="${k}"]`)?.value || '0', 10) || 0;
-    });
-
-    const bottles = [];
-    let n = m.nextElementSibling;
-
-    while (n && n.classList.contains('btl-subrow')) {
-      const detail = n.querySelector('.bottleDetails')?.value || '';
-      const split  = n.querySelector('.splitCount')?.value || '';
-      const qty    = n.querySelector('.bottleQuantity')?.value || '';
-      const amount = parseInt((n.querySelector('.bottleAmount')?.value || '0').replace(/,/g, ''), 10) || 0;
-
-      if (detail || split || qty || amount) {
-        bottles.push({ detail, split, qty, amount });
-      }
-
-      n = n.nextElementSibling;
-    }
-
-    return {
-      mainRow: m,
-      name: m.querySelector('.bulk-name')?.value || '',
-      exp: m.querySelector('.bulk-exp')?.checked || false,
-      send: parseInt(m.querySelector('.bulk-send')?.value || '0', 10) || 0,
-      nums,
-      bottles
-    };
-  }).filter(r =>
-    r.name ||
-    r.exp ||
-    r.send ||
-    Object.values(r.nums).some(v => !!v) ||
-    r.bottles.length
-  );
-
-  if (!rows.length) {
-    alert('入力がありません');
-    return;
-  }
-
-  if (!confirm(`${rows.length}人分を登録しますか？`)) {
-    return;
-  }
+  if (window._bulkRegisterRunning) return;
+  window._bulkRegisterRunning = true;
 
   const prevSuppress = window._suppressSyncObservers;
-  window._suppressSyncObservers = true;
 
   try {
+    const { grid } = getBulkDom();
+    const tb = grid?.tBodies?.[0];
+
+    if (!tb) {
+      alert('一括入力テーブルが見つかりません');
+      return;
+    }
+
+    const mains = [...tb.querySelectorAll('.bulk-mainrow')];
+
+    const rows = mains.map(m => {
+      const nums = {};
+
+      nums['2k'] = !!m.querySelector('[data-k="2k"]')?.checked;
+      nums.f2 = parseInt(m.querySelector('[data-k="f2"]')?.value || '0', 10) || 0;
+
+      [
+        'jounai', 'honshiri', 'douhan', 'eda', 'help',
+        'set40', 'set20', 'vip', 'a', 'b', 'c', 'd', 'e'
+      ].forEach(k => {
+        nums[k] = parseInt(m.querySelector(`[data-k="${k}"]`)?.value || '0', 10) || 0;
+      });
+
+      const bottles = [];
+      let n = m.nextElementSibling;
+
+      while (n && n.classList.contains('btl-subrow')) {
+        const detail = n.querySelector('.bottleDetails')?.value || '';
+        const split  = n.querySelector('.splitCount')?.value || '';
+        const qty    = n.querySelector('.bottleQuantity')?.value || '';
+        const amount = parseInt((n.querySelector('.bottleAmount')?.value || '0').replace(/,/g, ''), 10) || 0;
+
+        if (detail || split || qty || amount) {
+          bottles.push({ detail, split, qty, amount });
+        }
+
+        n = n.nextElementSibling;
+      }
+
+      return {
+        mainRow: m,
+        name: m.querySelector('.bulk-name')?.value || '',
+        exp: m.querySelector('.bulk-exp')?.checked || false,
+        send: parseInt(m.querySelector('.bulk-send')?.value || '0', 10) || 0,
+        nums,
+        bottles
+      };
+    }).filter(r =>
+      r.name ||
+      r.exp ||
+      r.send ||
+      Object.values(r.nums).some(v => !!v) ||
+      r.bottles.length
+    );
+
+    if (!rows.length) {
+      alert('入力がありません');
+      return;
+    }
+
+    if (!confirm(`${rows.length}人分を登録しますか？`)) {
+      return;
+    }
+
+    window._suppressSyncObservers = true;
+
     for (const r of rows) {
       setValue('castName', r.name);
       setChecked('experienceAndRental', r.exp);
@@ -5718,31 +5712,37 @@ async function bulkRegister() {
         });
       }
 
-      // 登録ボタン側で calculate 系を呼ぶ想定なので、ここでは直接呼ばない
-      document.getElementById('registerButton')?.click();
+      if (typeof window.confirmAndCalculate === 'function') {
+        await window.confirmAndCalculate({
+          preventDefault() {},
+          _fromBulkRegister: true,
+          _skipConfirm: true
+        });
+      }
 
       if (typeof rememberBottleSelectionsFromMainRow === 'function') {
         rememberBottleSelectionsFromMainRow(r.mainRow);
       }
 
-      // UIフリーズ軽減
       await new Promise(resolve => setTimeout(resolve, 0));
     }
+
+    if (typeof createHistoryIndex === 'function') {
+      createHistoryIndex();
+    }
+
+    if (typeof window.scheduleAutosave === 'function') {
+      window.scheduleAutosave();
+    } else if (typeof window.saveAllApps === 'function') {
+      window.saveAllApps();
+    }
+
+    alert('一括登録完了');
+
   } finally {
     window._suppressSyncObservers = prevSuppress;
+    window._bulkRegisterRunning = false;
   }
-
-  if (typeof createHistoryIndex === 'function') {
-    createHistoryIndex();
-  }
-
-  if (typeof window.scheduleAutosave === 'function') {
-    window.scheduleAutosave();
-  } else if (typeof window.saveAllApps === 'function') {
-    window.saveAllApps();
-  }
-
-  alert('一括登録完了');
 }
 
   // === 初期化 ==============================================================
@@ -6654,29 +6654,29 @@ document.addEventListener('click', (e)=>{
 
 function createHistoryIndex() {
   const table = document.getElementById('historyIndexTable');
-  if (!table) {
-    console.warn('[createHistoryIndex] historyIndexTable not found');
-    return;
-  }
+  if (!table) return;
 
   const tbody = document.getElementById('historyIndexBody');
-  if (!tbody) {
-    console.warn('[createHistoryIndex] historyIndexBody not found');
-    return;
-  }
+  if (!tbody) return;
 
   const historyList = document.getElementById('historyList');
-  if (!historyList) {
-    console.warn('[createHistoryIndex] historyList not found');
-    return;
-  }
+  if (!historyList) return;
 
   const countEl = document.getElementById('historyIndexCount');
 
-  // 履歴本体そのものを使う
   const items = Array
-  .from(historyList.querySelectorAll(':scope > li'))
-  .reverse();   // ← これ追加
+    .from(historyList.querySelectorAll(':scope > li'))
+    .filter(item => {
+      const castNameEl = item.querySelector('.castName');
+      if (!castNameEl) return false;
+
+      const name = castNameEl.textContent
+        .replace(/^\s*\d+\.\s*/, '')
+        .trim();
+
+      return !!name && !/^履歴\d+$/.test(name);
+    })
+    .reverse();
 
   tbody.innerHTML = '';
 
@@ -6700,16 +6700,9 @@ function createHistoryIndex() {
   items.forEach((item, index) => {
     const castNameEl = item.querySelector('.castName');
 
-    let name = '';
-    if (castNameEl) {
-      name = castNameEl.textContent
-        .replace(/^\s*\d+\.\s*/, '')
-        .trim();
-    }
-
-    if (!name) {
-      name = `履歴${index + 1}`;
-    }
+    const name = castNameEl.textContent
+      .replace(/^\s*\d+\.\s*/, '')
+      .trim();
 
     if (index % cols === 0) {
       tr = document.createElement('tr');
@@ -6725,14 +6718,12 @@ function createHistoryIndex() {
     btn.textContent = name;
 
     btn.addEventListener('click', () => {
-      // 元仕様：該当履歴へスクロール
       if (typeof scrollWithOffset === 'function') {
         scrollWithOffset(item);
       } else {
         item.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
 
-      // 軽く視覚フィードバック
       item.classList.add('history-target-hit');
       setTimeout(() => {
         item.classList.remove('history-target-hit');
@@ -6744,14 +6735,13 @@ function createHistoryIndex() {
   });
 
   const remainder = items.length % cols;
-  if (remainder !== 0 && tr) {
-    for (let i = 0; i < cols - remainder; i++) {
-      const emptyTd = document.createElement('td');
-      emptyTd.className = 'history-index-cell empty';
-      tr.appendChild(emptyTd);
+  if (remainder && tr) {
+    for (let i = remainder; i < cols; i++) {
+      const td = document.createElement('td');
+      td.className = 'history-index-cell empty';
+      tr.appendChild(td);
     }
   }
-
 }
 
 // createHistoryIndex の多重発火を1フレーム1回に圧縮
