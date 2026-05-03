@@ -3666,6 +3666,7 @@ function confirmAndCalculate(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
   const isBulkRegister = !!e?._fromBulkRegister;
+  const skipConfirm = !!e?._skipConfirm || !!e?._fromBulkPrint || isBulkRegister;
 
   const castName   = document.getElementById('castName').value || '（名前なし）';
   const experience = document.getElementById('experienceAndRental').checked ? '有り' : '無し';
@@ -3680,7 +3681,7 @@ function confirmAndCalculate(e) {
   const mainItems = [];
   Object.keys(labels).forEach(key => {
     const val = document.getElementById(key)?.value;
-    if (parseInt(val)) mainItems.push(`${labels[key]} ×${val}`);
+    if (parseInt(val, 10)) mainItems.push(`${labels[key]} ×${val}`);
   });
 
   const bottles = [];
@@ -3699,7 +3700,7 @@ function confirmAndCalculate(e) {
     }
   });
 
-  if (e && !isBulkRegister) {
+  if (e && !skipConfirm) {
     const msg = `内容を確認してください。\n\n`
       + `キャスト名:${castName}\n体験及び貸出:${experience}\n送迎金額:¥${sendoff}\n`
       + (mainItems.length ? `--- 伝票内訳 ---\n${mainItems.join('\n')}\n` : '')
@@ -3711,7 +3712,7 @@ function confirmAndCalculate(e) {
   if (typeof calculate === 'function') calculate();
   if (typeof updateCalculations === 'function') updateCalculations();
 
-  if (!isBulkRegister) {
+  if (!skipConfirm) {
     requestAnimationFrame(() => navScrollTo('app2-resultSection', 'smooth'));
   }
 
@@ -3723,9 +3724,8 @@ function confirmAndCalculate(e) {
     finalAmount = totalAmount;
   }
 
-
   try {
-    if (bottles.length > 0) {
+    if (bottles.length > 0 && !e?._fromBulkPrint) {
       const bottleHistory = JSON.parse(localStorage.getItem('BOTTLE_HISTORY') || '[]');
       bottles.forEach(b => bottleHistory.unshift(b));
       localStorage.setItem('BOTTLE_HISTORY', JSON.stringify(bottleHistory));
@@ -8754,9 +8754,16 @@ function openPrintApp2(innerHTML, opts = {}) {
       if (!sheet.querySelector(':scope > .sheet-inner')) {
         const inner = document.createElement('div');
         inner.className = 'sheet-inner';
-
         while (sheet.firstChild) inner.appendChild(sheet.firstChild);
         sheet.appendChild(inner);
+      }
+
+      const inner = sheet.querySelector(':scope > .sheet-inner');
+      if (inner && !inner.querySelector(':scope > .envelope')) {
+        const raw = inner.innerHTML.trim();
+        if (!/class\s*=\s*["'][^"']*envelope/.test(raw)) {
+          inner.innerHTML = `<div class="envelope">${raw}</div>`;
+        }
       }
     });
   } else {
@@ -8777,7 +8784,6 @@ function openPrintApp2(innerHTML, opts = {}) {
     `;
   }
 
-  // 再ラップ後にも戻るボタン除去
   temp.querySelectorAll('#__app2Back, button').forEach(el => {
     const text = (el.textContent || '').trim();
     if (el.id === '__app2Back' || text.includes('元の画面へ戻る')) {
@@ -8806,10 +8812,7 @@ function openPrintApp2(innerHTML, opts = {}) {
       --env-pad-top: 5mm;
       --env-pad-bottom: 5mm;
 
-      /* PC：氏名上切れ防止 */
       --pc-shift-y: 6mm;
-
-      /* iOS回転時：transformではなくpaddingで補正 */
       --ios-env-pad-top: 14mm;
     }
 
@@ -8821,7 +8824,6 @@ function openPrintApp2(innerHTML, opts = {}) {
     html,
     body {
       width: var(--sheet-w);
-      height: var(--sheet-h);
       margin: 0;
       padding: 0;
       background: #fff;
@@ -8829,10 +8831,11 @@ function openPrintApp2(innerHTML, opts = {}) {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       font-family: 'ＭＳ 明朝', serif;
-      overflow: hidden;
+      overflow: visible !important;
     }
 
     #__app2Back,
+    button,
     button[id="__app2Back"] {
       display: none !important;
       visibility: hidden !important;
@@ -8843,7 +8846,7 @@ function openPrintApp2(innerHTML, opts = {}) {
       margin: 0;
       padding: 0;
       background: #fff;
-      overflow: hidden;
+      overflow: visible !important;
       transform: none !important;
     }
 
@@ -8855,47 +8858,51 @@ function openPrintApp2(innerHTML, opts = {}) {
       box-sizing: border-box;
       position: relative;
       background: #fff;
-      overflow: hidden;
+      overflow: hidden !important;
       transform: none !important;
 
-      page-break-after: always;
-      break-after: page;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
 
     .print-sheet:last-child {
-      page-break-after: auto;
-      break-after: auto;
+      page-break-after: auto !important;
+      break-after: auto !important;
     }
 
     .sheet-inner {
-      width: calc(var(--sheet-w) / var(--scale));
-      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      width: var(--sheet-w);
+      height: var(--sheet-h);
       margin: 0 auto;
       padding: 0;
       box-sizing: border-box;
-      overflow: hidden;
-
-      transform: translateY(var(--pc-shift-y)) scale(var(--scale));
+      overflow: hidden !important;
+      transform: none !important;
       transform-origin: top center;
     }
 
+    .print-sheet:not(.rotate180) .sheet-inner {
+      padding-top: var(--pc-shift-y);
+    }
+
     .print-sheet.rotate180 .sheet-inner {
-      transform: rotate(180deg) scale(var(--scale));
-      transform-origin: center center;
+      transform: rotate(180deg) !important;
+      transform-origin: center center !important;
+      padding-top: 0;
     }
 
     .envelope {
       box-sizing: border-box;
-      width: calc(var(--env-w) / var(--scale));
-      height: calc((var(--sheet-h) - var(--trim-bottom)) / var(--scale));
+      width: var(--env-w);
+      height: calc(var(--sheet-h) - var(--trim-bottom));
       margin: 0 auto;
       padding:
-        calc(var(--env-pad-top) / var(--scale))
-        calc(var(--env-pad-x) / var(--scale))
-        calc(var(--env-pad-bottom) / var(--scale))
-        calc(var(--env-pad-x) / var(--scale));
+        var(--env-pad-top)
+        var(--env-pad-x)
+        var(--env-pad-bottom)
+        var(--env-pad-x);
 
       text-align: left;
       font-family: 'ＭＳ 明朝', serif;
@@ -8905,12 +8912,12 @@ function openPrintApp2(innerHTML, opts = {}) {
 
       color: #000 !important;
       background: #fff !important;
-      overflow: hidden;
+      overflow: hidden !important;
       transform: none !important;
     }
 
     .print-sheet.rotate180 .envelope {
-      padding-top: calc(var(--ios-env-pad-top) / var(--scale)) !important;
+      padding-top: var(--ios-env-pad-top) !important;
     }
 
     .print-date {
@@ -9008,6 +9015,27 @@ function openPrintApp2(innerHTML, opts = {}) {
 
     .sheet-inner * {
       color: inherit;
+    }
+
+    @media print {
+      html,
+      body,
+      .print-root {
+        width: var(--sheet-w) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+
+      .print-sheet {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      .print-sheet:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
     }
   </style>
 </head>
@@ -9239,13 +9267,9 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
     throw new Error('#result が見つかりません');
   }
 
-  const originalResultHtml = resultEl.innerHTML;
+  const originalHtml = resultEl.innerHTML;
   const sheets = [];
-
-  const ua = navigator.userAgent || '';
-  const isIOS =
-    /iPhone|iPad|iPod/i.test(ua) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const ios = typeof isIOS === 'function' ? isIOS() : false;
 
   try {
     for (let i = 0; i < selectedRows.length; i++) {
@@ -9253,63 +9277,41 @@ async function collectBulkSelectedPrintSheets(selectedRows) {
 
       pushBulkRowToNormalForm(row);
 
-      if (typeof window.calculate === 'function') {
-        window.calculate();
+      resultEl.innerHTML = '';
+
+      if (typeof window.confirmAndCalculate === 'function') {
+        const ret = window.confirmAndCalculate({
+          preventDefault() {},
+          _fromBulkPrint: true,
+          _skipConfirm: true
+        });
+        if (ret && typeof ret.then === 'function') await ret;
+      } else if (typeof window.calculate === 'function') {
+        const ret = window.calculate();
+        if (ret && typeof ret.then === 'function') await ret;
       }
 
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => setTimeout(resolve, 80));
-
-      let html = (resultEl.innerHTML || '').trim();
+      let html = resultEl.innerHTML.trim();
       if (!html) continue;
 
-      // 氏名表示を強制補正
-      const temp = document.createElement('div');
-      temp.innerHTML = html;
-
-      const castNameInput = document.getElementById('castName');
-      const castNameText = (castNameInput?.value || '').trim();
-
-      let castNode = temp.querySelector('.castName');
-      if (!castNode && castNameText) {
-        castNode = document.createElement('div');
-        castNode.className = 'castName';
-        castNode.textContent = castNameText;
-
-        const firstTitle =
-          temp.querySelector('.print-title') ||
-          temp.firstElementChild;
-
-        if (firstTitle && firstTitle.parentNode) {
-          firstTitle.parentNode.insertBefore(castNode, firstTitle.nextSibling);
-        } else {
-          temp.prepend(castNode);
-        }
-      } else if (castNode && castNameText && !castNode.textContent.trim()) {
-        castNode.textContent = castNameText;
+      const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
+      if (!hasEnvelope) {
+        html = `<div class="envelope">${html}</div>`;
       }
 
-      html = temp.innerHTML;
-
-      const hasEnvelope = /class\s*=\s*["'][^"']*envelope/.test(html);
-      const wrapped = hasEnvelope
-        ? html
-        : `<div class="envelope">${html}</div>`;
-
       sheets.push(`
-        <section class="print-sheet ${isIOS ? 'rotate180' : ''}">
+        <section class="print-sheet ${ios ? 'rotate180' : ''}">
           <div class="sheet-inner">
-            ${wrapped}
+            ${html}
           </div>
-          <div class="page-index">${i + 1} / ${selectedRows.length}</div>
         </section>
       `);
     }
   } finally {
-    resultEl.innerHTML = originalResultHtml;
+    resultEl.innerHTML = originalHtml;
   }
 
-  return sheets.join('');
+  return sheets;
 }
 
 async function printSelectedRows() {
@@ -9326,6 +9328,8 @@ async function printSelectedRows() {
     return checked && !isBulkRowEmpty(tr);
   });
 
+  console.log('[PRINT] selected count =', selected.length);
+
   if (!selected.length) {
     alert('出力する行をチェックしてください。');
     return;
@@ -9334,7 +9338,16 @@ async function printSelectedRows() {
   suspendSyncForPrint(8000);
 
   try {
-    const sheetsHtml = await collectBulkSelectedPrintSheets(selected);
+    const sheets = await collectBulkSelectedPrintSheets(selected);
+
+    const sheetsHtml = Array.isArray(sheets)
+      ? sheets.join('')
+      : String(sheets || '');
+
+    console.log('[PRINT] sheets type =', Array.isArray(sheets) ? 'array' : typeof sheets);
+    console.log('[PRINT] sheets count =', Array.isArray(sheets) ? sheets.length : 'not array');
+    console.log('[PRINT] sheetsHtml length =', sheetsHtml.length);
+    console.log('[PRINT] print-sheet count =', (sheetsHtml.match(/print-sheet/g) || []).length);
 
     if (!sheetsHtml) {
       alert('印刷データを作成できませんでした。');
@@ -9342,14 +9355,14 @@ async function printSelectedRows() {
     }
 
     openPrintApp2(
-  `<div class="print-root">${sheetsHtml}</div>`,
-  {
-    scale: 1.00,
-    rotateOnMobile: true,
-    trimBottomMM: 0,
-    title: 'APP2 Combined Print'
-  }
-);
+      `<div class="print-root">${sheetsHtml}</div>`,
+      {
+        scale: 1.00,
+        rotateOnMobile: true,
+        trimBottomMM: 0,
+        title: 'APP2 Combined Print'
+      }
+    );
   } catch (err) {
     console.error('まとめ印刷エラー:', err);
     alert('まとめ印刷に失敗しました。');
