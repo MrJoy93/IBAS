@@ -299,7 +299,7 @@ function repositionKeypadForIPhoneSafari() {
 
   const isLandscape = viewportWidth > viewportHeight;
 
-  const scale = isLandscape ? 0.78 : 1;
+  const scale = isLandscape ? 0.72 : 1;
 
   const keypadWidth = Math.min(
     isLandscape ? 300 : 360,
@@ -312,12 +312,16 @@ function repositionKeypadForIPhoneSafari() {
   keypad.style.setProperty('max-width', 'calc(100vw - 16px)', 'important');
   keypad.style.setProperty('z-index', '999999', 'important');
 
-  keypad.style.setProperty('scale', String(scale), 'important');
+  keypad.style.removeProperty('scale');
 
-  const keypadHeight = keypad.offsetHeight || 0;
-  const scaledKeypadHeight = keypadHeight * scale;
+  const rawHeight = keypad.offsetHeight || 0;
+  const visualHeight = rawHeight * scale;
 
-  const top = Math.max(gap, viewportBottom - scaledKeypadHeight - gap);
+  const top = Math.max(
+    gap,
+    viewportBottom - visualHeight - gap
+  );
+
   keypad.style.setProperty('top', `${Math.round(top)}px`, 'important');
 
   if (isLandscape) {
@@ -328,8 +332,8 @@ function repositionKeypadForIPhoneSafari() {
 
     keypad.style.setProperty('left', 'auto', 'important');
     keypad.style.setProperty('right', `${right}px`, 'important');
-    keypad.style.setProperty('transform', 'none', 'important');
-    keypad.style.setProperty('transform-origin', 'bottom right', 'important');
+    keypad.style.setProperty('transform', `scale(${scale})`, 'important');
+    keypad.style.setProperty('transform-origin', 'top right', 'important');
   } else {
     keypad.style.setProperty('left', '50%', 'important');
     keypad.style.setProperty('right', 'auto', 'important');
