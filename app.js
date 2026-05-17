@@ -290,23 +290,39 @@ function repositionKeypadForIPhoneSafari() {
   const gap = 8;
 
   const viewportTop = vv ? vv.offsetTop : 0;
+  const viewportLeft = vv ? vv.offsetLeft : 0;
+  const viewportWidth = vv ? vv.width : window.innerWidth;
   const viewportHeight = vv ? vv.height : window.innerHeight;
+
   const viewportBottom = viewportTop + viewportHeight;
+  const viewportRight = viewportLeft + viewportWidth;
+
+  const isLandscape = viewportWidth > viewportHeight;
 
   const keypadHeight = keypad.offsetHeight || 0;
-  const keypadWidth = Math.min(360, window.innerWidth - 16);
+  const keypadWidth = Math.min(
+    isLandscape ? 420 : 360,
+    viewportWidth - 16
+  );
 
   keypad.style.setProperty('position', 'fixed', 'important');
-  keypad.style.setProperty('left', '50%', 'important');
-  keypad.style.setProperty('right', 'auto', 'important');
   keypad.style.setProperty('bottom', 'auto', 'important');
   keypad.style.setProperty('width', `${keypadWidth}px`, 'important');
   keypad.style.setProperty('max-width', 'calc(100vw - 16px)', 'important');
-  keypad.style.setProperty('transform', 'translateX(-50%)', 'important');
   keypad.style.setProperty('z-index', '999999', 'important');
 
   const top = Math.max(gap, viewportBottom - keypadHeight - gap);
   keypad.style.setProperty('top', `${Math.round(top)}px`, 'important');
+
+  if (isLandscape) {
+    keypad.style.setProperty('left', 'auto', 'important');
+    keypad.style.setProperty('right', `${Math.round(window.innerWidth - viewportRight + gap)}px`, 'important');
+    keypad.style.setProperty('transform', 'none', 'important');
+  } else {
+    keypad.style.setProperty('left', '50%', 'important');
+    keypad.style.setProperty('right', 'auto', 'important');
+    keypad.style.setProperty('transform', 'translateX(-50%)', 'important');
+  }
 }
 
 function scheduleRepositionKeypadForIPhoneSafari() {
@@ -858,7 +874,7 @@ window.addEventListener('orientationchange', () => {
 
   keypad.addEventListener('touchstart', (e) => {
     scheduleRepositionKeypadForIPhoneSafari();
-    
+
     const btn = e.target.closest('button');
     if (!btn || !activeInput) return;
 

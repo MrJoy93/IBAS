@@ -3565,12 +3565,18 @@ body[data-active-app="app2"] #bulkGrid td:nth-child(3) {
   @media screen and (max-width: 768px) {
     #bulkCustomKeypad,
     #bulkCustomKeypad.bulk-custom-keypad {
-      right: auto !important;
       bottom: auto !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
       max-width: calc(100vw - 16px) !important;
       z-index: 999999 !important;
+    }
+  }
+
+  @media screen and (max-width: 932px) and (orientation: landscape) {
+    #bulkCustomKeypad,
+    #bulkCustomKeypad.bulk-custom-keypad {
+      left: auto !important;
+      right: 8px !important;
+      transform: none !important;
     }
   }
 }
