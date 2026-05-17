@@ -274,6 +274,52 @@ function installBulkCustomKeypad() {
     return isIOS || isAndroid || (hasTouch && coarsePointer);
   }
 
+  function isIPhoneLikeForKeypad() {
+  const ua = navigator.userAgent || '';
+  const isIPhone = /iPhone|iPod/i.test(ua);
+
+  // iPadは除外。スマホ幅のiOS Safariだけ対象。
+  return isIPhone && window.innerWidth <= 768;
+}
+
+function repositionKeypadForIPhoneSafari() {
+  if (!isIPhoneLikeForKeypad()) return;
+  if (!keypad || keypad.hidden) return;
+
+  const vv = window.visualViewport;
+  const gap = 8;
+
+  const viewportTop = vv ? vv.offsetTop : 0;
+  const viewportHeight = vv ? vv.height : window.innerHeight;
+  const viewportBottom = viewportTop + viewportHeight;
+
+  const keypadHeight = keypad.offsetHeight || 0;
+  const keypadWidth = Math.min(360, window.innerWidth - 16);
+
+  keypad.style.setProperty('position', 'fixed', 'important');
+  keypad.style.setProperty('left', '50%', 'important');
+  keypad.style.setProperty('right', 'auto', 'important');
+  keypad.style.setProperty('bottom', 'auto', 'important');
+  keypad.style.setProperty('width', `${keypadWidth}px`, 'important');
+  keypad.style.setProperty('max-width', 'calc(100vw - 16px)', 'important');
+  keypad.style.setProperty('transform', 'translateX(-50%)', 'important');
+  keypad.style.setProperty('z-index', '999999', 'important');
+
+  const top = Math.max(gap, viewportBottom - keypadHeight - gap);
+  keypad.style.setProperty('top', `${Math.round(top)}px`, 'important');
+}
+
+function scheduleRepositionKeypadForIPhoneSafari() {
+  if (!isIPhoneLikeForKeypad()) return;
+
+  requestAnimationFrame(() => {
+    repositionKeypadForIPhoneSafari();
+  });
+
+  setTimeout(repositionKeypadForIPhoneSafari, 80);
+  setTimeout(repositionKeypadForIPhoneSafari, 240);
+}
+
   const isMobileLike = isCustomKeypadDevice();
 
   // PC時はテンキー完全無効化
@@ -419,26 +465,28 @@ function installBulkCustomKeypad() {
   }
 
   function showKeypad(input) {
-    if (!input) return;
+  if (!input) return;
 
-    clearActiveState();
+  clearActiveState();
 
-    activeInput = input;
-    activeInput.classList.add('bulk-custom-keypad-active');
+  activeInput = input;
+  activeInput.classList.add('bulk-custom-keypad-active');
 
-    // フォーカス移動直後は次の1打を上書き扱い
-    replaceOnNextInput = true;
+  replaceOnNextInput = true;
 
-    if (keypadTitle) {
-      keypadTitle.textContent = `入力中: ${getLabel(input)}`;
-    }
-
-    keypad.hidden = false;
-
-    requestAnimationFrame(() => {
-      ensureCustomKeypadTargetVisible(activeInput);
-    });
+  if (keypadTitle) {
+    keypadTitle.textContent = `入力中: ${getLabel(input)}`;
   }
+
+  keypad.hidden = false;
+
+  scheduleRepositionKeypadForIPhoneSafari();
+
+  requestAnimationFrame(() => {
+    ensureCustomKeypadTargetVisible(activeInput);
+    scheduleRepositionKeypadForIPhoneSafari();
+  });
+}
 
   function hideKeypad() {
     clearActiveState();
@@ -798,7 +846,19 @@ function installBulkCustomKeypad() {
     } catch (_) {}
   });
 
+  if (window.visualViewport) {
+  visualViewport.addEventListener('resize', scheduleRepositionKeypadForIPhoneSafari, { passive: true });
+  visualViewport.addEventListener('scroll', scheduleRepositionKeypadForIPhoneSafari, { passive: true });
+}
+
+window.addEventListener('resize', scheduleRepositionKeypadForIPhoneSafari, { passive: true });
+window.addEventListener('orientationchange', () => {
+  setTimeout(scheduleRepositionKeypadForIPhoneSafari, 300);
+}, { passive: true });
+
   keypad.addEventListener('touchstart', (e) => {
+    scheduleRepositionKeypadForIPhoneSafari();
+    
     const btn = e.target.closest('button');
     if (!btn || !activeInput) return;
 

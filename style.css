@@ -3560,3 +3560,17 @@ body[data-active-app="app2"] #bulkGrid td:nth-child(3) {
     display: none !important;
   }
 }
+
+@supports (-webkit-touch-callout: none) {
+  @media screen and (max-width: 768px) {
+    #bulkCustomKeypad,
+    #bulkCustomKeypad.bulk-custom-keypad {
+      right: auto !important;
+      bottom: auto !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      max-width: calc(100vw - 16px) !important;
+      z-index: 999999 !important;
+    }
+  }
+}
