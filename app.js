@@ -7654,11 +7654,13 @@ function updateExtraGroupFields() {
   let adviserFee    = get('adviserFee')    || 0;
   let remainingCash = get('remainingCash') || 0;
   let totalTax      = get('totalTax')      || 0;
+  let sendoffTotal =
+  (parseInt(document.getElementById('driverExtra2')?.value.replace(/,/g,'') || 0, 10) || 0)
+  + getHistorySendoffTotal();
 
   let totalGrossPlusTax = remainingCash + totalTax + adviserFee;
 
   let el;
-  
 
   el = document.getElementById('grossProfit_extra');
   if (el) el.value = formatNumber(grossProfit);
@@ -7666,12 +7668,14 @@ function updateExtraGroupFields() {
   el = document.getElementById('cardSales_extra');
   if (el) el.value = formatNumber(cardSales);
 
-  // ←これ追加
   el = document.getElementById('adviserFee_extra');
   if (el) el.value = formatNumber(adviserFee);
 
   el = document.getElementById('remainingCash_extra');
   if (el) el.value = formatNumber(remainingCash);
+
+  el = document.getElementById('sendoffTotal');
+  if (el) el.value = formatNumber(sendoffTotal);
 
   el = document.getElementById('totalWithholdingTax');
   if (el) el.value = formatNumber(totalTax);
@@ -8077,6 +8081,21 @@ function getCustomFileName() {
   const d = String(fileDate.getDate()).padStart(2, '0');
 
   return `IBASD_${y}-${m}-${d}`;
+}
+
+function getHistorySendoffTotal() {
+  let total = 0;
+
+  document.querySelectorAll('#historyList .sendoff').forEach(el => {
+    const text = el.textContent || '';
+    const match = text.match(/送迎:\s*¥\s*([\d,]+)/);
+
+    if (match) {
+      total += parseInt(match[1].replace(/,/g, ''), 10) || 0;
+    }
+  });
+
+  return total;
 }
 
 
