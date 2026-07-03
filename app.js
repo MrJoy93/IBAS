@@ -3074,6 +3074,19 @@ bottleForms.forEach(form => {
 
   detailsHTML += '</div>';
 
+const commonNotice = (document.getElementById('app2CommonNotice')?.value || '').trim();
+
+const commonNoticeHTML = `
+  <div style="margin-top:24px;border-top:2px solid #000;padding-top:12px;">
+    <div style="font-size:20px;font-weight:bold;margin-bottom:8px;">
+      各従業者への伝達事項
+    </div>
+    <div style="white-space:pre-wrap;font-size:18px;line-height:1.6;">
+      ${escapeHtml(commonNotice || '特になし')}
+    </div>
+  </div>
+`;
+
   const castName = document.getElementById('castName').value || '（名前なし）';
 
   // 10万を超える場合だけ表示（封筒印字専用）
@@ -3108,6 +3121,8 @@ bottleForms.forEach(form => {
   ${congratsHTML}
 
   ${detailsHTML}
+
+  ${commonNoticeHTML}
   `;
 
   // 履歴に新しい項目を追加
@@ -3153,7 +3168,8 @@ bottleForms.forEach(form => {
 
 
   // 保存処理
-  const inputElements = document.querySelectorAll('input[type="number"], input[type="text"]');
+  const inputElements = document.querySelectorAll('input[type="number"], input[type="text"], textarea'
+);
   const inputValues = {};
   inputElements.forEach(input => {
     inputValues[input.id] = input.value;
@@ -3537,6 +3553,21 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function getApp2CommonNoticeHtml() {
+  const el = document.getElementById('app2CommonNotice');
+  const raw = (el?.value || '').trim();
+  if (!raw) return '';
+
+  const body = escapeHtml(raw).replace(/\r?\n/g, '<br>');
+
+  return `
+  <div class="app2-common-notice print-only">
+    <div class="app2-common-notice-title">各従業者への伝達事項</div>
+    <div class="app2-common-notice-body">${body}</div>
+  </div>
+  `;
 }
 
 function repositionBottleHierarchyPickerNow() {
@@ -8463,8 +8494,6 @@ window.exportAsFilledHTML = function(){
       return;
     }
 
-    // 個別カテゴリ
-    // 個別カテゴリ
 // --- 個別カテゴリ ---
 const arr = (window.catchbackDetails && window.catchbackDetails[category]) || [];
 const lineTexts = [];
@@ -9175,12 +9204,6 @@ function openPrintApp2(innerHTML, opts = {}) {
   return null;
 }
 
-// HTMLエスケープ（XSS/レイアウト崩れ対策）
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, m =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
 // 履歴の描画
 function renderApp2History(){
   const ul = document.getElementById('app2-historyList');
@@ -9760,7 +9783,7 @@ function resetApp1(full) {
 // app2用リセット
 function resetApp2(full) {
   // === 通常フォームのクリア =========================================
-  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"]').forEach(el => el.value = '');
+  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"], #app2 textarea').forEach(el => el.value = '');
   const exp = document.getElementById('experienceAndRental');
   if (exp) exp.checked = false;
   const result = document.getElementById('result');

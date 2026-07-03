@@ -3580,3 +3580,36 @@ body[data-active-app="app2"] #bulkGrid td:nth-child(3) {
     }
   }
 }
+
+/*従業者各員への伝達事項*/
+body[data-active-app="app2"] #app2CommonNotice {
+  width: 100% !important;
+  min-height: 96px !important;
+  resize: vertical !important;
+  text-align: left !important;
+  line-height: 1.55 !important;
+}
+
+.app2-common-notice {
+  margin-top: 5mm;
+  padding-top: 3mm;
+  border-top: 1px solid #000;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #000;
+}
+
+.app2-common-notice-title {
+  font-weight: 700;
+  margin-bottom: 1.5mm;
+}
+
+.app2-common-notice-body {
+  word-break: break-word;
+}
+
+@media screen {
+  .app2-common-notice.print-only {
+    display: none;
+  }
+}
