@@ -6730,13 +6730,18 @@ function moveFocusGridVertical(current, dir /* 'down' | 'up' */) {
     if (!target || !target.closest('#app2')) return;
     if (!['INPUT','SELECT','TEXTAREA'].includes(target.tagName)) return;
 
-    // Enter は常に “下へ” ＋ submit を完全阻止
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-      moveFocus('down', target);
-      return;
-    }
+    // Enter は textarea では改行、それ以外は下へ移動
+if (e.key === 'Enter') {
+  if (target.tagName === 'TEXTAREA' || target.id === 'app2CommonNotice') {
+    e.stopPropagation();
+    return;
+  }
+
+  e.preventDefault();
+  e.stopPropagation();
+  moveFocus('down', target);
+  return;
+}
 
     // 矢印
     let dir = null;
