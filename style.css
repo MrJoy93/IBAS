@@ -3359,6 +3359,144 @@ body[data-active-app="app1"] #app1.content{
     width:100% !important;
   }
 
+  /* =========================================
+   APP2 グリッド 3列表示の幅強制
+========================================= */
+/* =========================================================
+   APP2 一括入力グリッド（スマホ・タブレット縦 3列表示）
+========================================================= */
+@media (max-width: 1024px) {
+  body[data-active-app="app2"] #bulkGrid {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  body[data-active-app="app2"] #bulkGrid th,
+  body[data-active-app="app2"] #bulkGrid td {
+    padding: 3px 2px !important;
+    font-size: 11px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-shadow: none !important;
+  }
+
+  /* 3列表示時に見せる列を均等化 */
+  body[data-active-app="app2"] #bulkGrid th:nth-child(3),
+  body[data-active-app="app2"] #bulkGrid td:nth-child(3),
+  body[data-active-app="app2"] #bulkGrid th:nth-child(4),
+  body[data-active-app="app2"] #bulkGrid td:nth-child(4),
+  body[data-active-app="app2"] #bulkGrid th:nth-child(5),
+  body[data-active-app="app2"] #bulkGrid td:nth-child(5) {
+    width: 33.3333% !important;
+    min-width: 0 !important;
+    max-width: 33.3333% !important;
+  }
+
+body[data-active-app="app2"] #bulkGrid td:nth-child(3) {
+  text-align: left !important;
+  padding-left: 6px !important;
+}
+
+  body[data-active-app="app2"] #bulkGrid input,
+  body[data-active-app="app2"] #bulkGrid select,
+  body[data-active-app="app2"] #bulkGrid button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 4px 2px !important;
+    font-size: 11px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-app="app2"] #bulkGrid input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 auto !important;
+    display: block !important;
+  }
+
+  body[data-active-app="app2"] #bulkGrid tr.btl-subrow td {
+    padding: 2px !important;
+    font-size: 10px !important;
+  }
+
+  /* 既存の太い区切り線を弱める */
+  body[data-active-app="app2"] #bulkGrid th,
+  body[data-active-app="app2"] #bulkGrid td {
+    border-right: 1px solid rgba(0, 234, 255, 0.20) !important;
+  }
+}
+
+/* =========================================================
+   APP2：スマホ縦・タブレット縦では一括入力グリッドを非表示
+========================================================= */
+@media (max-width: 1024px) and (orientation: portrait) {
+  body[data-active-app="app2"] .group.group-bulk,
+  body[data-active-app="app2"] #bulkPanel,
+  body[data-active-app="app2"] .bulk-panel,
+  body[data-active-app="app2"] .bulk-grid-wrap,
+  body[data-active-app="app2"] #bulkGrid {
+    display: none !important;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media screen and (max-width: 768px) {
+    #bulkCustomKeypad,
+    #bulkCustomKeypad.bulk-custom-keypad {
+      bottom: auto !important;
+      max-width: calc(100vw - 16px) !important;
+      z-index: 999999 !important;
+    }
+  }
+
+  @media screen and (max-width: 932px) and (orientation: landscape) {
+    #bulkCustomKeypad,
+    #bulkCustomKeypad.bulk-custom-keypad {
+      left: auto !important;
+      right: 8px !important;
+      transform: none !important;
+    }
+  }
+}
+
+/*従業者各員への伝達事項*/
+body[data-active-app="app2"] #app2CommonNotice {
+  width: 100% !important;
+  min-height: 96px !important;
+  resize: vertical !important;
+  text-align: left !important;
+  line-height: 1.55 !important;
+}
+
+.app2-common-notice {
+  margin-top: 5mm;
+  padding-top: 3mm;
+  border-top: 1px solid #000;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #000;
+}
+
+.app2-common-notice-title {
+  font-weight: 700;
+  margin-bottom: 1.5mm;
+}
+
+.app2-common-notice-body {
+  word-break: break-word;
+}
+
+@media screen {
+  .app2-common-notice.print-only {
+    display: none;
+  }
+}
+
   /* =====================================================
      APP3
   ===================================================== */

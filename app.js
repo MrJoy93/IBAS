@@ -3074,18 +3074,16 @@ bottleForms.forEach(form => {
 
   detailsHTML += '</div>';
 
-const commonNotice = (document.getElementById('app2CommonNotice')?.value || '').trim();
+const commonNotice =
+  (document.getElementById('app2CommonNotice')?.value || '').trim();
+
+const noticeText = escapeHtml(commonNotice || '特になし');
 
 const commonNoticeHTML = `
-  <div style="margin-top:24px;border-top:2px solid #000;padding-top:12px;">
-    <div style="font-size:20px;font-weight:bold;margin-bottom:8px;">
-      各従業者への伝達事項
-    </div>
-    <div style="white-space:pre-wrap;font-size:18px;line-height:1.6;">
-      ${escapeHtml(commonNotice || '特になし')}
-    </div>
-  </div>
-`;
+<div style="margin-top:24px;border-top:2px solid #000;padding-top:12px;text-align:left;">
+  <div style="font-size:20px;font-weight:bold;margin-bottom:8px;text-align:left;">各従業者への伝達事項</div>
+  <div style="text-align:left;white-space:pre-wrap;word-break:break-word;font-size:18px;line-height:1.6;">${noticeText}</div>
+</div>`;
 
   const castName = document.getElementById('castName').value || '（名前なし）';
 
