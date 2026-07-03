@@ -3074,6 +3074,15 @@ bottleForms.forEach(form => {
 
   detailsHTML += '</div>';
 
+  const workDateRaw = document.getElementById('workDate')?.value || '';
+
+let workDateText = '未入力';
+
+if (workDateRaw) {
+  const [y, m, d] = workDateRaw.split('-');
+  workDateText = `${Number(y)}年${Number(m)}月${Number(d)}日`;
+}
+
 const commonNotice =
   (document.getElementById('app2CommonNotice')?.value || '').trim();
 
@@ -3101,6 +3110,10 @@ const commonNoticeHTML = `
     `;
 
   const resultText = `
+  <div style="font-size:16px;margin-bottom:12px;text-align:left;">
+    <strong>営業日：</strong>${escapeHtml(workDateText)}
+  </div>
+
   <div class="castName"><strong></strong> ${castName}</div>
   <div class="experienceAndRental">${experienceText}</div>
   <div class="subtotal"><strong>小計:</strong> ¥${total.toLocaleString()}</div>
@@ -3166,7 +3179,8 @@ const commonNoticeHTML = `
 
 
   // 保存処理
-  const inputElements = document.querySelectorAll('input[type="number"], input[type="text"], textarea'
+  const inputElements = document.querySelectorAll(
+  'input[type="number"], input[type="text"], input[type="date"], textarea'
 );
   const inputValues = {};
   inputElements.forEach(input => {
@@ -9786,7 +9800,9 @@ function resetApp1(full) {
 // app2用リセット
 function resetApp2(full) {
   // === 通常フォームのクリア =========================================
-  document.querySelectorAll('#app2 input[type="text"], #app2 input[type="number"], #app2 textarea').forEach(el => el.value = '');
+  document.querySelectorAll(
+  '#app2 input[type="text"], #app2 input[type="number"], #app2 input[type="date"], #app2 textarea'
+).forEach(el => el.value = '');
   const exp = document.getElementById('experienceAndRental');
   if (exp) exp.checked = false;
   const result = document.getElementById('result');
