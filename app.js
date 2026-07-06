@@ -5305,18 +5305,42 @@ if (bulkCheckAll) {
 }
 
   tbody.addEventListener('change', (e) => {
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
+  const target = e.target;
+  if (!(target instanceof HTMLElement)) return;
 
-    if (
-      target.matches('.bulk-check') ||
-      target.matches('.bulk-exp') ||
-      target.matches('.bulk-2k') ||
-      target.matches('.bulk-leave')
-    ) {
-      updateBulkCheckAllState();
+  if (target.matches('.bulk-leave')) {
+    const mainTr = target.closest('tr.bulk-mainrow');
+
+    if (mainTr) {
+      mainTr.classList.toggle('is-leave', target.checked);
+
+      let cur = mainTr.nextElementSibling;
+      while (cur && cur.classList.contains('btl-subrow')) {
+        cur.classList.toggle('is-leave', target.checked);
+        cur = cur.nextElementSibling;
+      }
+
+      const cb = mainTr.querySelector('.bulk-check');
+      if (cb) {
+        if (target.checked) {
+          cb.checked = false;
+          cb.disabled = true;
+        } else {
+          cb.disabled = !rowHasData(mainTr);
+        }
+      }
     }
-  });
+  }
+
+  if (
+    target.matches('.bulk-check') ||
+    target.matches('.bulk-exp') ||
+    target.matches('.bulk-2k') ||
+    target.matches('.bulk-leave')
+  ) {
+    updateBulkCheckAllState();
+  }
+});
 
   tbody.addEventListener('input', (e) => {
     const target = e.target;
@@ -6539,17 +6563,32 @@ function updateRowCheckState(mainRow){
   }
 
 
-  /* ✅改修版：退勤ON/OFFで「選択可・変更不可」制御 */
+/* ✅改修版：退勤ON/OFFで「選択可・変更不可」制御 */
 function applyRowLeaveState(mainTr, isLeave) {
   const subs = getSubrows(mainTr);
   const all = [mainTr, ...subs];
-  all.forEach(tr => tr.classList.toggle('is-leave', !!isLeave));
 
-  // 退勤チェック自身の制御
+  all.forEach(tr => {
+    tr.classList.toggle('is-leave', !!isLeave);
+  });
+
+  // 退勤チェック自身
+  const leave = mainTr.querySelector('.bulk-leave');
+  if (leave) {
+    leave.checked = !!isLeave;
+    leave.disabled = false;
+    leave.readOnly = false;
+  }
+
+  // 一括印刷チェック
   const sel = mainTr.querySelector('.bulk-check');
   if (sel) {
-    if (isLeave) { sel.checked = false; sel.disabled = true; }
-    else { sel.disabled = false; }
+    if (isLeave) {
+      sel.checked = false;
+      sel.disabled = true;
+    } else {
+      sel.disabled = false;
+    }
   }
 
   // 各入力要素の制御
@@ -6563,23 +6602,39 @@ function applyRowLeaveState(mainTr, isLeave) {
     const isLeaveCheck = el.classList.contains('bulk-leave');
 
     if (isLeave) {
-      // --- 退勤中 ---
-      if (el.tagName === 'INPUT' && !isLeaveCheck) {
-        el.readOnly = true;        // ← 入力禁止だがフォーカス可
+      if (isLeaveCheck || isMinus) {
+        el.disabled = false;
+        if (el.tagName === 'INPUT') el.readOnly = false;
+        return;
+      }
+
+      if (el.tagName === 'INPUT') {
+        el.readOnly = true;
       } else if (el.tagName === 'SELECT') {
-        el.dataset.readonly = '1'; // ← セレクト専用フラグ
+        el.dataset.readonly = '1';
         el.addEventListener('mousedown', preventSelectChange, { once: true });
-      } else if (!isLeaveCheck && !isMinus) {
-        el.disabled = true;        // ボタン類などは無効化
+      } else {
+        el.disabled = true;
       }
     } else {
-      // --- 通常 ---
-      if (el.tagName === 'INPUT') el.readOnly = false;
-      if (el.tagName === 'SELECT') delete el.dataset.readonly;
+      if (el.tagName === 'INPUT') {
+        el.readOnly = false;
+      }
+
+      if (el.tagName === 'SELECT') {
+        delete el.dataset.readonly;
+      }
+
       el.disabled = false;
     }
   });
+
+  if (typeof updateBulkCheckAllState === 'function') {
+    updateBulkCheckAllState();
+  }
 }
+
+window.applyRowLeaveState = applyRowLeaveState;
 
 /* セレクト変更抑止 */
 function preventSelectChange(e) {
@@ -9454,7 +9509,7 @@ async function printSelectedRows() {
       return;
     }
 
-    openPrintApp2(
+    const printWindow = openPrintApp2(
       `<div class="print-root">${sheetsHtml}</div>`,
       {
         scale: 1.00,
@@ -9463,6 +9518,82 @@ async function printSelectedRows() {
         title: 'APP2 Combined Print'
       }
     );
+
+    const applyLeaveAfterPrint = () => {
+  selected.forEach(mainTr => {
+    const leave = mainTr.querySelector('.bulk-leave');
+    if (!leave) return;
+
+    leave.checked = true;
+
+    // メイン行をグレーアウト
+    mainTr.classList.add('is-leave');
+
+    // サブ行もグレーアウト
+    let cur = mainTr.nextElementSibling;
+    while (cur && cur.classList.contains('btl-subrow')) {
+      cur.classList.add('is-leave');
+      cur = cur.nextElementSibling;
+    }
+
+    // 一括印刷チェックは外して無効化
+    const cb = mainTr.querySelector('.bulk-check');
+    if (cb) {
+      cb.checked = false;
+      cb.disabled = true;
+    }
+
+    // 入力欄を編集不可にする
+    const allEls = [
+      ...mainTr.querySelectorAll('input, select, button')
+    ];
+
+    let sub = mainTr.nextElementSibling;
+    while (sub && sub.classList.contains('btl-subrow')) {
+      allEls.push(...sub.querySelectorAll('input, select, button'));
+      sub = sub.nextElementSibling;
+    }
+
+    allEls.forEach(el => {
+      const isLeaveCheck = el.classList.contains('bulk-leave');
+      const isMinus = el.classList.contains('btl-minus');
+
+      if (isLeaveCheck || isMinus) {
+        el.disabled = false;
+        if (el.tagName === 'INPUT') el.readOnly = false;
+        return;
+      }
+
+      if (el.tagName === 'INPUT') {
+        el.readOnly = true;
+      } else if (el.tagName === 'SELECT') {
+        el.dataset.readonly = '1';
+      } else {
+        el.disabled = true;
+      }
+    });
+
+    leave.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  if (typeof saveBulkGridState === 'function') {
+    saveBulkGridState();
+  }
+
+  if (typeof window.scheduleAutosave === 'function') {
+    window.scheduleAutosave();
+  }
+};
+    if (printWindow) {
+      try {
+        printWindow.addEventListener('afterprint', applyLeaveAfterPrint, { once: true });
+      } catch (_) {
+        setTimeout(applyLeaveAfterPrint, 3000);
+      }
+    } else {
+      setTimeout(applyLeaveAfterPrint, 3000);
+    }
+
   } catch (err) {
     console.error('まとめ印刷エラー:', err);
     alert('まとめ印刷に失敗しました。');
