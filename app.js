@@ -5909,8 +5909,6 @@ async function bulkRegister() {
       window.saveAllApps();
     }
 
-    alert('一括登録完了');
-
   } finally {
     window._suppressSyncObservers = prevSuppress;
     window._bulkRegisterRunning = false;
